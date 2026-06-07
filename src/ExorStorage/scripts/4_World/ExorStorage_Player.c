@@ -12,5 +12,6 @@ modded class PlayerBase
 
 		AddAction(ExorActionPackBarrel, InputActionMap);
 		AddAction(ExorActionUncoverVehicle, InputActionMap);
+		AddAction(ExorActionFlipVehicle, InputActionMap);
 	}
 }

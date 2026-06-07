@@ -61,6 +61,12 @@ class ExorStorageSettings
 	// Vehiculos que nunca se cubren (classnames)
 	ref TStringArray vehiculos_excluidos;
 
+	// --- Voltear vehiculos ---
+	// Permitir voltear vehiculos volcados/de costado con una accion
+	bool voltear_vehiculos = true;
+	// Segundos que tarda la accion de voltear (anti-abuso en combate)
+	int voltear_segundos = 40;
+
 	void ExorStorageSettings()
 	{
 		blacklist = new TStringArray;
@@ -110,6 +116,9 @@ class ExorStorageSettings
 		vehiculos_cubrir_minutos = 5;
 		vehiculos_radio_jugador = 50;
 		vehiculos_excluidos.Clear();
+
+		voltear_vehiculos = true;
+		voltear_segundos = 40;
 	}
 
 	static ref ExorStorageSettings Load()

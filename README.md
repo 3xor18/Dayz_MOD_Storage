@@ -26,6 +26,7 @@ Mod de **optimización del servidor** para DayZ (cliente + servidor): barril 3xo
 - ✅ **Auto-stack al recoger**: las balas que levantás con "Take" (F) se fusionan solas con las pilas que ya tenés.
 - ✅ **Cantidad de munición al spawnear**: rango aleatorio `{min, max}` configurable por bala (default 15-65); la lista se auto-completa con todas las municiones del juego al arrancar.
 - ✅ **Cobertura de vehículos**: los autos inactivos X minutos se cubren con una red de camuflaje y dejan de simularse (gran ahorro — los vehículos activos son de lo más pesado del server). Acción *"Quitar la cobertura"* para usarlos de nuevo.
+- ✅ **Voltear vehículos**: un auto volcado o de costado se endereza con la acción *"Voltear vehículo"* (40 segundos manteniendo F, configurable — el tiempo largo evita abusos en combate). Requiere motor apagado y sin ocupantes.
 
 Roadmap completo y decisiones de diseño: [`docs/PLAN.md`](docs/PLAN.md)
 
@@ -51,6 +52,8 @@ Al primer arranque se crea `<profile>/3xorStorage/settings.json` con los default
 | `vehiculos_cubrir_minutos` | `5` | Minutos de inactividad (motor apagado, sin ocupantes) para cubrir el vehículo con la red camo. `0` = desactivado | ✅ v0.2 |
 | `vehiculos_radio_jugador` | `50` | No cubrir si hay un jugador a menos de estos metros | ✅ v0.2 |
 | `vehiculos_excluidos` | `[]` | Classnames de vehículos que nunca se cubren | ✅ v0.2 |
+| `voltear_vehiculos` | `true` | Activa la acción "Voltear vehículo" sobre autos volcados/de costado | ✅ v0.2 |
+| `voltear_segundos` | `40` | Duración de la acción de voltear (anti-abuso en combate) | ✅ v0.2 |
 
 > ⚠️ Única excepción a "todo configurable": el **stack máximo de balas (100)** es fijo en `config.cpp` (CfgMagazines `count`) — el motor no permite cambiarlo por JSON en runtime. Para otro número: editar `config.cpp` y recompilar. `stack_municion` en el JSON queda como referencia/documentación de los valores activos.
 
