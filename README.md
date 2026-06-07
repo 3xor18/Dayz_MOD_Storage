@@ -23,6 +23,7 @@ Mod de almacenamiento para **DayZ** (cliente + servidor): barril de gran capacid
 - 🔜 **Stacks de munición configurables** (Fase 3): una entrada por cada bala del juego, default 100. Solo balas sueltas/bolts/flechas (sin cajas ni granadas).
 - 🔜 **Auto-stack al recoger** (Fase 3): las balas que levantás se fusionan solas con las pilas que ya tenés en el inventario.
 - 🔜 **Cantidad de munición al spawnear** (Fase 3): rango aleatorio `{min, max}` configurable por bala para cada pila que spawnea como loot.
+- 🔜 **Cobertura de vehículos** (Fase 2.5): los autos inactivos X minutos se cubren con una red de camuflaje y dejan de simularse (gran ahorro de recursos — los vehículos activos son de lo más pesado del server). Acción "Quitar la cobertura" para usarlos de nuevo. Todo configurable (`vehiculos_cubrir_minutos`, radio de jugadores, exclusiones).
 
 Roadmap completo y decisiones de diseño: [`docs/PLAN.md`](docs/PLAN.md)
 

@@ -38,6 +38,14 @@ Obtención: spawn como loot (`types.xml`) + entrega por admins/eventos. **No** s
 - El JSON se escribe **antes** de borrar items (crash-safe: nunca se pierde loot).
 - Comida: multiplicador de duración `multiplicador_comida` mientras el barril está activo. Virtualizado = deterioro congelado (aceptado por diseño).
 
+### Fase 2.5 — Cobertura de vehículos (pedido 7-jun-2026)
+- Vehículo con motor apagado, sin ocupantes y sin jugadores en `vehiculos_radio_jugador` metros durante `vehiculos_cubrir_minutos` (default 5) → se serializa COMPLETO a JSON (attachments: ruedas/puertas/batería/bujía; fluidos: combustible/agua/aceite; vida por zona; cargo recursivo; posición/orientación) y se reemplaza por una **versión estática cubierta con red de camuflaje** (modelo del auto como objeto estático sin física + camonet vanilla encima). El server deja de simularlo = ahorro grande (los vehículos activos son de lo más caro del server).
+- Acción **"Quitar la cobertura"** → restaura el vehículo real exacto como estaba.
+- Config: `vehiculos_cubrir` (on/off), `vehiculos_cubrir_minutos` (5), `vehiculos_radio_jugador` (50), `vehiculos_excluidos` (classnames).
+- Mismo contrato anti-dupe: JSON se escribe ANTES de borrar el vehículo; crash-safe.
+- ATENCIÓN técnica: mantener el conteo del CE (events.xml cuenta vehículos para respawnear — si el auto cubierto "desaparece", el CE spawnea de más; problema conocido de los mods de car cover, resolver con flag/contador propio).
+- Reutiliza el motor de serialización de la Fase 2 — por eso va después.
+
 ### Fase 3 — Anti-dupe + reglas de guardado + munición
 - ID persistente único por barril; JSON ligado a ese ID; se elimina al restaurar.
 - Caja dupeada ⇒ el segundo barril restaura vacío + log de alerta para admins.
