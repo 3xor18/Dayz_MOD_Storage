@@ -9,13 +9,18 @@
     "stack_municion_default": 100,
     "stack_municion": {
         "Ammo_762x39": 100,
-        "Ammo_HuntingBolt": 25
+        "Ammo_556x45": 100,
+        "Ammo_9x19": 100,
+        "Ammo_12gaPellets": 100,
+        "Ammo_HuntingBolt": 100
     },
     "auto_stack": true,
-    "spawn_municion_default": 0,
+    "spawn_municion_min_default": 15,
+    "spawn_municion_max_default": 65,
     "spawn_municion": {
-        "Ammo_762x39": 75,
-        "Ammo_556x45": 60
+        "Ammo_762x39": { "min": 15, "max": 65 },
+        "Ammo_556x45": { "min": 15, "max": 65 },
+        "Ammo_9x19": { "min": 20, "max": 80 }
     },
     "municion_excluida": [
         "Ammo_40mm_Explosive",

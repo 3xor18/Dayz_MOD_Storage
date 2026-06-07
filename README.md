@@ -38,11 +38,11 @@ Al primer arranque se crea `<profile>/3xorStorage/settings.json` con los default
 | `permitir_ropa_con_items` | `true` | Permite guardar mochilas/ropa **con items adentro**, solo dentro de barriles 3xor (vanilla lo bloquea) | Fase 3 |
 | `blacklist` | `[]` | Classnames que NO se pueden guardar en los barriles | Fase 3 |
 | `cooldown_abrir_segundos` | `5` | Anti-dupe: segundos de espera para volver a abrir el mismo barril. `0` = sin cooldown | Fase 3 |
-| `stack_municion_default` | `100` | Stack máximo de balas sueltas/bolts/flechas. `0` = vanilla | Fase 3 |
-| `stack_municion` | `{}` | Override del stack máximo por classname (ej. `"Ammo_HuntingBolt": 25`) | Fase 3 |
+| `stack_municion` | auto | **Una entrada por cada bala del juego** → stack máximo. La lista se auto-completa al arrancar (Fase 3) con todas las municiones detectadas (vanilla + mods); después editás la que quieras | Fase 3 |
+| `stack_municion_default` | `100` | Valor de relleno con el que se auto-agregan las balas a `stack_municion` (nuevas balas de updates/mods entran solas con este valor) | Fase 3 |
 | `auto_stack` | `true` | Las balas que recogés se fusionan solas con las pilas que ya tenés | Fase 3 |
-| `spawn_municion_default` | `0` | Cantidad de balas con la que spawnea cada pila de loot. `0` = no tocar (usa el % vanilla de types.xml) | Fase 3 |
-| `spawn_municion` | `{}` | Override de cantidad de spawn por classname (ej. `"Ammo_762x39": 75`) | Fase 3 |
+| `spawn_municion` | auto | **Una entrada por bala** → `{ "min": X, "max": Y }`: cada pila de loot spawnea con una cantidad aleatoria entre min y max. También se auto-completa con todas las balas | Fase 3 |
+| `spawn_municion_min_default` / `spawn_municion_max_default` | `15` / `65` | Rango de relleno con el que se auto-agregan las balas a `spawn_municion` | Fase 3 |
 | `municion_excluida` | 40mm + bengalas | Munición que NUNCA se toca (ni stack, ni auto-stack, ni spawn). Granadas de mano, humo, gas y cajas ya quedan fuera por diseño | Fase 3 |
 
 > Los cambios en `settings.json` se aplican reiniciando el server.

@@ -8,11 +8,9 @@
 // ---------------------------------------------------------------------------
 class Exor_Barrel_Base : Barrel_ColorBase
 {
-	override void SetActions()
-	{
-		super.SetActions();
-		AddAction(ExorActionPackBarrel);
-	}
+	// OJO: la accion de empaquetar NO va aca (SetActions del item = solo con el
+	// item EN MANOS). Las acciones sobre el barril en el mundo se registran en
+	// PlayerBase (ver ExorStorage_Player.c).
 
 	// Solo se puede empaquetar si esta cerrado, sano y sin items adentro.
 	// El liquido (agua de lluvia) NO bloquea: se descarta al empaquetar.

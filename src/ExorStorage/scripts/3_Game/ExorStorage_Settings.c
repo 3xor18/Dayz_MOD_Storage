@@ -4,6 +4,13 @@
 // IMPORTANTE: los campos marcados (Fase 2/3) ya existen en el JSON pero se
 // activan cuando se implemente esa fase. Ver README.md para la doc completa.
 // ============================================================================
+// Rango aleatorio [min, max] de cantidad al spawnear una pila de municion
+class ExorMunicionSpawnRango
+{
+	int min = 15;
+	int max = 65;
+}
+
 class ExorStorageSettings
 {
 	int version = 1;
@@ -27,16 +34,20 @@ class ExorStorageSettings
 	int cooldown_abrir_segundos = 5;
 
 	// --- Fase 3: municion (SOLO balas sueltas/bolts/flechas; ver municion_excluida) ---
-	// Stack maximo por defecto (0 = vanilla, sin cambio)
+	// stack_municion: UNA entrada por cada bala del juego -> stack maximo.
+	// En la Fase 3 la lista se AUTO-COMPLETA al arrancar con todas las municiones
+	// detectadas (vanilla + mods) usando stack_municion_default como relleno.
+	// Despues editas el numero de la que quieras.
 	int stack_municion_default = 100;
-	// Override de stack maximo por tipo: classname -> stack
 	ref map<string, int> stack_municion;
 	// Fusionar automaticamente las pilas al recogerlas
 	bool auto_stack = true;
-	// Cantidad al spawnear como loot (0 = no tocar, usa el % vanilla de types.xml)
-	int spawn_municion_default = 0;
-	// Override de cantidad de spawn por tipo: classname -> cantidad
-	ref map<string, int> spawn_municion;
+	// spawn_municion: UNA entrada por bala -> rango {min, max}; la cantidad al
+	// spawnear como loot sale aleatoria entre min y max. Tambien se auto-completa
+	// (relleno: spawn_municion_min/max_default).
+	int spawn_municion_min_default = 15;
+	int spawn_municion_max_default = 65;
+	ref map<string, ref ExorMunicionSpawnRango> spawn_municion;
 	// Municion que NUNCA se toca (granadas 40mm, bengalas, etc.)
 	ref TStringArray municion_excluida;
 
@@ -44,7 +55,7 @@ class ExorStorageSettings
 	{
 		blacklist = new TStringArray;
 		stack_municion = new map<string, int>;
-		spawn_municion = new map<string, int>;
+		spawn_municion = new map<string, ref ExorMunicionSpawnRango>;
 		municion_excluida = new TStringArray;
 	}
 
@@ -58,17 +69,15 @@ class ExorStorageSettings
 		cooldown_abrir_segundos = 5;
 		stack_municion_default = 100;
 		auto_stack = true;
-		spawn_municion_default = 0;
+		spawn_municion_min_default = 15;
+		spawn_municion_max_default = 65;
 
 		blacklist.Clear();
 
+		// Las listas por bala se auto-completan en la Fase 3 al arrancar el server
+		// con todas las municiones detectadas (vanilla + mods).
 		stack_municion.Clear();
-		// Ejemplo de override por tipo:
-		// stack_municion.Set("Ammo_762x39", 60);
-
 		spawn_municion.Clear();
-		// Ejemplo: que la 7.62x39 spawnee siempre con 75 balas:
-		// spawn_municion.Set("Ammo_762x39", 75);
 
 		municion_excluida.Clear();
 		municion_excluida.Insert("Ammo_40mm_Explosive");
