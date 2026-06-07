@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 // 3xorStorage - Settings configurables por JSON ($profile:3xorStorage\settings.json)
 // Se crea solo con defaults al primer arranque del server.
 // IMPORTANTE: los campos marcados (Fase 2/3) ya existen en el JSON pero se
