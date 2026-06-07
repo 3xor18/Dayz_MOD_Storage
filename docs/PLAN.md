@@ -33,6 +33,7 @@ Obtención: spawn como loot (`types.xml`) + entrega por admins/eventos. **No** s
 
 ### Fase 2 — Virtualización
 - Tras `virtualizar_minutos` sin interacción, el contenido se serializa (recursivo: attachments, cargadores, cantidades, cargo anidado) a `$profile:3xorStorage\storage\<id>.json` y los items se borran del mundo.
+- **Auto-cierre** (`auto_cerrar_minutos`, default 5): si alguien deja el barril abierto, se cierra solo pasados X min sin interacción; recién ahí arranca el timer de virtualización (un barril abierto nunca virtualiza).
 - Al abrir el barril, se restaura todo.
 - El JSON se escribe **antes** de borrar items (crash-safe: nunca se pierde loot).
 - Comida: multiplicador de duración `multiplicador_comida` mientras el barril está activo. Virtualizado = deterioro congelado (aceptado por diseño).
