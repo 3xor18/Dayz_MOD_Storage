@@ -12,6 +12,14 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	// Timestamps de runtime (ms de uptime del server)
 	protected int m_ExorLastInteractMs;
 	protected int m_ExorLastCloseMs;
+	// Sincronizado al cliente: el barril tiene contenido virtualizado en disco
+	// (el cliente no puede chequear el archivo; sin esto mostraria "Empaquetar")
+	protected bool m_ExorVirtualizedSync;
+
+	void Exor_Barrel_Base()
+	{
+		RegisterNetSyncVariableBool("m_ExorVirtualizedSync");
+	}
 
 	// ------------------------- init / persistencia -------------------------
 	override void EEInit()
@@ -52,6 +60,17 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		return true;
 	}
 
+	override void AfterStoreLoad()
+	{
+		super.AfterStoreLoad();
+		// Tras reinicio, avisar al cliente si este barril esta virtualizado
+		if (GetGame().IsServer())
+		{
+			m_ExorVirtualizedSync = ExorIsVirtualized();
+			SetSynchDirty();
+		}
+	}
+
 	string ExorGetID()
 	{
 		if (m_ExorID == "")
@@ -84,10 +103,17 @@ class Exor_Barrel_Base : Barrel_ColorBase
 				// Anti-dupe: cooldown de reapertura activo
 				return;
 			}
-			ExorRestoreIfNeeded();
-			m_ExorLastInteractMs = now;
 		}
+
+		// IMPORTANTE: abrir ANTES de restaurar — un barril cerrado rechaza
+		// items en su cargo (regla vanilla) y todo caeria al piso
 		super.Open();
+
+		if (GetGame().IsServer())
+		{
+			ExorRestoreIfNeeded();
+			m_ExorLastInteractMs = GetGame().GetTime();
+		}
 	}
 
 	override void Close()
@@ -167,6 +193,9 @@ class Exor_Barrel_Base : Barrel_ColorBase
 			GetGame().ObjectDelete(toDelete.Get(i));
 		}
 
+		m_ExorVirtualizedSync = true;
+		SetSynchDirty();
+
 		Print(string.Format("%1 Barril %2 virtualizado: %3 items a disco", ExorStorageConstants.LOG, ExorGetID(), f.items.Count()));
 	}
 
@@ -191,6 +220,9 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		// ANTI-DUPE: el JSON se elimina tras restaurar (una caja dupeada
 		// encontraria el archivo ya consumido -> barril vacio)
 		DeleteFile(path);
+
+		m_ExorVirtualizedSync = false;
+		SetSynchDirty();
 
 		Print(string.Format("%1 Barril %2 restaurado: %3/%4 items", ExorStorageConstants.LOG, ExorGetID(), restored, f.items.Count()));
 	}
@@ -230,8 +262,11 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		if (IsRuined())
 			return false;
 		// CRITICO: un barril virtualizado parece vacio pero su loot esta en
-		// disco; empaquetarlo perderia el contenido
-		if (ExorIsVirtualized())
+		// disco; empaquetarlo perderia el contenido. La variable sincronizada
+		// hace que el CLIENTE tampoco muestre la accion
+		if (m_ExorVirtualizedSync)
+			return false;
+		if (GetGame().IsServer() && ExorIsVirtualized())
 			return false;
 		if (GetInventory())
 		{
