@@ -14,7 +14,9 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		AddAction(ExorActionPackBarrel);
 	}
 
-	// Solo se puede empaquetar si esta cerrado, sano y completamente vacio
+	// Solo se puede empaquetar si esta cerrado, sano y sin items adentro.
+	// El liquido (agua de lluvia) NO bloquea: se descarta al empaquetar.
+	// (Los barriles spawneados por admin/CE pueden traer agua invisible.)
 	bool ExorCanBePacked()
 	{
 		if (IsOpen())
@@ -32,10 +34,6 @@ class Exor_Barrel_Base : Barrel_ColorBase
 			if (cargo && cargo.GetItemCount() > 0)
 				return false;
 		}
-
-		// Liquidos (agua de lluvia acumulada) tambien bloquean el empaquetado
-		if (GetQuantity() > 0)
-			return false;
 
 		return true;
 	}

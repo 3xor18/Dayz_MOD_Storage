@@ -28,19 +28,83 @@ Roadmap completo y decisiones de diseño: [`docs/PLAN.md`](docs/PLAN.md)
 
 ## Configuración del servidor
 
-Al primer arranque se crea `<profile>/3xorStorage/settings.json` con los defaults. Ejemplo completo en [`config-examples/settings.json`](config-examples/settings.json):
+Al primer arranque se crea `<profile>/3xorStorage/settings.json` con los defaults (si ya existía de una versión vieja, se completa solo con los campos nuevos). Ejemplo completo en [`config-examples/settings.json`](config-examples/settings.json).
 
-```json
-{
-    "virtualizar_minutos": 30,
-    "multiplicador_comida": 2.0,
-    "permitir_ropa_con_items": true,
-    "blacklist": [],
-    "cooldown_abrir_segundos": 5,
-    "stack_municion_default": 100,
-    "stack_municion": { "Ammo_762x39": 100 }
-}
+| Parámetro | Default | Qué hace | Activo desde |
+|---|---|---|---|
+| `virtualizar_minutos` | `30` | Minutos sin interacción (barril cerrado) para que el contenido se virtualice a disco y los items salgan del mundo. `0` = desactivado | Fase 2 |
+| `auto_cerrar_minutos` | `5` | Si alguien deja el barril abierto, se cierra solo pasados estos minutos (recién ahí corre el timer de virtualización). `0` = desactivado | Fase 2 |
+| `multiplicador_comida` | `2.0` | La comida dentro del barril se deteriora N veces más lento (`2.0` = dura el doble). Virtualizado, el deterioro queda congelado | Fase 2 |
+| `permitir_ropa_con_items` | `true` | Permite guardar mochilas/ropa **con items adentro**, solo dentro de barriles 3xor (vanilla lo bloquea) | Fase 3 |
+| `blacklist` | `[]` | Classnames que NO se pueden guardar en los barriles | Fase 3 |
+| `cooldown_abrir_segundos` | `5` | Anti-dupe: segundos de espera para volver a abrir el mismo barril. `0` = sin cooldown | Fase 3 |
+| `stack_municion_default` | `100` | Stack máximo de balas sueltas/bolts/flechas. `0` = vanilla | Fase 3 |
+| `stack_municion` | `{}` | Override del stack máximo por classname (ej. `"Ammo_HuntingBolt": 25`) | Fase 3 |
+| `auto_stack` | `true` | Las balas que recogés se fusionan solas con las pilas que ya tenés | Fase 3 |
+| `spawn_municion_default` | `0` | Cantidad de balas con la que spawnea cada pila de loot. `0` = no tocar (usa el % vanilla de types.xml) | Fase 3 |
+| `spawn_municion` | `{}` | Override de cantidad de spawn por classname (ej. `"Ammo_762x39": 75`) | Fase 3 |
+| `municion_excluida` | 40mm + bengalas | Munición que NUNCA se toca (ni stack, ni auto-stack, ni spawn). Granadas de mano, humo, gas y cajas ya quedan fuera por diseño | Fase 3 |
+
+> Los cambios en `settings.json` se aplican reiniciando el server.
+
+## types.xml (spawn como loot)
+
+Agregá esto al `types.xml` de tu misión para que los barriles spawneen como loot. Recomendado: spawnear la versión **empaquetada** (es la que tiene gracia encontrar y llevarte); la desplegada dejala en `nominal=0` (solo existe cuando un jugador la despliega).
+
+```xml
+<!-- 3xorStorage: cajas empaquetadas (estas spawnean como loot) -->
+<type name="Exor_Barrel_500_Packed">
+    <nominal>4</nominal>
+    <lifetime>14400</lifetime>
+    <restock>1800</restock>
+    <min>2</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0"/>
+    <category name="containers"/>
+    <usage name="Industrial"/>
+    <usage name="Military"/>
+</type>
+<type name="Exor_Barrel_1000_Packed">
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>3600</restock>
+    <min>1</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0"/>
+    <category name="containers"/>
+    <usage name="Military"/>
+</type>
+
+<!-- 3xorStorage: barriles desplegados (NO spawnean; persisten 45 dias como los barriles vanilla) -->
+<type name="Exor_Barrel_500">
+    <nominal>0</nominal>
+    <lifetime>3888000</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0"/>
+    <category name="containers"/>
+</type>
+<type name="Exor_Barrel_1000">
+    <nominal>0</nominal>
+    <lifetime>3888000</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0"/>
+    <category name="containers"/>
+</type>
 ```
+
+Ajustá `nominal`/`min` a gusto (cuántos querés que haya en el mapa a la vez). `lifetime 3888000` = 45 días sin interacción antes de despawnear, igual que un barril vanilla.
 
 ## Estructura del repo
 
