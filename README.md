@@ -76,7 +76,23 @@ Agregá esto al `types.xml` de tu misión para que el barril spawnee como loot. 
     <usage name="Military"/>
 </type>
 
-<!-- 3xorStorage: barril desplegado (NO spawnea; persiste 45 dias como los barriles vanilla) -->
+<!-- Cobertura de vehiculos: OBLIGATORIO agregarla, si no el CE la limpia
+     a los ~45 segundos (CleanupLifetimeDefault) y la red desaparece.
+     (El mod tiene self-heal: recrea coberturas desde los JSON al arrancar,
+     pero sin esta entrada desaparecerian una y otra vez.) -->
+<type name="Exor_VehicleCover">
+    <nominal>0</nominal>
+    <lifetime>3888000</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0"/>
+    <category name="containers"/>
+</type>
+
+<!-- Barril desplegado (NO spawnea; persiste 45 dias como los barriles vanilla) -->
 <type name="Exor_Barrel_500">
     <nominal>0</nominal>
     <lifetime>3888000</lifetime>

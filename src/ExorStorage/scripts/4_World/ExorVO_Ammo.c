@@ -52,7 +52,21 @@ class ExorVO_Ammo
 		mag.ServerSetAmmoCount(q);
 	}
 
-	// Fusiona la pila recogida con las pilas existentes del jugador
+	// Esta el item en las manos? (las manos no se tocan: permite dividir
+	// balas para darselas a otro jugador)
+	static bool IsInHands(EntityAI e)
+	{
+		InventoryLocation loc = new InventoryLocation();
+		if (e.GetInventory() && e.GetInventory().GetCurrentInventoryLocation(loc))
+		{
+			if (loc.GetType() == InventoryLocationType.HANDS)
+				return true;
+		}
+		return false;
+	}
+
+	// Consolida TODAS las pilas del mismo tipo del inventario del jugador
+	// en la menor cantidad de pilas posible (ej. 50+25+15 -> 90)
 	static void AutoStack(Magazine mag, PlayerBase player)
 	{
 		if (!GetGame().IsServer())
@@ -68,55 +82,62 @@ class ExorVO_Ammo
 		// Solo si la pila realmente quedo en el inventario del jugador
 		if (mag.GetHierarchyRootPlayer() != player)
 			return;
+		if (IsInHands(mag))
+			return;
+
+		string tipo = mag.GetType();
 
 		array<EntityAI> items = new array<EntityAI>;
 		player.GetInventory().EnumerateInventory(InventoryTraversalType.PREORDER, items);
 
-		int restante = mag.GetAmmoCount();
-		int original = restante;
+		array<Magazine> pilas = new array<Magazine>;
+		int total = 0;
 		int i;
 		for (i = 0; i < items.Count(); i++)
 		{
-			if (restante <= 0)
-				break;
 			Magazine other = Magazine.Cast(items.Get(i));
 			if (!other)
 				continue;
-			if (other == mag)
+			if (other.GetType() != tipo)
 				continue;
-			if (other.GetType() != mag.GetType())
+			if (IsInHands(other))
 				continue;
-			int espacio = other.GetAmmoMax() - other.GetAmmoCount();
-			if (espacio <= 0)
-				continue;
-			int mover = restante;
-			if (mover > espacio)
-				mover = espacio;
-			other.ServerSetAmmoCount(other.GetAmmoCount() + mover);
-			restante = restante - mover;
+			pilas.Insert(other);
+			total = total + other.GetAmmoCount();
 		}
 
-		if (restante != original)
+		if (pilas.Count() < 2)
+			return;
+
+		int maxA = mag.GetAmmoMax();
+		int antes = pilas.Count();
+		for (i = 0; i < pilas.Count(); i++)
 		{
-			if (restante <= 0)
+			Magazine pila = pilas.Get(i);
+			if (total <= 0)
 			{
-				GetGame().ObjectDelete(mag);
+				GetGame().ObjectDelete(pila);
+				continue;
 			}
-			else
-			{
-				mag.ServerSetAmmoCount(restante);
-			}
+			int poner = total;
+			if (poner > maxA)
+				poner = maxA;
+			pila.ServerSetAmmoCount(poner);
+			total = total - poner;
 		}
+
+		Print(string.Format("%1 Auto-stack: %2 consolidado de %3 pilas", ExorStorageConstants.LOG, tipo, antes));
 	}
 
-	// Diferido: la accion Take termina de mover el item de forma asincronica
+	// Diferido: el movimiento de inventario termina de forma asincronica
 	static void AutoStackLater(Magazine mag, PlayerBase player)
 	{
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorVO_Ammo.AutoStack, 400, false, mag, player);
 	}
 }
 
-// Cantidad aleatoria cuando el CE spawnea la pila como loot
+// Cantidad aleatoria al spawnear por el CE + auto-stack al entrar al inventario
+// (cubre Take con F, drag & drop y cualquier otra via de recogida)
 modded class Ammunition_Base
 {
 	override void EEOnCECreate()
@@ -124,20 +145,16 @@ modded class Ammunition_Base
 		super.EEOnCECreate();
 		ExorVO_Ammo.ApplySpawnQuantity(this);
 	}
-}
 
-// Auto-stack al recoger del piso con la accion "Take" (tecla F)
-modded class ActionTakeItem
-{
-	override void OnExecuteServer(ActionData action_data)
+	override void OnInventoryEnter(Man player)
 	{
-		super.OnExecuteServer(action_data);
-		if (!action_data || !action_data.m_Target)
+		super.OnInventoryEnter(player);
+		if (!GetGame().IsServer())
 			return;
-		Magazine mag = Magazine.Cast(action_data.m_Target.GetObject());
-		if (mag && action_data.m_Player)
+		PlayerBase pb = PlayerBase.Cast(player);
+		if (pb)
 		{
-			ExorVO_Ammo.AutoStackLater(mag, action_data.m_Player);
+			ExorVO_Ammo.AutoStackLater(this, pb);
 		}
 	}
 }

@@ -11,12 +11,15 @@ class ExorVO_Manager
 	ref array<CarScript> m_Vehicles;
 	// Mapea el objeto estatico visual (auto sin fisica) -> su cobertura
 	ref map<Object, Exor_VehicleCover> m_CoverByStatic;
+	// Coberturas vivas por id (para detectar JSONs huerfanos al arrancar)
+	ref map<string, Exor_VehicleCover> m_CoverById;
 
 	void ExorVO_Manager()
 	{
 		m_Barrels = new array<Exor_Barrel_Base>;
 		m_Vehicles = new array<CarScript>;
 		m_CoverByStatic = new map<Object, Exor_VehicleCover>;
+		m_CoverById = new map<string, Exor_VehicleCover>;
 	}
 
 	static ExorVO_Manager Get()
@@ -34,7 +37,61 @@ class ExorVO_Manager
 			return;
 		ExorVO_Serializer.EnsureDirs();
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().Tick, ExorStorageConstants.TICK_MS, true);
+		// Self-heal: a los 2 min (con la persistencia ya cargada) recrear las
+		// coberturas cuyos JSONs quedaron huerfanos (ej. limpiadas por el CE)
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().HealOrphanCovers, 120000, false);
 		Print(string.Format("%1 Manager iniciado (tick cada %2 ms)", ExorStorageConstants.LOG, ExorStorageConstants.TICK_MS));
+	}
+
+	// ------------------------- self-heal de coberturas -------------------------
+	void HealOrphanCovers()
+	{
+		string fileName;
+		FileAttr attr;
+		array<string> files = new array<string>;
+		FindFileHandle handle = FindFile(string.Format("%1\\*.json", ExorStorageConstants.VEHICLES_DIR), fileName, attr, FindFileFlags.ALL);
+		if (handle)
+		{
+			if (fileName != "")
+				files.Insert(fileName);
+			while (FindNextFile(handle, fileName, attr))
+			{
+				if (fileName != "")
+					files.Insert(fileName);
+			}
+			CloseFindFile(handle);
+		}
+
+		int healed = 0;
+		int i;
+		for (i = 0; i < files.Count(); i++)
+		{
+			string id = files.Get(i);
+			id.Replace(".json", "");
+			if (m_CoverById.Contains(id))
+				continue;
+
+			// JSON sin cobertura en el mundo: recrearla donde estaba el vehiculo
+			string path = string.Format("%1\\%2.json", ExorStorageConstants.VEHICLES_DIR, id);
+			ExorVO_VehicleFile f = new ExorVO_VehicleFile();
+			JsonFileLoader<ExorVO_VehicleFile>.JsonLoadFile(path, f);
+			if (f.type == "")
+				continue;
+
+			vector pos = Vector(f.pos_x, f.pos_y, f.pos_z);
+			Exor_VehicleCover cover = Exor_VehicleCover.Cast(GetGame().CreateObjectEx("Exor_VehicleCover", pos, ECE_KEEPHEIGHT));
+			if (!cover)
+				continue;
+			cover.SetPosition(pos);
+			cover.SetOrientation(Vector(f.ori_x, f.ori_y, f.ori_z));
+			cover.ExorSetup(id, f.type);
+			healed++;
+		}
+
+		if (healed > 0)
+		{
+			Print(string.Format("%1 Self-heal: %2 coberturas de vehiculo recreadas desde JSON", ExorStorageConstants.LOG, healed));
+		}
 	}
 
 	// ------------------------- registro -------------------------
@@ -66,6 +123,22 @@ class ExorVO_Manager
 	static void RegisterStaticCover(Object staticObj, Exor_VehicleCover cover)
 	{
 		Get().m_CoverByStatic.Set(staticObj, cover);
+	}
+
+	static void RegisterCoverId(string id, Exor_VehicleCover cover)
+	{
+		if (id != "")
+		{
+			Get().m_CoverById.Set(id, cover);
+		}
+	}
+
+	static void UnregisterCoverId(string id)
+	{
+		if (id != "")
+		{
+			Get().m_CoverById.Remove(id);
+		}
 	}
 
 	static void UnregisterStaticCover(Object staticObj)

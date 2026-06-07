@@ -63,6 +63,10 @@ class Exor_VehicleCover : ItemBase
 	override void EEDelete(EntityAI parent)
 	{
 		ExorRemoveStaticCar();
+		if (GetGame().IsServer())
+		{
+			ExorVO_Manager.UnregisterCoverId(m_ExorVehId);
+		}
 		super.EEDelete(parent);
 	}
 
@@ -106,6 +110,7 @@ class Exor_VehicleCover : ItemBase
 		if (GetGame().IsServer() && m_ExorVehType != "")
 		{
 			ExorSpawnStaticCar();
+			ExorVO_Manager.RegisterCoverId(m_ExorVehId, this);
 		}
 	}
 
@@ -114,6 +119,7 @@ class Exor_VehicleCover : ItemBase
 		m_ExorVehId = vehId;
 		m_ExorVehType = vehType;
 		ExorSpawnStaticCar();
+		ExorVO_Manager.RegisterCoverId(m_ExorVehId, this);
 	}
 
 	string ExorGetVehicleId()
