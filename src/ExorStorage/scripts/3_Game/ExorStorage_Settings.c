@@ -17,7 +17,7 @@ class ExorStorageSettings
 
 	// --- Fase 2: virtualizacion ---
 	// Minutos sin interaccion (cerrado) para virtualizar el contenido (0 = desactivado)
-	int virtualizar_minutos = 30;
+	int virtualizar_minutos = 5;
 	// Minutos para que un barril dejado abierto se cierre solo (0 = desactivado)
 	int auto_cerrar_minutos = 5;
 	// Multiplicador de duracion de la comida dentro del barril (2.0 = dura el doble)
@@ -62,7 +62,7 @@ class ExorStorageSettings
 	void SetDefaults()
 	{
 		version = 1;
-		virtualizar_minutos = 30;
+		virtualizar_minutos = 5;
 		auto_cerrar_minutos = 5;
 		multiplicador_comida = 2.0;
 		permitir_ropa_con_items = true;

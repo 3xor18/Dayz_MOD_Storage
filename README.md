@@ -32,7 +32,7 @@ Al primer arranque se crea `<profile>/3xorStorage/settings.json` con los default
 
 | Parámetro | Default | Qué hace | Activo desde |
 |---|---|---|---|
-| `virtualizar_minutos` | `30` | Minutos sin interacción (barril cerrado) para que el contenido se virtualice a disco y los items salgan del mundo. `0` = desactivado | Fase 2 |
+| `virtualizar_minutos` | `5` | Minutos sin interacción (barril cerrado) para que el contenido se virtualice a disco y los items salgan del mundo. `0` = desactivado. Nota: más bajo = más ahorro, pero abrir un barril dormido tiene una micro-pausa de restauración, y la comida virtualizada congela su deterioro | Fase 2 |
 | `auto_cerrar_minutos` | `5` | Si alguien deja el barril abierto, se cierra solo pasados estos minutos (recién ahí corre el timer de virtualización). `0` = desactivado | Fase 2 |
 | `multiplicador_comida` | `2.0` | La comida dentro del barril se deteriora N veces más lento (`2.0` = dura el doble). Virtualizado, el deterioro queda congelado | Fase 2 |
 | `permitir_ropa_con_items` | `true` | Permite guardar mochilas/ropa **con items adentro**, solo dentro de barriles 3xor (vanilla lo bloquea) | Fase 3 |
