@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-# Genera las texturas camo "3xor" de los barriles (PNG 2048x2048, RGBA).
-# - exor_barrel_500_co.png  -> letras BLANCAS
-# - exor_barrel_1000_co.png -> letras ROJAS
-# Procedural (no usa assets del juego). Despues se convierten a .paa con
+# Genera la textura camo "3xor" del barril (PNG 2048x2048, RGBA).
+# - exor_barrel_500_co.png -> letras BLANCAS
+# Procedural (no usa assets del juego). Despues se convierte a .paa con
 # ImageToPAA (ver build.ps1). Seed fija para que el resultado sea reproducible.
 import os
 import random
@@ -96,7 +95,7 @@ def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     base = make_camo(seed=3018)
 
-    for name, color in (("exor_barrel_500_co.png", WHITE), ("exor_barrel_1000_co.png", RED)):
+    for name, color in (("exor_barrel_500_co.png", WHITE),):
         img = stamp_text(base.copy(), color).convert("RGBA")
         out = os.path.abspath(os.path.join(OUT_DIR, name))
         img.save(out)

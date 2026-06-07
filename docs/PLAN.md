@@ -13,9 +13,9 @@ Mod cliente+servidor para DayZ inspirado en **ToFu Virtual Storage** (virtualiza
 | Classname | Visible en juego | Capacidad | Letras |
 |---|---|---|---|
 | `Exor_Barrel_500` | 3xor Barrel 500 | 10×50 = 500 slots | Blancas |
-| `Exor_Barrel_1000` | 3xor Barrel 1000 | 10×100 = 1000 slots | Rojas |
 | `Exor_Barrel_500_Packed` | 3xor Barrel 500 (empaquetado) | — (5×5 en inventario) | Blancas |
-| `Exor_Barrel_1000_Packed` | 3xor Barrel 1000 (empaquetado) | — (5×5 en inventario) | Rojas |
+
+> **Decisión 7-jun-2026:** se eliminó el barril de 1000 slots (`Exor_Barrel_1000`) — 1000 era demasiado para el balance del server. Queda solo el de 500. Si algún día se quiere de vuelta, está en el historial de git (hasta el commit `beff3a1`).
 
 Modelo base: barril vanilla `\dz\gear\containers\55galDrum.p3d`, retexturizado vía `hiddenSelections = {"camoGround"}` con camo procedural + logo "3xor".
 
@@ -57,7 +57,7 @@ Obtención: spawn como loot (`types.xml`) + entrega por admins/eventos. **No** s
 
 ## Decisiones pendientes
 
-- **Balance de raideo**: ¿el barril es lockeable (CodeLock/candado)? ¿Es destruible y en qué horario? Con NoWallDamage los muros son inmunes fuera de horario — un barril de 1000 slots lockeado e indestructible sería loot 100% seguro. Decidir antes de salir a producción.
+- **Balance de raideo**: ¿el barril es lockeable (CodeLock/candado)? ¿Es destruible y en qué horario? Con NoWallDamage los muros son inmunes fuera de horario — un barril de 500 slots lockeado e indestructible sería loot 100% seguro. Decidir antes de salir a producción.
 - Posición de los logos "3xor" en la textura: el tileo actual es provisional; se ajusta cuando veamos el UV real in-game.
 
 ## Limitaciones conocidas (heredadas del enfoque, igual que ToFu)

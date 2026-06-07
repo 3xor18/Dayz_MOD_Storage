@@ -1,6 +1,6 @@
-{
+﻿{
     "version": 1,
-    "virtualizar_minutos": 5,
+    "virtualizar_minutos": 10,
     "auto_cerrar_minutos": 5,
     "multiplicador_comida": 2.0,
     "permitir_ropa_con_items": true,

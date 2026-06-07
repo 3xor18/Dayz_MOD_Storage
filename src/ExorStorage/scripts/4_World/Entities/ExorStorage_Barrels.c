@@ -51,14 +51,6 @@ class Exor_Barrel_500 : Exor_Barrel_Base
 	}
 }
 
-class Exor_Barrel_1000 : Exor_Barrel_Base
-{
-	override string ExorGetPackedType()
-	{
-		return "Exor_Barrel_1000_Packed";
-	}
-}
-
 // ---------------------------------------------------------------------------
 // Barril empaquetado (item transportable, sin cargo). Se despliega con accion.
 // ---------------------------------------------------------------------------
@@ -82,13 +74,5 @@ class Exor_Barrel_500_Packed : Exor_Barrel_Packed_Base
 	override string ExorGetDeployedType()
 	{
 		return "Exor_Barrel_500";
-	}
-}
-
-class Exor_Barrel_1000_Packed : Exor_Barrel_Packed_Base
-{
-	override string ExorGetDeployedType()
-	{
-		return "Exor_Barrel_1000";
 	}
 }

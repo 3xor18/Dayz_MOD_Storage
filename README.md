@@ -1,6 +1,6 @@
 # 3xorStorage
 
-Mod de almacenamiento para **DayZ** (cliente + servidor): barriles de gran capacidad, **empaquetables y transportables**, con **virtualización de contenido** para mejorar el rendimiento del servidor y **anti-dupe** integrado.
+Mod de almacenamiento para **DayZ** (cliente + servidor): barril de gran capacidad, **empaquetable y transportable**, con **virtualización de contenido** para mejorar el rendimiento del servidor y **anti-dupe** integrado.
 
 > Inspirado en *ToFu Virtual Storage* (virtualización) y *MMG Base Storage* (empaquetado en cajas), combinando lo mejor de ambos: el loot guardado deja de cargar al servidor **y** el barril se puede mover de base fácilmente.
 
@@ -9,20 +9,19 @@ Mod de almacenamiento para **DayZ** (cliente + servidor): barriles de gran capac
 | Classname | Nombre en juego | Capacidad | Logo |
 |---|---|---|---|
 | `Exor_Barrel_500` | 3xor Barrel 500 | 500 slots (10×50) | "3xor" blanco |
-| `Exor_Barrel_1000` | 3xor Barrel 1000 | 1000 slots (10×100) | "3xor" rojo |
 | `Exor_Barrel_500_Packed` | 3xor Barrel 500 (empaquetado) | 5×5 en inventario | "3xor" blanco |
-| `Exor_Barrel_1000_Packed` | 3xor Barrel 1000 (empaquetado) | 5×5 en inventario | "3xor" rojo |
 
 ## Features
 
 - ✅ **Empaquetar / Desplegar**: con el barril cerrado y vacío, acción *"Empaquetar barril"* → se convierte en una caja transportable. Con la caja en las manos, *"Desplegar barril"* lo coloca de nuevo. Transportá varios a la vez.
 - 🔜 **Virtualización** (Fase 2): pasados X minutos sin interacción, el contenido se guarda en disco y los items desaparecen del mundo → menos entidades, menos lag, arranques más rápidos.
+- 🔜 **Auto-cierre** (Fase 2): un barril dejado abierto se cierra solo pasados X minutos.
 - 🔜 **Comida que dura más** (Fase 2): multiplicador configurable de duración dentro del barril (default: el doble).
 - 🔜 **Anti-dupe** (Fase 3): ID único por barril, detección de duplicados al arranque, cooldowns y logs para admins.
 - 🔜 **Mochilas/ropa con items adentro** (Fase 3): solo dentro de barriles 3xor, activable por config.
-- 🔜 **Stacks de munición configurables** (Fase 3): default 100 por tipo, ajustable por classname. Solo balas sueltas/bolts/flechas (sin cajas ni granadas).
+- 🔜 **Stacks de munición configurables** (Fase 3): una entrada por cada bala del juego, default 100. Solo balas sueltas/bolts/flechas (sin cajas ni granadas).
 - 🔜 **Auto-stack al recoger** (Fase 3): las balas que levantás se fusionan solas con las pilas que ya tenés en el inventario.
-- 🔜 **Cantidad de munición al spawnear** (Fase 3): configurá cuántas balas trae cada pila que spawnea como loot, por tipo (ej. 7.62×39 siempre con 75).
+- 🔜 **Cantidad de munición al spawnear** (Fase 3): rango aleatorio `{min, max}` configurable por bala para cada pila que spawnea como loot.
 
 Roadmap completo y decisiones de diseño: [`docs/PLAN.md`](docs/PLAN.md)
 
@@ -32,7 +31,7 @@ Al primer arranque se crea `<profile>/3xorStorage/settings.json` con los default
 
 | Parámetro | Default | Qué hace | Activo desde |
 |---|---|---|---|
-| `virtualizar_minutos` | `5` | Minutos sin interacción (barril cerrado) para que el contenido se virtualice a disco y los items salgan del mundo. `0` = desactivado. Nota: más bajo = más ahorro, pero abrir un barril dormido tiene una micro-pausa de restauración, y la comida virtualizada congela su deterioro | Fase 2 |
+| `virtualizar_minutos` | `10` | Minutos sin interacción (barril cerrado) para que el contenido se virtualice a disco y los items salgan del mundo. `0` = desactivado. Nota: más bajo = más ahorro, pero abrir un barril dormido tiene una micro-pausa de restauración, y la comida virtualizada congela su deterioro | Fase 2 |
 | `auto_cerrar_minutos` | `5` | Si alguien deja el barril abierto, se cierra solo pasados estos minutos (recién ahí corre el timer de virtualización). `0` = desactivado | Fase 2 |
 | `multiplicador_comida` | `2.0` | La comida dentro del barril se deteriora N veces más lento (`2.0` = dura el doble). Virtualizado, el deterioro queda congelado | Fase 2 |
 | `permitir_ropa_con_items` | `true` | Permite guardar mochilas/ropa **con items adentro**, solo dentro de barriles 3xor (vanilla lo bloquea) | Fase 3 |
@@ -49,10 +48,10 @@ Al primer arranque se crea `<profile>/3xorStorage/settings.json` con los default
 
 ## types.xml (spawn como loot)
 
-Agregá esto al `types.xml` de tu misión para que los barriles spawneen como loot. Recomendado: spawnear la versión **empaquetada** (es la que tiene gracia encontrar y llevarte); la desplegada dejala en `nominal=0` (solo existe cuando un jugador la despliega).
+Agregá esto al `types.xml` de tu misión para que el barril spawnee como loot. Recomendado: spawnear la versión **empaquetada** (es la que tiene gracia encontrar y llevarte); la desplegada dejala en `nominal=0` (solo existe cuando un jugador la despliega).
 
 ```xml
-<!-- 3xorStorage: cajas empaquetadas (estas spawnean como loot) -->
+<!-- 3xorStorage: caja empaquetada (esta spawnea como loot) -->
 <type name="Exor_Barrel_500_Packed">
     <nominal>4</nominal>
     <lifetime>14400</lifetime>
@@ -66,32 +65,9 @@ Agregá esto al `types.xml` de tu misión para que los barriles spawneen como lo
     <usage name="Industrial"/>
     <usage name="Military"/>
 </type>
-<type name="Exor_Barrel_1000_Packed">
-    <nominal>2</nominal>
-    <lifetime>14400</lifetime>
-    <restock>3600</restock>
-    <min>1</min>
-    <quantmin>-1</quantmin>
-    <quantmax>-1</quantmax>
-    <cost>100</cost>
-    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0"/>
-    <category name="containers"/>
-    <usage name="Military"/>
-</type>
 
-<!-- 3xorStorage: barriles desplegados (NO spawnean; persisten 45 dias como los barriles vanilla) -->
+<!-- 3xorStorage: barril desplegado (NO spawnea; persiste 45 dias como los barriles vanilla) -->
 <type name="Exor_Barrel_500">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
-    <quantmin>-1</quantmin>
-    <quantmax>-1</quantmax>
-    <cost>100</cost>
-    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0"/>
-    <category name="containers"/>
-</type>
-<type name="Exor_Barrel_1000">
     <nominal>0</nominal>
     <lifetime>3888000</lifetime>
     <restock>0</restock>
@@ -110,14 +86,14 @@ Ajustá `nominal`/`min` a gusto (cuántos querés que haya en el mapa a la vez).
 
 ```
 ├── src/ExorStorage/          # Fuente del PBO (prefix: ExorStorage)
-│   ├── config.cpp            # CfgPatches / CfgMods / CfgVehicles (los 4 items)
+│   ├── config.cpp            # CfgPatches / CfgMods / CfgVehicles (barril + caja)
 │   ├── data/                 # Texturas .paa (generadas por el build)
 │   └── scripts/
 │       ├── 3_Game/           # Constantes + settings JSON
 │       ├── 4_World/
-│       │   ├── Entities/     # Clases de los barriles
+│       │   ├── Entities/     # Clases del barril
 │       │   ├── Actions/      # Empaquetar / Desplegar
-│       │   └── ...           # Registro de acciones
+│       │   └── ...           # Registro de acciones + PlayerBase
 │       └── 5_Mission/        # Init del server (carga settings)
 ├── assets/textures/          # PNG fuente de las texturas (generadas)
 ├── tools/                    # Build: gen_textures.py, pack_pbo.py, build.ps1
@@ -150,4 +126,4 @@ El resultado queda en `dist/@3xorStorage/` listo para copiar al server y al clie
 
 ## Estado
 
-**v0.1.0 — Fase 1** (barriles + empaquetado). En desarrollo activo; aún no publicado en Workshop.
+**v0.1.0 — Fase 1** (barril + empaquetado). En desarrollo activo; aún no publicado en Workshop.

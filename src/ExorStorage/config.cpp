@@ -8,7 +8,7 @@ class CfgPatches
 {
 	class ExorStorage
 	{
-		units[] = {"Exor_Barrel_500", "Exor_Barrel_1000", "Exor_Barrel_500_Packed", "Exor_Barrel_1000_Packed"};
+		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed"};
 		weapons[] = {};
 		requiredVersion = 0.1;
 		requiredAddons[] = {"DZ_Data", "DZ_Scripts", "DZ_Gear_Containers"};
@@ -77,21 +77,6 @@ class CfgVehicles
 		};
 	};
 
-	class Exor_Barrel_1000: Exor_Barrel_Base
-	{
-		scope = 2;
-		displayName = "3xor Barrel 1000";
-		descriptionShort = "Barril de almacenamiento 3xor de 1000 slots. Vacio y cerrado se puede empaquetar para transportarlo facilmente.";
-		color = "CamoRed";
-		hiddenSelectionsTextures[] = {"ExorStorage\data\exor_barrel_1000_co.paa"};
-		class Cargo
-		{
-			itemsCargoSize[] = {10, 100};	// 1000 slots
-			openable = 0;
-			allowOwnedCargoManipulation = 1;
-		};
-	};
-
 	// ------------------------------------------------------------------
 	// Barriles empaquetados (transportables, sin cargo)
 	// ------------------------------------------------------------------
@@ -114,11 +99,4 @@ class CfgVehicles
 		hiddenSelectionsTextures[] = {"ExorStorage\data\exor_barrel_500_co.paa"};
 	};
 
-	class Exor_Barrel_1000_Packed: Exor_Barrel_Packed_Base
-	{
-		scope = 2;
-		displayName = "3xor Barrel 1000 (empaquetado)";
-		descriptionShort = "Barril 3xor de 1000 slots empaquetado. Tenelo en las manos y usa 'Desplegar barril' para colocarlo.";
-		hiddenSelectionsTextures[] = {"ExorStorage\data\exor_barrel_1000_co.paa"};
-	};
 };
