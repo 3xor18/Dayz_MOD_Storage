@@ -50,7 +50,7 @@ Al primer arranque se crea `<profile>/3xorStorage/settings.json` con los default
 | `municion_excluida` | 40mm + bengalas + RPG/LAW | Munición que NUNCA se toca (ni auto-stack ni spawn). Granadas de mano, humo, gas y cajas ya quedan fuera por diseño | ✅ v0.2 |
 | `vehiculos_dormir` | `true` | Activa el sueño automático de vehículos inactivos | ✅ v0.2 |
 | `vehiculos_dormir_minutos` | `5` | Minutos de inactividad (motor apagado, sin ocupantes) para dormir la física del vehículo. `0` = desactivado | ✅ v0.2 |
-| `vehiculos_despertar_metros` | `150` | El vehículo solo duerme sin jugadores en este radio, y despierta solo cuando alguien entra a él | ✅ v0.2 |
+| `vehiculos_despertar_metros` | `30` | El vehículo solo duerme sin jugadores en este radio, y despierta solo cuando alguien entra a él (chequeo cada 5 s) | ✅ v0.2 |
 | `vehiculos_excluidos` | `[]` | Classnames de vehículos que nunca se duermen | ✅ v0.2 |
 | `voltear_vehiculos` | `true` | Activa la acción "Voltear vehículo" sobre autos volcados/de costado | ✅ v0.2 |
 | `voltear_segundos` | `40` | Duración de la acción de voltear (anti-abuso en combate) | ✅ v0.2 |

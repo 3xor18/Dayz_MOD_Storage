@@ -58,7 +58,7 @@ class ExorStorageSettings
 	int vehiculos_dormir_minutos = 5;
 	// Radio en metros: el vehiculo solo duerme si no hay jugadores mas cerca
 	// que esto, y DESPIERTA solo cuando alguien entra a este radio
-	int vehiculos_despertar_metros = 150;
+	int vehiculos_despertar_metros = 30;
 	// Vehiculos que nunca se duermen (classnames)
 	ref TStringArray vehiculos_excluidos;
 
@@ -115,7 +115,7 @@ class ExorStorageSettings
 
 		vehiculos_dormir = true;
 		vehiculos_dormir_minutos = 5;
-		vehiculos_despertar_metros = 150;
+		vehiculos_despertar_metros = 30;
 		vehiculos_excluidos.Clear();
 
 		voltear_vehiculos = true;
