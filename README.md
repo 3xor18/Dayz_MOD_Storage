@@ -14,6 +14,7 @@ Mod de almacenamiento para **DayZ** (cliente + servidor): barril de gran capacid
 ## Features
 
 - ✅ **Empaquetar / Desplegar**: con el barril cerrado y vacío, acción *"Empaquetar barril"* → se convierte en una caja transportable. Con la caja en las manos, *"Desplegar barril"* lo coloca de nuevo. Transportá varios a la vez.
+- ✅ **Indestructible y no lockeable**: el loot guardado nunca se destruye (explosiones/balas no lo afectan), pero el barril no acepta CodeLocks ni candados — quien llega hasta él, lo abre. La defensa es tu base, no el barril.
 - 🔜 **Virtualización** (Fase 2): pasados X minutos sin interacción, el contenido se guarda en disco y los items desaparecen del mundo → menos entidades, menos lag, arranques más rápidos.
 - 🔜 **Auto-cierre** (Fase 2): un barril dejado abierto se cierra solo pasados X minutos.
 - 🔜 **Comida que dura más** (Fase 2): multiplicador configurable de duración dentro del barril (default: el doble).

@@ -55,9 +55,11 @@ Obtención: spawn como loot (`types.xml`) + entrega por admins/eventos. **No** s
 - Publicación en Steam Workshop (DayZ Tools Publisher, cuenta del dueño).
 - Firmado de PBOs (DSUtils) + distribución de la `.bikey` al server.
 
-## Decisiones pendientes
+## Decisiones tomadas
 
-- **Balance de raideo**: ¿el barril es lockeable (CodeLock/candado)? ¿Es destruible y en qué horario? Con NoWallDamage los muros son inmunes fuera de horario — un barril de 500 slots lockeado e indestructible sería loot 100% seguro. Decidir antes de salir a producción.
+- **Balance de raideo (RESUELTO 7-jun-2026)**: el barril es **indestructible** (`SetAllowDamage(false)`, el loot nunca se pierde) pero **NO lockeable** (`CanReceiveAttachment` bloquea codelocks/candados de cualquier mod). Quien llega físicamente al barril, lo abre — la protección es la base (y con NoWallDamage, raidear la base = romper puertas en horario de raid). La caja empaquetada también es indestructible.
+
+## Decisiones pendientes
 - Posición de los logos "3xor" en la textura: el tileo actual es provisional; se ajusta cuando veamos el UV real in-game.
 
 ## Limitaciones conocidas (heredadas del enfoque, igual que ToFu)
