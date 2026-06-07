@@ -46,6 +46,7 @@ Obtención: spawn como loot (`types.xml`) + entrega por admins/eventos. **No** s
 - `permitir_ropa_con_items`: mochilas/ropa con cosas adentro, solo en barriles 3xor (configurable).
 - **Stack de munición** global: `stack_municion_default` (100) + override por classname en `stack_municion`. Solo balas sueltas, bolts y flechas. Excluidos: cajas de munición, granadas 40 mm, granadas de mano (explosiva/humo/gas). Técnica: override de `GetQuantityMax` leyendo el JSON; plan B = valores fijos en config.cpp si el enfoque dinámico da problemas de split/persistencia.
 - **Auto-stack al recoger** (`auto_stack`, default true): cuando una pila de balas entra al inventario del jugador, el server la fusiona automáticamente con las pilas existentes del mismo tipo que tengan espacio (hasta el stack máximo). Mismo alcance que el punto anterior: solo balas sueltas/bolts/flechas. Técnica: hook en `OnInventoryEnter` de las pilas de munición (server-side).
+- **Cantidad de munición al spawnear** (`spawn_municion_default` + `spawn_municion` por classname): cuando el CE spawnea una pila de balas como loot, el mod le setea la cantidad configurada (ej. 7.62×39 siempre con 75). `0` = no tocar (queda el % vanilla de types.xml, que con el stack máximo subido ya spawnea proporcionalmente más). El valor se recorta al stack máximo del tipo. Técnica: hook `EEOnCECreate` (server-side). Mismo alcance: solo balas sueltas/bolts/flechas.
 
 ### Fase 4 — Test de carga y release
 - Test en server local con cientos de items.
