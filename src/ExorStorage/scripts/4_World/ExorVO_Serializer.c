@@ -35,6 +35,20 @@ class ExorVO_ContainerFile
 	}
 }
 
+// Trabajo de relleno diferido: llenar un contenedor recien creado un instante
+// despues, cuando su inventario ya esta inicializado
+class ExorVO_RestoreJob
+{
+	EntityAI parent;
+	vector fallbackPos;
+	ref array<ref ExorVO_ItemData> children;
+
+	void ExorVO_RestoreJob()
+	{
+		children = new array<ref ExorVO_ItemData>;
+	}
+}
+
 class ExorVO_Serializer
 {
 	// ------------------------- CAPTURA -------------------------
@@ -97,6 +111,9 @@ class ExorVO_Serializer
 	}
 
 	// ------------------------- RESTAURACION -------------------------
+	// Mantiene vivos los trabajos de relleno diferido hasta que se procesan
+	static ref array<ref ExorVO_RestoreJob> s_PendingJobs = new array<ref ExorVO_RestoreJob>;
+
 	static EntityAI RestoreItem(ExorVO_ItemData data, EntityAI parent, vector fallbackPos)
 	{
 		EntityAI e;
@@ -139,17 +156,45 @@ class ExorVO_Serializer
 			}
 		}
 
-		int i;
-		for (i = 0; i < data.attachments.Count(); i++)
+		// Hijos (attachments + cargo anidado): DIFERIDOS. Un contenedor recien
+		// creado no tiene su inventario listo en el mismo frame; si llenamos ya,
+		// el contenido cae al piso. CreateInInventory elige solo slot o cargo.
+		if (data.attachments.Count() > 0 || data.cargo.Count() > 0)
 		{
-			RestoreItem(data.attachments.Get(i), e, fallbackPos);
-		}
-		for (i = 0; i < data.cargo.Count(); i++)
-		{
-			RestoreItem(data.cargo.Get(i), e, fallbackPos);
+			ExorVO_RestoreJob job = new ExorVO_RestoreJob();
+			job.parent = e;
+			job.fallbackPos = fallbackPos;
+			int i;
+			for (i = 0; i < data.attachments.Count(); i++)
+			{
+				job.children.Insert(data.attachments.Get(i));
+			}
+			for (i = 0; i < data.cargo.Count(); i++)
+			{
+				job.children.Insert(data.cargo.Get(i));
+			}
+			s_PendingJobs.Insert(job);
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorVO_Serializer.RunRestoreJob, 200, false, job);
 		}
 
 		return e;
+	}
+
+	static void RunRestoreJob(ExorVO_RestoreJob job)
+	{
+		if (job && job.parent)
+		{
+			int i;
+			for (i = 0; i < job.children.Count(); i++)
+			{
+				RestoreItem(job.children.Get(i), job.parent, job.fallbackPos);
+			}
+		}
+		int idx = s_PendingJobs.Find(job);
+		if (idx != -1)
+		{
+			s_PendingJobs.Remove(idx);
+		}
 	}
 
 	// ------------------------- UTILIDADES -------------------------
