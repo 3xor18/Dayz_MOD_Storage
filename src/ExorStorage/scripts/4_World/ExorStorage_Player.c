@@ -11,7 +11,6 @@ modded class PlayerBase
 		super.SetActions(InputActionMap);
 
 		AddAction(ExorActionPackBarrel, InputActionMap);
-		AddAction(ExorActionUncoverVehicle, InputActionMap);
 		AddAction(ExorActionFlipVehicle, InputActionMap);
 	}
 }

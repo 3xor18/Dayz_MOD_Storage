@@ -9,7 +9,6 @@ modded class ActionConstructor
 
 		actions.Insert(ExorActionPackBarrel);
 		actions.Insert(ExorActionDeployBarrel);
-		actions.Insert(ExorActionUncoverVehicle);
 		actions.Insert(ExorActionFlipVehicle);
 	}
 }

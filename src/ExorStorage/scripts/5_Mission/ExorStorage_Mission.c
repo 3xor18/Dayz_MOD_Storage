@@ -18,7 +18,7 @@ modded class MissionServer
 		// OJO: este compilador no acepta expresiones partidas en varias lineas (ni ternarios)
 		Print(string.Format("%1 %2 v%3 inicializado", ExorStorageConstants.LOG, ExorStorageConstants.MOD_NAME, ExorStorageConstants.MOD_VERSION));
 		Print(string.Format("%1 virtualizar_minutos=%2 auto_cerrar_minutos=%3 multiplicador_comida=%4", ExorStorageConstants.LOG, settings.virtualizar_minutos, settings.auto_cerrar_minutos, settings.multiplicador_comida));
-		Print(string.Format("%1 vehiculos_cubrir=%2 vehiculos_cubrir_minutos=%3 radio=%4", ExorStorageConstants.LOG, settings.vehiculos_cubrir, settings.vehiculos_cubrir_minutos, settings.vehiculos_radio_jugador));
+		Print(string.Format("%1 vehiculos_dormir=%2 dormir_minutos=%3 despertar_metros=%4", ExorStorageConstants.LOG, settings.vehiculos_dormir, settings.vehiculos_dormir_minutos, settings.vehiculos_despertar_metros));
 		Print(string.Format("%1 auto_stack=%2 spawn_municion=%3 tipos registrados", ExorStorageConstants.LOG, settings.auto_stack, settings.spawn_municion.Count()));
 	}
 

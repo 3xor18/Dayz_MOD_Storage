@@ -51,14 +51,15 @@ class ExorStorageSettings
 	// Municion que NUNCA se toca (granadas 40mm, bengalas, etc.)
 	ref TStringArray municion_excluida;
 
-	// --- Fase 2.5: cobertura de vehiculos ---
-	// Cubrir vehiculos inactivos con red camo (dejan de simularse = menos lag)
-	bool vehiculos_cubrir = true;
-	// Minutos de inactividad (motor apagado, sin ocupantes) para cubrir
-	int vehiculos_cubrir_minutos = 5;
-	// No cubrir si hay un jugador a menos de estos metros
-	int vehiculos_radio_jugador = 50;
-	// Vehiculos que nunca se cubren (classnames)
+	// --- Fase 2.5: sueno automatico de vehiculos ---
+	// Dormir la fisica de vehiculos inactivos (mismo ahorro, invisible al jugador)
+	bool vehiculos_dormir = true;
+	// Minutos de inactividad (motor apagado, sin ocupantes) para dormirse
+	int vehiculos_dormir_minutos = 5;
+	// Radio en metros: el vehiculo solo duerme si no hay jugadores mas cerca
+	// que esto, y DESPIERTA solo cuando alguien entra a este radio
+	int vehiculos_despertar_metros = 150;
+	// Vehiculos que nunca se duermen (classnames)
 	ref TStringArray vehiculos_excluidos;
 
 	// --- Voltear vehiculos ---
@@ -112,9 +113,9 @@ class ExorStorageSettings
 		municion_excluida.Insert("Ammo_LAW_HE");
 		municion_excluida.Insert("Ammo_GrenadeM4");
 
-		vehiculos_cubrir = true;
-		vehiculos_cubrir_minutos = 5;
-		vehiculos_radio_jugador = 50;
+		vehiculos_dormir = true;
+		vehiculos_dormir_minutos = 5;
+		vehiculos_despertar_metros = 150;
 		vehiculos_excluidos.Clear();
 
 		voltear_vehiculos = true;

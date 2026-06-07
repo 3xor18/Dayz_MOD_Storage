@@ -9,7 +9,7 @@ class CfgPatches
 {
 	class ExorStorage
 	{
-		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_VehicleCover"};
+		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed"};
 		weapons[] = {};
 		requiredVersion = 0.1;
 		requiredAddons[] = {"DZ_Data", "DZ_Scripts", "DZ_Gear_Containers", "DZ_Weapons_Ammunition"};
@@ -98,22 +98,6 @@ class CfgVehicles
 		displayName = "3xor Barrel 500 (empaquetado)";
 		descriptionShort = "Barril 3xor de 500 slots empaquetado. Tenelo en las manos y usa 'Desplegar barril' para colocarlo.";
 		hiddenSelectionsTextures[] = {"ExorStorage\data\exor_barrel_500_co.paa"};
-	};
-
-	// ------------------------------------------------------------------
-	// Cobertura de vehiculo: red camo que reemplaza al vehiculo inactivo
-	// (el vehiculo real esta serializado en el profile; ver Fase 2.5)
-	// ------------------------------------------------------------------
-	class Exor_VehicleCover: Inventory_Base
-	{
-		scope = 2;
-		displayName = "Vehiculo cubierto";
-		descriptionShort = "Vehiculo cubierto con red de camuflaje para ahorrar recursos del servidor. Usa 'Quitar la cobertura' para recuperarlo.";
-		model = "\DZ\gear\camping\proxies\CarTentCamonetProxy.p3d";
-		weight = 1000000;
-		itemSize[] = {10, 10};
-		itemBehaviour = 0;
-		carveNavmesh = 0;
 	};
 };
 

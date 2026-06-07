@@ -25,7 +25,7 @@ Mod de **optimización del servidor** para DayZ (cliente + servidor): barril 3xo
 - ✅ **Stacks de munición a 100**: solo balas sueltas/bolts/flechas (sin cajas ni granadas). Fijo en config.cpp (ver nota abajo).
 - ✅ **Auto-stack al recoger**: las balas que levantás con "Take" (F) se fusionan solas con las pilas que ya tenés.
 - ✅ **Cantidad de munición al spawnear**: rango aleatorio `{min, max}` configurable por bala (default 15-65); la lista se auto-completa con todas las municiones del juego al arrancar.
-- ✅ **Cobertura de vehículos**: los autos inactivos X minutos se cubren con una red de camuflaje y dejan de simularse (gran ahorro — los vehículos activos son de lo más pesado del server). Acción *"Quitar la cobertura"* para usarlos de nuevo.
+- ✅ **Sueño automático de vehículos**: los autos inactivos X minutos se "duermen" (su física deja de simularse — gran ahorro, los vehículos son de lo más pesado del server) y **despiertan solos** cuando un jugador se acerca. El auto queda visible y en su lugar: los jugadores no notan nada. El CE los sigue contando (no spawnea clones).
 - ✅ **Voltear vehículos**: un auto volcado o de costado se endereza con la acción *"Voltear vehículo"* (40 segundos manteniendo F, configurable — el tiempo largo evita abusos en combate). Requiere motor apagado y sin ocupantes.
 
 Roadmap completo y decisiones de diseño: [`docs/PLAN.md`](docs/PLAN.md)
@@ -48,10 +48,10 @@ Al primer arranque se crea `<profile>/3xorStorage/settings.json` con los default
 | `spawn_municion` | auto | **Una entrada por bala** → `{ "min": X, "max": Y }`: cada pila de loot spawnea con una cantidad aleatoria entre min y max. También se auto-completa con todas las balas | ✅ v0.2 |
 | `spawn_municion_min_default` / `spawn_municion_max_default` | `15` / `65` | Rango de relleno con el que se auto-agregan las balas a `spawn_municion` | ✅ v0.2 |
 | `municion_excluida` | 40mm + bengalas + RPG/LAW | Munición que NUNCA se toca (ni auto-stack ni spawn). Granadas de mano, humo, gas y cajas ya quedan fuera por diseño | ✅ v0.2 |
-| `vehiculos_cubrir` | `true` | Activa la cobertura de vehículos inactivos | ✅ v0.2 |
-| `vehiculos_cubrir_minutos` | `5` | Minutos de inactividad (motor apagado, sin ocupantes) para cubrir el vehículo con la red camo. `0` = desactivado | ✅ v0.2 |
-| `vehiculos_radio_jugador` | `50` | No cubrir si hay un jugador a menos de estos metros | ✅ v0.2 |
-| `vehiculos_excluidos` | `[]` | Classnames de vehículos que nunca se cubren | ✅ v0.2 |
+| `vehiculos_dormir` | `true` | Activa el sueño automático de vehículos inactivos | ✅ v0.2 |
+| `vehiculos_dormir_minutos` | `5` | Minutos de inactividad (motor apagado, sin ocupantes) para dormir la física del vehículo. `0` = desactivado | ✅ v0.2 |
+| `vehiculos_despertar_metros` | `150` | El vehículo solo duerme sin jugadores en este radio, y despierta solo cuando alguien entra a él | ✅ v0.2 |
+| `vehiculos_excluidos` | `[]` | Classnames de vehículos que nunca se duermen | ✅ v0.2 |
 | `voltear_vehiculos` | `true` | Activa la acción "Voltear vehículo" sobre autos volcados/de costado | ✅ v0.2 |
 | `voltear_segundos` | `40` | Duración de la acción de voltear (anti-abuso en combate) | ✅ v0.2 |
 
@@ -77,22 +77,6 @@ Agregá esto al `types.xml` de tu misión para que el barril spawnee como loot. 
     <category name="containers"/>
     <usage name="Industrial"/>
     <usage name="Military"/>
-</type>
-
-<!-- Cobertura de vehiculos: OBLIGATORIO agregarla, si no el CE la limpia
-     a los ~45 segundos (CleanupLifetimeDefault) y la red desaparece.
-     (El mod tiene self-heal: recrea coberturas desde los JSON al arrancar,
-     pero sin esta entrada desaparecerian una y otra vez.) -->
-<type name="Exor_VehicleCover">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
-    <quantmin>-1</quantmin>
-    <quantmax>-1</quantmax>
-    <cost>100</cost>
-    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0"/>
-    <category name="containers"/>
 </type>
 
 <!-- Barril desplegado (NO spawnea; persiste 45 dias como los barriles vanilla) -->
