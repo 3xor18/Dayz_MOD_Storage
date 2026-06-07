@@ -129,12 +129,16 @@ class ExorVO_Manager
 	}
 
 	// ------------------------- tick rapido (5s): despertar -------------------------
+	protected int m_WakeRuns = 0;
+
 	void WakeTick()
 	{
 		ExorStorageSettings settings = GetExorStorageSettings();
 		if (!settings.vehiculos_dormir)
 			return;
 
+		m_WakeRuns++;
+		int dormidos = 0;
 		int i;
 		for (i = m_Vehicles.Count() - 1; i >= 0; i--)
 		{
@@ -146,11 +150,18 @@ class ExorVO_Manager
 			}
 			if (!car.ExorIsSleeping())
 				continue;
+			dormidos++;
 			if (IsPlayerNear(car.GetPosition(), settings.vehiculos_despertar_metros))
 			{
 				car.ExorWake();
 				Print(string.Format("%1 Vehiculo %2 despierto (jugador cerca)", ExorStorageConstants.LOG, car.GetType()));
 			}
+		}
+
+		// Diagnostico: las primeras 3 corridas y despues 1 vez por minuto
+		if (m_WakeRuns <= 3 || m_WakeRuns % 12 == 0)
+		{
+			Print(string.Format("%1 WakeTick #%2: %3 vehiculos (%4 dormidos), radio=%5", ExorStorageConstants.LOG, m_WakeRuns, m_Vehicles.Count(), dormidos, settings.vehiculos_despertar_metros));
 		}
 	}
 

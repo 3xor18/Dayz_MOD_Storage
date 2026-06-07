@@ -82,15 +82,31 @@ class ExorActionFlipVehicle : ActionContinuousBase
 		if (!ExorIsFlipped(car))
 			return;
 
+		// CRITICO: despertar primero — con la fisica dormida el cambio de
+		// orientacion no se replica al cliente
+		car.ExorWake();
+
 		// Enderezar: conservar la direccion (yaw), anular vuelco (pitch/roll)
 		vector ori = car.GetOrientation();
 		ori[1] = 0;
 		ori[2] = 0;
-		vector pos = car.GetPosition();
-		pos[1] = pos[1] + 0.5;	// levantarlo un poco para que no quede clavado
 
-		car.SetOrientation(ori);
+		// Levantarlo sobre la superficie para que asiente con fisica limpia
+		vector pos = car.GetPosition();
+		float surfaceY = GetGame().SurfaceY(pos[0], pos[2]);
+		if (pos[1] < surfaceY + 1.0)
+		{
+			pos[1] = surfaceY + 1.0;
+		}
+		else
+		{
+			pos[1] = pos[1] + 0.5;
+		}
+
 		car.SetPosition(pos);
+		car.SetOrientation(ori);
+		SetVelocity(car, vector.Zero);
+		dBodySetAngularVelocity(car, vector.Zero);
 
 		Print(string.Format("%1 Vehiculo %2 volteado a posicion natural", ExorStorageConstants.LOG, car.GetType()));
 	}
