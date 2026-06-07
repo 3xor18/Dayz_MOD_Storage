@@ -167,7 +167,5 @@ class ExorVO_Serializer
 			MakeDirectory(ExorStorageConstants.CONFIG_DIR);
 		if (!FileExist(ExorStorageConstants.STORAGE_DIR))
 			MakeDirectory(ExorStorageConstants.STORAGE_DIR);
-		if (!FileExist(ExorStorageConstants.VEHICLES_DIR))
-			MakeDirectory(ExorStorageConstants.VEHICLES_DIR);
 	}
 }
