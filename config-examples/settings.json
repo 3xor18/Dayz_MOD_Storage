@@ -1,4 +1,4 @@
-﻿{
+{
     "version": 1,
     "virtualizar_minutos": 10,
     "auto_cerrar_minutos": 5,
@@ -9,9 +9,6 @@
     "stack_municion_default": 100,
     "stack_municion": {
         "Ammo_762x39": 100,
-        "Ammo_556x45": 100,
-        "Ammo_9x19": 100,
-        "Ammo_12gaPellets": 100,
         "Ammo_HuntingBolt": 100
     },
     "auto_stack": true,
@@ -19,14 +16,26 @@
     "spawn_municion_max_default": 65,
     "spawn_municion": {
         "Ammo_762x39": { "min": 15, "max": 65 },
-        "Ammo_556x45": { "min": 15, "max": 65 },
         "Ammo_9x19": { "min": 20, "max": 80 }
     },
     "municion_excluida": [
         "Ammo_40mm_Explosive",
+        "Ammo_40mm_ChemGas",
         "Ammo_40mm_Smoke_White",
         "Ammo_40mm_Smoke_Red",
         "Ammo_40mm_Smoke_Green",
-        "Ammo_Flare"
-    ]
+        "Ammo_40mm_Smoke_Black",
+        "Ammo_Flare",
+        "Ammo_FlareRed",
+        "Ammo_FlareGreen",
+        "Ammo_FlareBlue",
+        "Ammo_RPG7_HE",
+        "Ammo_RPG7_AP",
+        "Ammo_LAW_HE",
+        "Ammo_GrenadeM4"
+    ],
+    "vehiculos_cubrir": true,
+    "vehiculos_cubrir_minutos": 5,
+    "vehiculos_radio_jugador": 50,
+    "vehiculos_excluidos": []
 }

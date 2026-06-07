@@ -1,7 +1,7 @@
 // ============================================================================
-// 3xorStorage - Acciones del jugador sobre objetos del mundo
-// Las acciones con TARGET (mirar el barril y empaquetarlo) se registran en
-// PlayerBase; las de item en manos (desplegar la caja) van en el SetActions
+// 3xor_Vanilla_Optimization - Acciones del jugador sobre objetos del mundo
+// Las acciones con TARGET (empaquetar barril, quitar cobertura) se registran
+// en PlayerBase; las de item en manos (desplegar la caja) van en el SetActions
 // del item.
 // ============================================================================
 modded class PlayerBase
@@ -11,5 +11,6 @@ modded class PlayerBase
 		super.SetActions(InputActionMap);
 
 		AddAction(ExorActionPackBarrel, InputActionMap);
+		AddAction(ExorActionUncoverVehicle, InputActionMap);
 	}
 }

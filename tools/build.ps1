@@ -35,7 +35,7 @@ Write-Host "[3/3] Empaquetando PBO..." -ForegroundColor Cyan
 if ($LASTEXITCODE -ne 0) { throw "pack_pbo.py fallo" }
 
 # mod.cpp para la carpeta del mod (Workshop / launcher)
-Copy-Item "$repo\mod\mod.cpp" "$repo\dist\@3xorStorage\mod.cpp" -Force
+Copy-Item "$repo\mod\mod.cpp" "$repo\dist\@3xor_Vanilla_Optimization\mod.cpp" -Force
 
 Write-Host ""
-Write-Host "Build OK -> $repo\dist\@3xorStorage" -ForegroundColor Green
+Write-Host "Build OK -> $repo\dist\@3xor_Vanilla_Optimization" -ForegroundColor Green

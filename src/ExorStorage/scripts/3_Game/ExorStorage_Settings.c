@@ -51,12 +51,23 @@ class ExorStorageSettings
 	// Municion que NUNCA se toca (granadas 40mm, bengalas, etc.)
 	ref TStringArray municion_excluida;
 
+	// --- Fase 2.5: cobertura de vehiculos ---
+	// Cubrir vehiculos inactivos con red camo (dejan de simularse = menos lag)
+	bool vehiculos_cubrir = true;
+	// Minutos de inactividad (motor apagado, sin ocupantes) para cubrir
+	int vehiculos_cubrir_minutos = 5;
+	// No cubrir si hay un jugador a menos de estos metros
+	int vehiculos_radio_jugador = 50;
+	// Vehiculos que nunca se cubren (classnames)
+	ref TStringArray vehiculos_excluidos;
+
 	void ExorStorageSettings()
 	{
 		blacklist = new TStringArray;
 		stack_municion = new map<string, int>;
 		spawn_municion = new map<string, ref ExorMunicionSpawnRango>;
 		municion_excluida = new TStringArray;
+		vehiculos_excluidos = new TStringArray;
 	}
 
 	void SetDefaults()
@@ -81,10 +92,24 @@ class ExorStorageSettings
 
 		municion_excluida.Clear();
 		municion_excluida.Insert("Ammo_40mm_Explosive");
+		municion_excluida.Insert("Ammo_40mm_ChemGas");
 		municion_excluida.Insert("Ammo_40mm_Smoke_White");
 		municion_excluida.Insert("Ammo_40mm_Smoke_Red");
 		municion_excluida.Insert("Ammo_40mm_Smoke_Green");
+		municion_excluida.Insert("Ammo_40mm_Smoke_Black");
 		municion_excluida.Insert("Ammo_Flare");
+		municion_excluida.Insert("Ammo_FlareRed");
+		municion_excluida.Insert("Ammo_FlareGreen");
+		municion_excluida.Insert("Ammo_FlareBlue");
+		municion_excluida.Insert("Ammo_RPG7_HE");
+		municion_excluida.Insert("Ammo_RPG7_AP");
+		municion_excluida.Insert("Ammo_LAW_HE");
+		municion_excluida.Insert("Ammo_GrenadeM4");
+
+		vehiculos_cubrir = true;
+		vehiculos_cubrir_minutos = 5;
+		vehiculos_radio_jugador = 50;
+		vehiculos_excluidos.Clear();
 	}
 
 	static ref ExorStorageSettings Load()

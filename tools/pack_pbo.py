@@ -70,6 +70,6 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--src", default=os.path.join(repo, "src", "ExorStorage"))
     ap.add_argument("--prefix", default="ExorStorage")
-    ap.add_argument("--out", default=os.path.join(repo, "dist", "@3xorStorage", "addons", "ExorStorage.pbo"))
+    ap.add_argument("--out", default=os.path.join(repo, "dist", "@3xor_Vanilla_Optimization", "addons", "ExorStorage.pbo"))
     args = ap.parse_args()
     pack(args.src, args.prefix, args.out)

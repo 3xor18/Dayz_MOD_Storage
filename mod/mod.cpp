@@ -1,4 +1,4 @@
-name = "3xorStorage";
+name = "3xor_Vanilla_Optimization";
 author = "3xor";
-version = "0.1.0";
-description = "Barriles de almacenamiento 3xor: empaquetables y transportables, con virtualizacion de contenido para mejorar el rendimiento del server.";
+version = "0.2.0";
+description = "Optimizacion vanilla del server: barriles 3xor con virtualizacion de contenido, cobertura de vehiculos inactivos y stacks de municion. Menos entidades = menos lag.";

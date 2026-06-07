@@ -1,5 +1,5 @@
 // ============================================================================
-// 3xorStorage - Registro de acciones custom en el motor
+// 3xor_Vanilla_Optimization - Registro de acciones custom en el motor
 // ============================================================================
 modded class ActionConstructor
 {
@@ -9,5 +9,6 @@ modded class ActionConstructor
 
 		actions.Insert(ExorActionPackBarrel);
 		actions.Insert(ExorActionDeployBarrel);
+		actions.Insert(ExorActionUncoverVehicle);
 	}
 }
