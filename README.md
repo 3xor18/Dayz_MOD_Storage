@@ -95,6 +95,8 @@ Agregá esto al `types.xml` de tu misión para que el barril spawnee como loot. 
 
 Ajustá `nominal`/`min` a gusto (cuántos querés que haya en el mapa a la vez). `lifetime 3888000` = 45 días sin interacción antes de despawnear, igual que un barril vanilla.
 
+> **Tip (no es del mod, es DayZ vanilla):** los vehículos spawneados por **admin/VPP o trader** que no estén en `types.xml` los limpia el CE a los ~45 segundos sin jugadores cerca. Si tu server spawnea vehículos así, agregá cada classname de vehículo al `types.xml` con `nominal=0` y `lifetime=3888000`. Los vehículos de `events.xml` no necesitan nada.
+
 ## Estructura del repo
 
 ```
