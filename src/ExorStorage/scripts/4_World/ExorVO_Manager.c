@@ -1,7 +1,7 @@
 // ============================================================================
 // 3xor_Vanilla_Optimization - Manager central (SOLO server)
-// Tick cada 30s: auto-cierre de barriles, virtualizacion de contenido y
-// cobertura de vehiculos inactivos.
+// Tick cada 30s: auto-cierre de barriles, virtualizacion de contenido,
+// cobertura de vehiculos inactivos y self-heal de coberturas perdidas.
 // ============================================================================
 class ExorVO_Manager
 {
@@ -11,8 +11,10 @@ class ExorVO_Manager
 	ref array<CarScript> m_Vehicles;
 	// Mapea el objeto estatico visual (auto sin fisica) -> su cobertura
 	ref map<Object, Exor_VehicleCover> m_CoverByStatic;
-	// Coberturas vivas por id (para detectar JSONs huerfanos al arrancar)
+	// Coberturas vivas por id
 	ref map<string, Exor_VehicleCover> m_CoverById;
+	// Vehiculos cubiertos (dormidos bajo tierra) por id
+	ref map<string, CarScript> m_CoveredVehicleById;
 
 	void ExorVO_Manager()
 	{
@@ -20,6 +22,7 @@ class ExorVO_Manager
 		m_Vehicles = new array<CarScript>;
 		m_CoverByStatic = new map<Object, Exor_VehicleCover>;
 		m_CoverById = new map<string, Exor_VehicleCover>;
+		m_CoveredVehicleById = new map<string, CarScript>;
 	}
 
 	static ExorVO_Manager Get()
@@ -37,64 +40,10 @@ class ExorVO_Manager
 			return;
 		ExorVO_Serializer.EnsureDirs();
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().Tick, ExorStorageConstants.TICK_MS, true);
-		// Self-heal: a los 2 min (con la persistencia ya cargada) recrear las
-		// coberturas cuyos JSONs quedaron huerfanos (ej. limpiadas por el CE)
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().HealOrphanCovers, 120000, false);
 		Print(string.Format("%1 Manager iniciado (tick cada %2 ms)", ExorStorageConstants.LOG, ExorStorageConstants.TICK_MS));
 	}
 
-	// ------------------------- self-heal de coberturas -------------------------
-	void HealOrphanCovers()
-	{
-		string fileName;
-		FileAttr attr;
-		array<string> files = new array<string>;
-		FindFileHandle handle = FindFile(string.Format("%1\\*.json", ExorStorageConstants.VEHICLES_DIR), fileName, attr, FindFileFlags.ALL);
-		if (handle)
-		{
-			if (fileName != "")
-				files.Insert(fileName);
-			while (FindNextFile(handle, fileName, attr))
-			{
-				if (fileName != "")
-					files.Insert(fileName);
-			}
-			CloseFindFile(handle);
-		}
-
-		int healed = 0;
-		int i;
-		for (i = 0; i < files.Count(); i++)
-		{
-			string id = files.Get(i);
-			id.Replace(".json", "");
-			if (m_CoverById.Contains(id))
-				continue;
-
-			// JSON sin cobertura en el mundo: recrearla donde estaba el vehiculo
-			string path = string.Format("%1\\%2.json", ExorStorageConstants.VEHICLES_DIR, id);
-			ExorVO_VehicleFile f = new ExorVO_VehicleFile();
-			JsonFileLoader<ExorVO_VehicleFile>.JsonLoadFile(path, f);
-			if (f.type == "")
-				continue;
-
-			vector pos = Vector(f.pos_x, f.pos_y, f.pos_z);
-			Exor_VehicleCover cover = Exor_VehicleCover.Cast(GetGame().CreateObjectEx("Exor_VehicleCover", pos, ECE_KEEPHEIGHT));
-			if (!cover)
-				continue;
-			cover.SetPosition(pos);
-			cover.SetOrientation(Vector(f.ori_x, f.ori_y, f.ori_z));
-			cover.ExorSetup(id, f.type);
-			healed++;
-		}
-
-		if (healed > 0)
-		{
-			Print(string.Format("%1 Self-heal: %2 coberturas de vehiculo recreadas desde JSON", ExorStorageConstants.LOG, healed));
-		}
-	}
-
-	// ------------------------- registro -------------------------
+	// ------------------------- registro: barriles -------------------------
 	static void RegisterBarrel(Exor_Barrel_Base barrel)
 	{
 		if (Get().m_Barrels.Find(barrel) == -1)
@@ -112,6 +61,7 @@ class ExorVO_Manager
 		}
 	}
 
+	// ------------------------- registro: vehiculos -------------------------
 	static void RegisterVehicle(CarScript car)
 	{
 		if (Get().m_Vehicles.Find(car) == -1)
@@ -120,9 +70,42 @@ class ExorVO_Manager
 		}
 	}
 
+	static void RegisterCoveredVehicle(string id, CarScript car)
+	{
+		if (id != "")
+		{
+			Get().m_CoveredVehicleById.Set(id, car);
+		}
+	}
+
+	static void UnregisterCoveredVehicle(string id)
+	{
+		if (id != "")
+		{
+			Get().m_CoveredVehicleById.Remove(id);
+		}
+	}
+
+	static CarScript GetCoveredVehicle(string id)
+	{
+		CarScript car;
+		if (Get().m_CoveredVehicleById.Find(id, car))
+			return car;
+		return null;
+	}
+
+	// ------------------------- registro: coberturas -------------------------
 	static void RegisterStaticCover(Object staticObj, Exor_VehicleCover cover)
 	{
 		Get().m_CoverByStatic.Set(staticObj, cover);
+	}
+
+	static void UnregisterStaticCover(Object staticObj)
+	{
+		if (staticObj)
+		{
+			Get().m_CoverByStatic.Remove(staticObj);
+		}
 	}
 
 	static void RegisterCoverId(string id, Exor_VehicleCover cover)
@@ -138,14 +121,6 @@ class ExorVO_Manager
 		if (id != "")
 		{
 			Get().m_CoverById.Remove(id);
-		}
-	}
-
-	static void UnregisterStaticCover(Object staticObj)
-	{
-		if (staticObj)
-		{
-			Get().m_CoverByStatic.Remove(staticObj);
 		}
 	}
 
@@ -183,6 +158,9 @@ class ExorVO_Manager
 			barrel.ExorTick(now, settings);
 		}
 
+		// --- Self-heal: vehiculo cubierto cuya cobertura se perdio ---
+		HealLostCovers();
+
 		// --- Vehiculos: cobertura por inactividad ---
 		if (!settings.vehiculos_cubrir)
 			return;
@@ -198,6 +176,10 @@ class ExorVO_Manager
 				m_Vehicles.Remove(i);
 				continue;
 			}
+			if (car.ExorIsCovered())
+				continue;
+			if (car.IsRuined())
+				continue;	// chatarra no se cubre
 			if (car.ExorIsActive())
 			{
 				car.ExorMarkActive(now);
@@ -211,7 +193,41 @@ class ExorVO_Manager
 				continue;
 
 			ExorVO_VehicleCoverSystem.CoverVehicle(car);
-			m_Vehicles.Remove(i);
+		}
+	}
+
+	// Si una cobertura desaparecio (admin, bug, limpieza) pero el vehiculo
+	// dormido sigue bajo tierra, recrear la cobertura en su lugar original
+	void HealLostCovers()
+	{
+		array<string> ids = new array<string>;
+		int i;
+		for (i = 0; i < m_CoveredVehicleById.Count(); i++)
+		{
+			ids.Insert(m_CoveredVehicleById.GetKey(i));
+		}
+
+		for (i = 0; i < ids.Count(); i++)
+		{
+			string id = ids.Get(i);
+			if (m_CoverById.Contains(id))
+				continue;
+
+			CarScript car = GetCoveredVehicle(id);
+			if (!car)
+			{
+				m_CoveredVehicleById.Remove(id);
+				continue;
+			}
+
+			vector pos = car.ExorGetOrigPos();
+			Exor_VehicleCover cover = Exor_VehicleCover.Cast(GetGame().CreateObjectEx("Exor_VehicleCover", pos, ECE_KEEPHEIGHT));
+			if (!cover)
+				continue;
+			cover.SetPosition(pos);
+			cover.SetOrientation(car.GetOrientation());
+			cover.ExorSetup(id, car.GetType());
+			Print(string.Format("%1 Self-heal: cobertura %2 recreada para %3", ExorStorageConstants.LOG, id, car.GetType()));
 		}
 	}
 

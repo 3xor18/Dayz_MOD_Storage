@@ -31,7 +31,7 @@ class ExorStorageSettings
 
 	// --- Fase 3: anti-dupe ---
 	// Segundos de espera entre abrir/cerrar el mismo barril (0 = sin cooldown)
-	int cooldown_abrir_segundos = 5;
+	int cooldown_abrir_segundos = 3;
 
 	// --- Fase 3: municion (SOLO balas sueltas/bolts/flechas; ver municion_excluida) ---
 	// stack_municion: UNA entrada por cada bala del juego -> stack maximo.
@@ -83,7 +83,7 @@ class ExorStorageSettings
 		auto_cerrar_minutos = 5;
 		multiplicador_comida = 2.0;
 		permitir_ropa_con_items = true;
-		cooldown_abrir_segundos = 5;
+		cooldown_abrir_segundos = 3;
 		stack_municion_default = 100;
 		auto_stack = true;
 		spawn_municion_min_default = 15;

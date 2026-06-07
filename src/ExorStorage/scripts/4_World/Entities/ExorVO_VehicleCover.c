@@ -1,14 +1,20 @@
 // ============================================================================
-// 3xor_Vanilla_Optimization - Cobertura de vehiculos (Fase 2.5)
-// Un vehiculo inactivo se serializa a JSON y se reemplaza por:
-//   - un objeto ESTATICO con el modelo del auto (sin fisica = sin costo)
-//   - la red camo (Exor_VehicleCover) que guarda el ID y permite restaurar
+// 3xor_Vanilla_Optimization - Cobertura de vehiculos (Fase 2.5, arquitectura v2)
+// El vehiculo NO se borra (asi el CE lo sigue contando y no spawnea clones):
+//   - se le desactiva la simulacion fisica (DisableSimulation = costo ~cero)
+//   - se teletransporta 100 m bajo tierra (invisible e inaccesible)
+//   - en su lugar queda la red camo (Exor_VehicleCover) + el auto estatico visual
+// Al descubrir: el vehiculo vuelve a su posicion con TODO su inventario intacto
+// (nunca salio del mundo = cero riesgo de perdida o dupe).
 // ============================================================================
 
-// Registra los vehiculos en el manager y trackea su actividad
 modded class CarScript
 {
 	protected int m_ExorLastActiveMs;
+	// Si esta cubierto: id que lo liga con su cobertura (persistido)
+	protected string m_ExorCoverId;
+	// Posicion original (superficie) para recuperacion (persistido)
+	protected vector m_ExorOrigPos;
 
 	override void EEInit()
 	{
@@ -17,7 +23,83 @@ modded class CarScript
 		{
 			m_ExorLastActiveMs = GetGame().GetTime();
 			ExorVO_Manager.RegisterVehicle(this);
+			if (ExorIsCovered())
+			{
+				// Recien creado ya-cubierto no pasa por aca (EEInit corre antes
+				// del store load); el caso real se maneja en AfterStoreLoad
+				DisableSimulation(true);
+			}
 		}
+	}
+
+	override void OnStoreSave(ParamsWriteContext ctx)
+	{
+		super.OnStoreSave(ctx);
+		ctx.Write(m_ExorCoverId);
+		ctx.Write(m_ExorOrigPos);
+	}
+
+	override bool OnStoreLoad(ParamsReadContext ctx, int version)
+	{
+		if (!super.OnStoreLoad(ctx, version))
+			return false;
+		string id;
+		vector pos;
+		if (!ctx.Read(id))
+			return false;
+		if (!ctx.Read(pos))
+			return false;
+		m_ExorCoverId = id;
+		m_ExorOrigPos = pos;
+		return true;
+	}
+
+	override void AfterStoreLoad()
+	{
+		super.AfterStoreLoad();
+		if (GetGame().IsServer() && ExorIsCovered())
+		{
+			// Tras reinicio: seguir dormido bajo tierra y re-registrarse
+			DisableSimulation(true);
+			ExorVO_Manager.RegisterCoveredVehicle(m_ExorCoverId, this);
+		}
+	}
+
+	bool ExorIsCovered()
+	{
+		return m_ExorCoverId != "";
+	}
+
+	string ExorGetCoverId()
+	{
+		return m_ExorCoverId;
+	}
+
+	vector ExorGetOrigPos()
+	{
+		return m_ExorOrigPos;
+	}
+
+	void ExorCover(string id)
+	{
+		m_ExorCoverId = id;
+		m_ExorOrigPos = GetPosition();
+		vector under = m_ExorOrigPos;
+		under[1] = under[1] - 100.0;
+		DisableSimulation(true);
+		SetPosition(under);
+		ExorVO_Manager.RegisterCoveredVehicle(id, this);
+	}
+
+	void ExorUncover()
+	{
+		string id = m_ExorCoverId;
+		vector pos = m_ExorOrigPos;
+		m_ExorCoverId = "";
+		SetPosition(pos);
+		DisableSimulation(false);
+		m_ExorLastActiveMs = GetGame().GetTime();
+		ExorVO_Manager.UnregisterCoveredVehicle(id);
 	}
 
 	bool ExorIsActive()
@@ -44,7 +126,7 @@ modded class CarScript
 	}
 }
 
-// La red camo colocada sobre el auto cubierto
+// La red camo colocada donde estaba el auto
 class Exor_VehicleCover : ItemBase
 {
 	protected string m_ExorVehId;
@@ -127,11 +209,6 @@ class Exor_VehicleCover : ItemBase
 		return m_ExorVehId;
 	}
 
-	string ExorGetVehiclePath()
-	{
-		return string.Format("%1\\%2.json", ExorStorageConstants.VEHICLES_DIR, m_ExorVehId);
-	}
-
 	void ExorSpawnStaticCar()
 	{
 		if (m_ExorStaticCar)
@@ -166,48 +243,26 @@ class ExorVO_VehicleCoverSystem
 	{
 		if (!car)
 			return;
+		if (car.ExorIsCovered())
+			return;
 
-		ExorVO_VehicleFile f = new ExorVO_VehicleFile();
-		f.id = ExorVO_Serializer.GenerateId();
-		f.type = car.GetType();
-
+		string id = ExorVO_Serializer.GenerateId();
 		vector pos = car.GetPosition();
 		vector ori = car.GetOrientation();
-		f.pos_x = pos[0];
-		f.pos_y = pos[1];
-		f.pos_z = pos[2];
-		f.ori_x = ori[0];
-		f.ori_y = ori[1];
-		f.ori_z = ori[2];
-
-		f.health = car.GetHealth01("", "");
-		f.fuel = car.GetFluidFraction(CarFluid.FUEL);
-		f.oil = car.GetFluidFraction(CarFluid.OIL);
-		f.coolant = car.GetFluidFraction(CarFluid.COOLANT);
-		f.brake = car.GetFluidFraction(CarFluid.BRAKE);
-
-		ExorVO_ItemData tree = ExorVO_Serializer.CaptureItem(car);
-		f.attachments = tree.attachments;
-		f.cargo = tree.cargo;
-
-		// ANTI-DUPE: JSON primero, borrar despues (crash-safe)
-		string path = string.Format("%1\\%2.json", ExorStorageConstants.VEHICLES_DIR, f.id);
-		JsonFileLoader<ExorVO_VehicleFile>.JsonSaveFile(path, f);
+		string vtype = car.GetType();
 
 		Exor_VehicleCover cover = Exor_VehicleCover.Cast(GetGame().CreateObjectEx("Exor_VehicleCover", pos, ECE_KEEPHEIGHT));
 		if (!cover)
 		{
-			// Si no se pudo crear la cobertura, NO borrar el vehiculo
-			DeleteFile(path);
-			Print(string.Format("%1 ERROR: no se pudo crear Exor_VehicleCover; vehiculo %2 queda vivo", ExorStorageConstants.LOG, f.type));
+			Print(string.Format("%1 ERROR: no se pudo crear Exor_VehicleCover; %2 queda activo", ExorStorageConstants.LOG, vtype));
 			return;
 		}
 		cover.SetPosition(pos);
 		cover.SetOrientation(ori);
-		cover.ExorSetup(f.id, f.type);
+		cover.ExorSetup(id, vtype);
 
-		GetGame().ObjectDelete(car);
-		Print(string.Format("%1 Vehiculo %2 cubierto (id %3): %4 attachments, %5 items de cargo", ExorStorageConstants.LOG, f.type, f.id, f.attachments.Count(), f.cargo.Count()));
+		car.ExorCover(id);
+		Print(string.Format("%1 Vehiculo %2 cubierto (id %3) - dormido bajo tierra, CE lo sigue contando", ExorStorageConstants.LOG, vtype, id));
 	}
 
 	static void UncoverVehicle(Exor_VehicleCover cover)
@@ -215,49 +270,23 @@ class ExorVO_VehicleCoverSystem
 		if (!cover)
 			return;
 
-		string path = cover.ExorGetVehiclePath();
-		if (!FileExist(path))
+		string id = cover.ExorGetVehicleId();
+		CarScript car = ExorVO_Manager.GetCoveredVehicle(id);
+		if (!car)
 		{
-			// Archivo consumido o perdido: anti-dupe en accion o error previo
-			Print(string.Format("%1 ALERTA: cobertura sin JSON (%2) - posible dupe detectado; se elimina la cobertura vacia", ExorStorageConstants.LOG, path));
+			Print(string.Format("%1 ALERTA: cobertura %2 sin vehiculo asociado (perdido?); se elimina la cobertura", ExorStorageConstants.LOG, id));
 			GetGame().ObjectDelete(cover);
 			return;
 		}
 
-		ExorVO_VehicleFile f = new ExorVO_VehicleFile();
-		JsonFileLoader<ExorVO_VehicleFile>.JsonLoadFile(path, f);
-
-		vector pos = Vector(f.pos_x, f.pos_y, f.pos_z);
-		vector ori = Vector(f.ori_x, f.ori_y, f.ori_z);
-
-		Car car = Car.Cast(GetGame().CreateObjectEx(f.type, pos, ECE_KEEPHEIGHT | ECE_CREATEPHYSICS));
-		if (!car)
-		{
-			Print(string.Format("%1 ERROR: no se pudo recrear el vehiculo %2; el JSON se conserva en %3", ExorStorageConstants.LOG, f.type, path));
-			return;
-		}
-		car.SetPosition(pos);
-		car.SetOrientation(ori);
-		car.SetHealth01("", "", f.health);
-		car.Fill(CarFluid.FUEL, f.fuel * car.GetFluidCapacity(CarFluid.FUEL));
-		car.Fill(CarFluid.OIL, f.oil * car.GetFluidCapacity(CarFluid.OIL));
-		car.Fill(CarFluid.COOLANT, f.coolant * car.GetFluidCapacity(CarFluid.COOLANT));
-		car.Fill(CarFluid.BRAKE, f.brake * car.GetFluidCapacity(CarFluid.BRAKE));
-
-		int i;
-		for (i = 0; i < f.attachments.Count(); i++)
-		{
-			ExorVO_Serializer.RestoreItem(f.attachments.Get(i), car, pos);
-		}
-		for (i = 0; i < f.cargo.Count(); i++)
-		{
-			ExorVO_Serializer.RestoreItem(f.cargo.Get(i), car, pos);
-		}
-
-		// ANTI-DUPE: consumir el JSON tras restaurar
-		DeleteFile(path);
-
+		vector pos = cover.GetPosition();
+		vector ori = cover.GetOrientation();
 		GetGame().ObjectDelete(cover);
-		Print(string.Format("%1 Vehiculo %2 descubierto y restaurado", ExorStorageConstants.LOG, f.type));
+
+		car.SetOrientation(ori);
+		car.ExorUncover();
+		car.SetPosition(pos);
+
+		Print(string.Format("%1 Vehiculo %2 descubierto (id %3)", ExorStorageConstants.LOG, car.GetType(), id));
 	}
 }

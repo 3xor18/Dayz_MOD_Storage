@@ -35,33 +35,6 @@ class ExorVO_ContainerFile
 	}
 }
 
-// Archivo de un vehiculo cubierto
-class ExorVO_VehicleFile
-{
-	int version = 1;
-	string id;
-	string type;
-	float pos_x;
-	float pos_y;
-	float pos_z;
-	float ori_x;
-	float ori_y;
-	float ori_z;
-	float health = 1.0;
-	float fuel = 0;
-	float oil = 0;
-	float coolant = 0;
-	float brake = 0;
-	ref array<ref ExorVO_ItemData> attachments;
-	ref array<ref ExorVO_ItemData> cargo;
-
-	void ExorVO_VehicleFile()
-	{
-		attachments = new array<ref ExorVO_ItemData>;
-		cargo = new array<ref ExorVO_ItemData>;
-	}
-}
-
 class ExorVO_Serializer
 {
 	// ------------------------- CAPTURA -------------------------

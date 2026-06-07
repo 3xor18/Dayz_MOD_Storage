@@ -41,7 +41,7 @@ Al primer arranque se crea `<profile>/3xorStorage/settings.json` con los default
 | `multiplicador_comida` | `2.0` | La comida dentro del barril se deteriora N veces más lento (`2.0` = dura el doble). Virtualizado, el deterioro queda congelado | ✅ v0.2 |
 | `permitir_ropa_con_items` | `true` | Permite guardar mochilas/ropa **con items adentro**, solo dentro de barriles 3xor (vanilla lo bloquea) | ✅ v0.2 |
 | `blacklist` | `[]` | Classnames que NO se pueden guardar en los barriles | ✅ v0.2 |
-| `cooldown_abrir_segundos` | `5` | Anti-dupe: segundos de espera para volver a abrir el mismo barril. `0` = sin cooldown | ✅ v0.2 |
+| `cooldown_abrir_segundos` | `3` | Anti-dupe: segundos de espera para volver a abrir el mismo barril. `0` = sin cooldown | ✅ v0.2 |
 | `stack_municion` | auto | **Una entrada por cada bala del juego** → stack máximo. La lista se auto-completa al arrancar (Fase 3) con todas las municiones detectadas (vanilla + mods); después editás la que quieras | ✅ v0.2 |
 | `stack_municion_default` | `100` | Valor de relleno con el que se auto-agregan las balas a `stack_municion` (nuevas balas de updates/mods entran solas con este valor) | ✅ v0.2 |
 | `auto_stack` | `true` | Las balas que recogés se fusionan solas con las pilas que ya tenés | ✅ v0.2 |

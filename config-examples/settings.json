@@ -5,7 +5,7 @@
     "multiplicador_comida": 2.0,
     "permitir_ropa_con_items": true,
     "blacklist": [],
-    "cooldown_abrir_segundos": 5,
+    "cooldown_abrir_segundos": 3,
     "stack_municion_default": 100,
     "stack_municion": {
         "Ammo_762x39": 100,
