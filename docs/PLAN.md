@@ -45,6 +45,7 @@ Obtención: spawn como loot (`types.xml`) + entrega por admins/eventos. **No** s
 - `blacklist`: items que no entran al barril.
 - `permitir_ropa_con_items`: mochilas/ropa con cosas adentro, solo en barriles 3xor (configurable).
 - **Stack de munición** global: `stack_municion_default` (100) + override por classname en `stack_municion`. Solo balas sueltas, bolts y flechas. Excluidos: cajas de munición, granadas 40 mm, granadas de mano (explosiva/humo/gas). Técnica: override de `GetQuantityMax` leyendo el JSON; plan B = valores fijos en config.cpp si el enfoque dinámico da problemas de split/persistencia.
+- **Auto-stack al recoger** (`auto_stack`, default true): cuando una pila de balas entra al inventario del jugador, el server la fusiona automáticamente con las pilas existentes del mismo tipo que tengan espacio (hasta el stack máximo). Mismo alcance que el punto anterior: solo balas sueltas/bolts/flechas. Técnica: hook en `OnInventoryEnter` de las pilas de munición (server-side).
 
 ### Fase 4 — Test de carga y release
 - Test en server local con cientos de items.

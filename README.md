@@ -21,6 +21,7 @@ Mod de almacenamiento para **DayZ** (cliente + servidor): barriles de gran capac
 - 🔜 **Anti-dupe** (Fase 3): ID único por barril, detección de duplicados al arranque, cooldowns y logs para admins.
 - 🔜 **Mochilas/ropa con items adentro** (Fase 3): solo dentro de barriles 3xor, activable por config.
 - 🔜 **Stacks de munición configurables** (Fase 3): default 100 por tipo, ajustable por classname. Solo balas sueltas/bolts/flechas (sin cajas ni granadas).
+- 🔜 **Auto-stack al recoger** (Fase 3): las balas que levantás se fusionan solas con las pilas que ya tenés en el inventario.
 
 Roadmap completo y decisiones de diseño: [`docs/PLAN.md`](docs/PLAN.md)
 
