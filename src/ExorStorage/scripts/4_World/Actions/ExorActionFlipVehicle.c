@@ -28,7 +28,9 @@ class ExorActionFlipVehicle : ActionContinuousBase
 	override void CreateConditionComponents()
 	{
 		m_ConditionItem = new CCINone;
-		m_ConditionTarget = new CCTObject(UAMaxDistances.DEFAULT);
+		// 4 m de alcance: permite voltear parado a distancia segura, desde
+		// cualquier lado, sin estar pegado al chasis (el auto cae al girar)
+		m_ConditionTarget = new CCTObject(4.0);
 	}
 
 	override bool HasProgress()
