@@ -161,7 +161,31 @@ class ExorVO_Manager
 		// Diagnostico: las primeras 3 corridas y despues 1 vez por minuto
 		if (m_WakeRuns <= 3 || m_WakeRuns % 12 == 0)
 		{
-			Print(string.Format("%1 WakeTick #%2: %3 vehiculos (%4 dormidos), radio=%5", ExorStorageConstants.LOG, m_WakeRuns, m_Vehicles.Count(), dormidos, settings.vehiculos_despertar_metros));
+			array<Man> players = new array<Man>;
+			GetGame().GetPlayers(players);
+			string extra = "sin dormidos";
+			for (i = 0; i < m_Vehicles.Count(); i++)
+			{
+				CarScript primero = m_Vehicles.Get(i);
+				if (primero && primero.ExorIsSleeping())
+				{
+					vector carPos = primero.GetPosition();
+					float minDist = -1;
+					int j;
+					for (j = 0; j < players.Count(); j++)
+					{
+						Man pj = players.Get(j);
+						if (!pj)
+							continue;
+						float d = vector.Distance(pj.GetPosition(), carPos);
+						if (minDist < 0 || d < minDist)
+							minDist = d;
+					}
+					extra = string.Format("dormido[0]=%1 pos=%2 distMin=%3", primero.GetType(), carPos.ToString(), minDist);
+					break;
+				}
+			}
+			Print(string.Format("%1 WakeTick #%2: %3 veh (%4 dormidos) radio=%5 jugadores=%6 | %7", ExorStorageConstants.LOG, m_WakeRuns, m_Vehicles.Count(), dormidos, settings.vehiculos_despertar_metros, players.Count(), extra));
 		}
 	}
 

@@ -83,8 +83,18 @@ class ExorActionFlipVehicle : ActionContinuousBase
 			return;
 
 		// CRITICO: despertar primero — con la fisica dormida el cambio de
-		// orientacion no se replica al cliente
+		// orientacion no se replica al cliente. El giro se difiere 300 ms
+		// porque la fisica tarda en reactivarse tras DisableSimulation(false)
 		car.ExorWake();
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorActionFlipVehicle.DoFlip, 300, false, car);
+	}
+
+	static void DoFlip(CarScript car)
+	{
+		if (!car)
+			return;
+		if (!ExorIsFlipped(car))
+			return;
 
 		// Enderezar: conservar la direccion (yaw), anular vuelco (pitch/roll)
 		vector ori = car.GetOrientation();
@@ -107,7 +117,8 @@ class ExorActionFlipVehicle : ActionContinuousBase
 		car.SetOrientation(ori);
 		SetVelocity(car, vector.Zero);
 		dBodySetAngularVelocity(car, vector.Zero);
+		dBodyActive(car, ActiveState.ACTIVE);
 
-		Print(string.Format("%1 Vehiculo %2 volteado a posicion natural", ExorStorageConstants.LOG, car.GetType()));
+		Print(string.Format("%1 Vehiculo %2 volteado a posicion natural en %3", ExorStorageConstants.LOG, car.GetType(), pos.ToString()));
 	}
 }
