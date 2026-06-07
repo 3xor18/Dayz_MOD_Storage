@@ -1,0 +1,13 @@
+# Salida de build
+dist/
+
+# Assets extraidos del juego (propiedad de Bohemia, no se redistribuyen)
+_vanilla_extract/
+
+# Python
+__pycache__/
+*.pyc
+
+# Varios
+Thumbs.db
+desktop.ini

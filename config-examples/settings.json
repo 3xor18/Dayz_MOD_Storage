@@ -1,0 +1,14 @@
+{
+    "version": 1,
+    "virtualizar_minutos": 30,
+    "multiplicador_comida": 2.0,
+    "permitir_ropa_con_items": true,
+    "blacklist": [],
+    "cooldown_abrir_segundos": 5,
+    "stack_municion_default": 100,
+    "stack_municion": {
+        "Ammo_762x39": 100,
+        "Ammo_556x45": 100,
+        "Ammo_HuntingBolt": 25
+    }
+}
