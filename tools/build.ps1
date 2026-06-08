@@ -35,7 +35,20 @@ Write-Host "[3/3] Empaquetando PBO..." -ForegroundColor Cyan
 if ($LASTEXITCODE -ne 0) { throw "pack_pbo.py fallo" }
 
 # mod.cpp para la carpeta del mod (Workshop / launcher)
-Copy-Item "$repo\mod\mod.cpp" "$repo\dist\@3xor_Vanilla_Optimization\mod.cpp" -Force
+$dist = "$repo\dist\@3xor_Vanilla_Optimization"
+Copy-Item "$repo\mod\mod.cpp" "$dist\mod.cpp" -Force
+
+# Firmar el PBO (obligatorio para mods de cliente; si no, BattlEye kickea)
+$ds = "D:\SteamLibrary\steamapps\common\DayZ Tools\Bin\DsUtils\DSSignFile.exe"
+$privKey = "$repo\keys\3xorVO.biprivatekey"
+if ((Test-Path $ds) -and (Test-Path $privKey)) {
+    Write-Host "[firma] Firmando PBO..." -ForegroundColor Cyan
+    & $ds $privKey "$dist\addons\ExorStorage.pbo"
+    New-Item -ItemType Directory -Force "$dist\keys" | Out-Null
+    Copy-Item "$repo\keys\3xorVO.bikey" "$dist\keys\3xorVO.bikey" -Force
+} else {
+    Write-Host "[firma] OMITIDA (falta DSSignFile o la llave privada)" -ForegroundColor Yellow
+}
 
 Write-Host ""
-Write-Host "Build OK -> $repo\dist\@3xor_Vanilla_Optimization" -ForegroundColor Green
+Write-Host "Build OK -> $dist" -ForegroundColor Green

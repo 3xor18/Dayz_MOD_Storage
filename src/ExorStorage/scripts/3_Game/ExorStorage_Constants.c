@@ -4,7 +4,7 @@
 class ExorStorageConstants
 {
 	static const string MOD_NAME = "3xor_Vanilla_Optimization";
-	static const string MOD_VERSION = "0.2.0";
+	static const string MOD_VERSION = "1.0.0";
 	static const string LOG = "[3xorVO]";
 
 	// Config en el profile del server (se crea sola con defaults al primer arranque)

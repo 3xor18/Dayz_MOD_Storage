@@ -1,6 +1,9 @@
 # Salida de build
 dist/
 
+# Llave privada de firma: NUNCA subir (quien la tenga puede falsificar tu mod)
+keys/*.biprivatekey
+
 # Assets extraidos del juego (propiedad de Bohemia, no se redistribuyen)
 _vanilla_extract/
 

@@ -141,4 +141,7 @@ El resultado queda en `dist/@3xor_Vanilla_Optimization/` listo para copiar al se
 
 ## Estado
 
-**v0.2.0 — Fases 1, 2, 2.5 y 3 implementadas** (en testing en server local). Aún no publicado en Workshop. Queda: test de carga, firma de PBOs y publicación (Fase 4).
+**v1.0.0 — completo y verificado en server local.** Todos los sistemas probados in-game: barril (virtualización, nested cargo, anti-dupe, comida, empaquetado, indestructible/no-lockeable), vehículos (dormir/despertar/voltear), munición (stack 100, auto-stack, spawn 15-65). PBO firmado, listo para Workshop.
+
+### Firma
+El PBO se firma en el build con la llave `keys/3xorVO.biprivatekey` (esa llave **no** está en el repo — es privada). La `.bikey` pública viaja con el mod en `keys/` y debe copiarse a la carpeta `keys/` del server.
