@@ -35,20 +35,6 @@ class ExorVO_ContainerFile
 	}
 }
 
-// Trabajo de relleno diferido: llenar un contenedor recien creado un instante
-// despues, cuando su inventario ya esta inicializado
-class ExorVO_RestoreJob
-{
-	EntityAI parent;
-	vector fallbackPos;
-	ref array<ref ExorVO_ItemData> children;
-
-	void ExorVO_RestoreJob()
-	{
-		children = new array<ref ExorVO_ItemData>;
-	}
-}
-
 class ExorVO_Serializer
 {
 	// ------------------------- CAPTURA -------------------------
@@ -111,22 +97,14 @@ class ExorVO_Serializer
 	}
 
 	// ------------------------- RESTAURACION -------------------------
-	// Mantiene vivos los trabajos de relleno diferido hasta que se procesan
-	static ref array<ref ExorVO_RestoreJob> s_PendingJobs = new array<ref ExorVO_RestoreJob>;
-
-	static EntityAI RestoreItem(ExorVO_ItemData data, EntityAI parent, vector fallbackPos)
+	// CLAVE: un contenedor que YA esta dentro de otro contenedor (mochila en
+	// barril) NO acepta que le creen items adentro. Por eso cada item se ARMA
+	// COMPLETO en el piso (objeto del mundo = acepta cargo) y recien lleno se
+	// MUEVE entero adentro del parent (mover un contenedor lleno si esta
+	// permitido). Asi funciona el anidado arbitrario (mochila con cosas, etc).
+	static EntityAI RestoreItem(ExorVO_ItemData data, EntityAI parent, vector groundPos)
 	{
-		EntityAI e;
-
-		if (parent)
-		{
-			e = parent.GetInventory().CreateInInventory(data.type);
-		}
-		if (!e)
-		{
-			// No entro (inventario lleno o sin parent): al piso como fallback
-			e = EntityAI.Cast(GetGame().CreateObjectEx(data.type, fallbackPos, ECE_PLACE_ON_SURFACE));
-		}
+		EntityAI e = EntityAI.Cast(GetGame().CreateObjectEx(data.type, groundPos, ECE_PLACE_ON_SURFACE));
 		if (!e)
 		{
 			Print(string.Format("%1 ERROR restaurando item tipo '%2' (clase desconocida?)", ExorStorageConstants.LOG, data.type));
@@ -156,45 +134,30 @@ class ExorVO_Serializer
 			}
 		}
 
-		// Hijos (attachments + cargo anidado): DIFERIDOS. Un contenedor recien
-		// creado no tiene su inventario listo en el mismo frame; si llenamos ya,
-		// el contenido cae al piso. CreateInInventory elige solo slot o cargo.
-		if (data.attachments.Count() > 0 || data.cargo.Count() > 0)
+		// Llenar 'e' MIENTRAS esta en el piso (objeto del mundo, acepta cargo).
+		// Cada hijo tambien se arma en el piso y se mueve adentro de 'e'.
+		int i;
+		for (i = 0; i < data.attachments.Count(); i++)
 		{
-			ExorVO_RestoreJob job = new ExorVO_RestoreJob();
-			job.parent = e;
-			job.fallbackPos = fallbackPos;
-			int i;
-			for (i = 0; i < data.attachments.Count(); i++)
+			RestoreItem(data.attachments.Get(i), e, groundPos);
+		}
+		for (i = 0; i < data.cargo.Count(); i++)
+		{
+			RestoreItem(data.cargo.Get(i), e, groundPos);
+		}
+
+		// Mover 'e' (ya lleno) adentro del parent. ANY = prueba slot de
+		// attachment y luego cargo.
+		if (parent)
+		{
+			bool moved = parent.GetInventory().TakeEntityToInventory(InventoryMode.SERVER, FindInventoryLocationType.ANY, e);
+			if (!moved)
 			{
-				job.children.Insert(data.attachments.Get(i));
+				Print(string.Format("%1 AVISO: '%2' no entro en '%3' (lleno) -> queda en el piso", ExorStorageConstants.LOG, data.type, parent.GetType()));
 			}
-			for (i = 0; i < data.cargo.Count(); i++)
-			{
-				job.children.Insert(data.cargo.Get(i));
-			}
-			s_PendingJobs.Insert(job);
-			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorVO_Serializer.RunRestoreJob, 200, false, job);
 		}
 
 		return e;
-	}
-
-	static void RunRestoreJob(ExorVO_RestoreJob job)
-	{
-		if (job && job.parent)
-		{
-			int i;
-			for (i = 0; i < job.children.Count(); i++)
-			{
-				RestoreItem(job.children.Get(i), job.parent, job.fallbackPos);
-			}
-		}
-		int idx = s_PendingJobs.Find(job);
-		if (idx != -1)
-		{
-			s_PendingJobs.Remove(idx);
-		}
 	}
 
 	// ------------------------- UTILIDADES -------------------------
