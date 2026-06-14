@@ -21,6 +21,7 @@ class ExorStorageConstants
 	static const string CFG_SPAWNS    = "$profile:3xorVanillaOptimization\\spawns.json";
 	static const string CFG_MAPA      = "$profile:3xorVanillaOptimization\\mapa.json";
 	static const string CFG_ITEMS     = "$profile:3xorVanillaOptimization\\items.json";
+	static const string CFG_VIP       = "$profile:3xorVanillaOptimization\\vip.json";
 
 	// Datos del sistema party (Fase B+): grupos persistidos
 	static const string GROUPS_DIR = "$profile:3xorVanillaOptimization\\groups";

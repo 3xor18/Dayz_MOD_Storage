@@ -141,6 +141,17 @@ modded class TerritoryFlag
 			return;	// todavia protegida (p.ej. se reprogramo)
 		int slotId = InventorySlots.GetSlotIdFromString("Material_FPole_Flag");
 		GetInventory().SetSlotLock(slotId, false);
+
+		// Auto-cambiar la blanca por la bandera configurada (si hay una seteada).
+		// Borramos la blanca y creamos la nueva diferido (que se libere el slot).
+		ExorCfgPartyBandera bcfg = GetExorConfig().party.bandera;
+		EntityAI actual = FindAttachmentBySlotName("Material_FPole_Flag");
+		if (bcfg.bandera_blanca_cambiar_a != "" && actual && actual.IsKindOf("Flag_White"))
+		{
+			GetGame().ObjectDelete(actual);
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCreateConfiguredFlag, 300, false);
+		}
+
 		// avisar a los miembros online
 		ExorGroup g = ExorGroupManager.Get().FindById(m_ExorGroupId);
 		if (g)
@@ -153,6 +164,23 @@ modded class TerritoryFlag
 					pb.MessageImportant("Proteccion de bandera blanca terminada: ya pueden cambiarla por su bandera.");
 			}
 		}
+	}
+
+	// Crea la bandera configurada en el slot (tras haber borrado la blanca).
+	void ExorCreateConfiguredFlag()
+	{
+		if (!GetGame().IsServer())
+			return;
+		if (FindAttachmentBySlotName("Material_FPole_Flag"))
+			return;	// ya hay una bandera colgada
+		ExorCfgPartyBandera b = GetExorConfig().party.bandera;
+		if (b.bandera_blanca_cambiar_a == "")
+			return;
+		int slotId = InventorySlots.GetSlotIdFromString("Material_FPole_Flag");
+		GetInventory().SetSlotLock(slotId, false);
+		EntityAI fl = GetInventory().CreateAttachment(b.bandera_blanca_cambiar_a);
+		if (fl)
+			ExorAnimateCloth(m_ExorFlagRaised);	// respetar estado izada/bajada
 	}
 
 	// Programa el desbloqueo para cuando termine la ventana (o lo hace ya si vencio).

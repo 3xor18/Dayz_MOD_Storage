@@ -81,6 +81,13 @@ class ExorSpawn
 		if (!cfg.habilitado)
 			return vector.Zero;
 
+		// Gate VIP: dos toggles independientes (VIP / no-VIP) para spawnear en el mastil
+		bool vip = GetExorConfig().vip.IsVip(steamid);
+		if (vip && !cfg.permitir_spawn_mastil_vip)
+			return vector.Zero;
+		if (!vip && !cfg.permitir_spawn_mastil_no_vip)
+			return vector.Zero;
+
 		ExorGroup g = ExorGroupManager.Get().FindByPlayer(steamid);
 		if (!g)
 			return vector.Zero;
@@ -171,13 +178,24 @@ class ExorSpawn
 		for (i = 0; i < spawns.puntos.Count(); i++)
 			dto.nombres.Insert(spawns.puntos.Get(i).nombre);
 
-		// opcion "mi base" si esta habilitada y el jugador tiene mastil
+		// opcion "mi base" si esta habilitada, el gate VIP lo permite y el jugador tiene mastil
 		dto.base_enabled = false;
-		if (GetExorConfig().party.respawn_base.habilitado)
+		ExorCfgPartyRespawnBase rb = GetExorConfig().party.respawn_base;
+		if (rb.habilitado)
 		{
-			ExorGroup g = ExorGroupManager.Get().FindByPlayer(ExorGroupManager.SteamId(player));
-			if (g && ExorTerritoryManager.Get().FindMastByGroup(g.id))
-				dto.base_enabled = true;
+			string sidBase = ExorGroupManager.SteamId(player);
+			bool vipBase = GetExorConfig().vip.IsVip(sidBase);
+			bool permitido = false;
+			if (vipBase && rb.permitir_spawn_mastil_vip)
+				permitido = true;
+			if (!vipBase && rb.permitir_spawn_mastil_no_vip)
+				permitido = true;
+			if (permitido)
+			{
+				ExorGroup g = ExorGroupManager.Get().FindByPlayer(sidBase);
+				if (g && ExorTerritoryManager.Get().FindMastByGroup(g.id))
+					dto.base_enabled = true;
+			}
 		}
 
 		JsonSerializer js = new JsonSerializer();

@@ -189,12 +189,15 @@ class ExorCfgPartyBandera
 	bool bajada_bloquea_respawn = true;
 	bool bandera_blanca = false;
 	int bandera_blanca_minutos = 10080;   // proteccion en MINUTOS reales (10080 = 7 dias; 1440 = 1 dia; 1 = 1 min)
+	string bandera_blanca_cambiar_a = "Flag_DayZ";   // al expirar, reemplaza la blanca por esta bandera ("" = no cambiar, solo destrabar el slot)
 }
 
 class ExorCfgPartyRespawnBase
 {
-	bool habilitado = true;                  // respawn en tu base/mastil (configurable: false = off)
+	bool habilitado = true;                  // respawn en tu base/mastil (configurable: false = off) - interruptor maestro
 	int cooldown_segundos = 3600;            // 1 hora (configurable)
+	bool permitir_spawn_mastil_vip = true;   // los VIP (vip.json) pueden spawnear en el mastil
+	bool permitir_spawn_mastil_no_vip = false; // el resto (no-VIP) puede spawnear en el mastil
 }
 
 class ExorCfgParty
@@ -241,9 +244,12 @@ class ExorCfgParty
 		bandera.bajada_bloquea_respawn = true;
 		bandera.bandera_blanca = false;
 		bandera.bandera_blanca_minutos = 10080;
+		bandera.bandera_blanca_cambiar_a = "Flag_DayZ";
 
 		respawn_base.habilitado = true;
 		respawn_base.cooldown_segundos = 3600;
+		respawn_base.permitir_spawn_mastil_vip = true;
+		respawn_base.permitir_spawn_mastil_no_vip = false;
 	}
 }
 
@@ -358,6 +364,32 @@ class ExorClientCfgDTO
 	}
 }
 
+// ----------------------------------------------------------------------------
+// vip.json (lista de SteamIDs VIP). Hoy se usa para permitir spawn en el mastil;
+// queda listo para colgarle mas beneficios a futuro.
+// ----------------------------------------------------------------------------
+class ExorCfgVip
+{
+	ref TStringArray vip_steamids;
+
+	void ExorCfgVip()
+	{
+		vip_steamids = new TStringArray;
+	}
+
+	void SetDefaults()
+	{
+		vip_steamids = new TStringArray;
+	}
+
+	bool IsVip(string sid)
+	{
+		if (!vip_steamids)
+			return false;
+		return vip_steamids.Find(sid) > -1;
+	}
+}
+
 // ============================================================================
 // Manager de configuracion
 // ============================================================================
@@ -370,6 +402,7 @@ class ExorConfig
 	ref ExorCfgSpawns spawns;
 	ref ExorCfgMapa mapa;
 	ref ExorCfgItems items;
+	ref ExorCfgVip vip;
 	bool m_Synced;	// cliente: true cuando ya recibio la config del server
 
 	void ExorConfig()
@@ -381,6 +414,7 @@ class ExorConfig
 		spawns = new ExorCfgSpawns;
 		mapa = new ExorCfgMapa;
 		items = new ExorCfgItems;
+		vip = new ExorCfgVip;
 	}
 
 	// SERVER: serializa la config relevante al cliente a JSON
@@ -437,6 +471,7 @@ class ExorConfig
 		c.LoadSpawns();
 		c.LoadMapa();
 		c.LoadItems();
+		c.LoadVip();
 
 		return c;
 	}
@@ -503,6 +538,15 @@ class ExorConfig
 		else
 			items.SetDefaults();
 		JsonFileLoader<ExorCfgItems>.JsonSaveFile(ExorStorageConstants.CFG_ITEMS, items);
+	}
+
+	void LoadVip()
+	{
+		if (FileExist(ExorStorageConstants.CFG_VIP))
+			JsonFileLoader<ExorCfgVip>.JsonLoadFile(ExorStorageConstants.CFG_VIP, vip);
+		else
+			vip.SetDefaults();
+		JsonFileLoader<ExorCfgVip>.JsonSaveFile(ExorStorageConstants.CFG_VIP, vip);
 	}
 
 	// ---- migracion del settings.json monolitico viejo ----
