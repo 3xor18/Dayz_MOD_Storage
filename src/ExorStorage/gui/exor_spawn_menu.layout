@@ -1,0 +1,117 @@
+PanelWidgetClass ExorSpawnRoot
+{
+	visible 1
+	position 0 0
+	size 1 1
+	color 0 0 0 0.6
+	style rover_sim_colorable
+	hexactpos 0
+	vexactpos 0
+	hexactsize 0
+	vexactsize 0
+	{
+		PanelWidgetClass ExorSpawnPanel
+		{
+			visible 1
+			position 0.34 0.16
+			size 0.32 0.68
+			color 0.06 0.07 0.12 1
+			style rover_sim_colorable
+			halign left_ref
+			valign top_ref
+			hexactpos 0
+			vexactpos 0
+			hexactsize 0
+			vexactsize 0
+			{
+				TextWidgetClass ExorSpawnTitle
+				{
+					visible 1
+					position 0.02 0.025
+					size 0.96 0.08
+					hexactpos 0
+					vexactpos 0
+					hexactsize 0
+					vexactsize 0
+					color 1 1 1 1
+					text "Select Spawn"
+					font "gui/fonts/Metron-Bold58"
+					"exact text" 1
+					"exact text size" 28
+					"text halign" center
+					"text valign" center
+				}
+				ButtonWidgetClass ExorSpawnBtn0
+				{
+					visible 1
+					position 0.05 0.13
+					size 0.9 0.08
+					color 0.2 0.2 0.3 1
+					style rover_sim_colorable
+					text "punto 0"
+					font "gui/fonts/MetronBook16"
+				}
+				ButtonWidgetClass ExorSpawnBtn1
+				{
+					visible 1
+					position 0.05 0.23
+					size 0.9 0.08
+					color 0.2 0.2 0.3 1
+					style rover_sim_colorable
+					text "punto 1"
+					font "gui/fonts/MetronBook16"
+				}
+				ButtonWidgetClass ExorSpawnBtn2
+				{
+					visible 1
+					position 0.05 0.33
+					size 0.9 0.08
+					color 0.2 0.2 0.3 1
+					style rover_sim_colorable
+					text "punto 2"
+					font "gui/fonts/MetronBook16"
+				}
+				ButtonWidgetClass ExorSpawnBtn3
+				{
+					visible 1
+					position 0.05 0.43
+					size 0.9 0.08
+					color 0.2 0.2 0.3 1
+					style rover_sim_colorable
+					text "punto 3"
+					font "gui/fonts/MetronBook16"
+				}
+				ButtonWidgetClass ExorSpawnBtn4
+				{
+					visible 1
+					position 0.05 0.53
+					size 0.9 0.08
+					color 0.2 0.2 0.3 1
+					style rover_sim_colorable
+					text "punto 4"
+					font "gui/fonts/MetronBook16"
+				}
+				ButtonWidgetClass ExorSpawnBtn5
+				{
+					visible 1
+					position 0.05 0.63
+					size 0.9 0.08
+					color 0.2 0.2 0.3 1
+					style rover_sim_colorable
+					text "punto 5"
+					font "gui/fonts/MetronBook16"
+				}
+				ButtonWidgetClass ExorSpawnBtnBase
+				{
+					visible 1
+					position 0.05 0.8
+					size 0.9 0.08
+					color 0.12 0.4 0.12 1
+					style rover_sim_colorable
+					text "Mi base"
+					font "gui/fonts/MetronBook16"
+				}
+			}
+		}
+	}
+}

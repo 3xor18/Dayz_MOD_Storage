@@ -15,7 +15,7 @@ class ExorVO_Ammo
 			return false;
 		if (!e.IsInherited(Ammunition_Base))
 			return false;
-		ExorStorageSettings settings = GetExorStorageSettings();
+		ExorCfgMunicion settings = GetExorConfig().municion;
 		if (settings.municion_excluida.Find(e.GetType()) != -1)
 			return false;
 		return true;
@@ -29,7 +29,7 @@ class ExorVO_Ammo
 		if (!IsManagedAmmo(mag))
 			return;
 
-		ExorStorageSettings settings = GetExorStorageSettings();
+		ExorCfgMunicion settings = GetExorConfig().municion;
 		int mn = settings.spawn_municion_min_default;
 		int mx = settings.spawn_municion_max_default;
 		ExorMunicionSpawnRango rango;
@@ -76,7 +76,7 @@ class ExorVO_Ammo
 		if (!IsManagedAmmo(mag))
 			return;
 
-		ExorStorageSettings settings = GetExorStorageSettings();
+		ExorCfgMunicion settings = GetExorConfig().municion;
 		if (!settings.auto_stack)
 			return;
 		// Solo si la pila realmente quedo en el inventario del jugador

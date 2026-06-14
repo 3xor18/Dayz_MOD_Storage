@@ -1,0 +1,36 @@
+PanelWidgetClass ExorHudRoot
+{
+	visible 1
+	position 0.012 0.025
+	size 0.2 0.5
+	color 0 0 0 0
+	hexactpos 0
+	vexactpos 0
+	hexactsize 0
+	vexactsize 0
+	{
+		TextWidgetClass ExorHudName0 { visible 0 position 0 0.000 size 1 0.028 color 1 1 1 1 text "" font "gui/fonts/MetronBook16" "exact text" 1 "exact text size" 15 "text halign" left }
+		PanelWidgetClass ExorHudBarBg0 { visible 0 position 0 0.030 size 0.5 0.012 color 0.1 0.1 0.1 0.8 style rover_sim_colorable { PanelWidgetClass ExorHudBarFill0 { visible 1 position 0 0 size 1 1 color 0 1 0 1 style rover_sim_colorable } } }
+
+		TextWidgetClass ExorHudName1 { visible 0 position 0 0.060 size 1 0.028 color 1 1 1 1 text "" font "gui/fonts/MetronBook16" "exact text" 1 "exact text size" 15 "text halign" left }
+		PanelWidgetClass ExorHudBarBg1 { visible 0 position 0 0.090 size 0.5 0.012 color 0.1 0.1 0.1 0.8 style rover_sim_colorable { PanelWidgetClass ExorHudBarFill1 { visible 1 position 0 0 size 1 1 color 0 1 0 1 style rover_sim_colorable } } }
+
+		TextWidgetClass ExorHudName2 { visible 0 position 0 0.120 size 1 0.028 color 1 1 1 1 text "" font "gui/fonts/MetronBook16" "exact text" 1 "exact text size" 15 "text halign" left }
+		PanelWidgetClass ExorHudBarBg2 { visible 0 position 0 0.150 size 0.5 0.012 color 0.1 0.1 0.1 0.8 style rover_sim_colorable { PanelWidgetClass ExorHudBarFill2 { visible 1 position 0 0 size 1 1 color 0 1 0 1 style rover_sim_colorable } } }
+
+		TextWidgetClass ExorHudName3 { visible 0 position 0 0.180 size 1 0.028 color 1 1 1 1 text "" font "gui/fonts/MetronBook16" "exact text" 1 "exact text size" 15 "text halign" left }
+		PanelWidgetClass ExorHudBarBg3 { visible 0 position 0 0.210 size 0.5 0.012 color 0.1 0.1 0.1 0.8 style rover_sim_colorable { PanelWidgetClass ExorHudBarFill3 { visible 1 position 0 0 size 1 1 color 0 1 0 1 style rover_sim_colorable } } }
+
+		TextWidgetClass ExorHudName4 { visible 0 position 0 0.240 size 1 0.028 color 1 1 1 1 text "" font "gui/fonts/MetronBook16" "exact text" 1 "exact text size" 15 "text halign" left }
+		PanelWidgetClass ExorHudBarBg4 { visible 0 position 0 0.270 size 0.5 0.012 color 0.1 0.1 0.1 0.8 style rover_sim_colorable { PanelWidgetClass ExorHudBarFill4 { visible 1 position 0 0 size 1 1 color 0 1 0 1 style rover_sim_colorable } } }
+
+		TextWidgetClass ExorHudName5 { visible 0 position 0 0.300 size 1 0.028 color 1 1 1 1 text "" font "gui/fonts/MetronBook16" "exact text" 1 "exact text size" 15 "text halign" left }
+		PanelWidgetClass ExorHudBarBg5 { visible 0 position 0 0.330 size 0.5 0.012 color 0.1 0.1 0.1 0.8 style rover_sim_colorable { PanelWidgetClass ExorHudBarFill5 { visible 1 position 0 0 size 1 1 color 0 1 0 1 style rover_sim_colorable } } }
+
+		TextWidgetClass ExorHudName6 { visible 0 position 0 0.360 size 1 0.028 color 1 1 1 1 text "" font "gui/fonts/MetronBook16" "exact text" 1 "exact text size" 15 "text halign" left }
+		PanelWidgetClass ExorHudBarBg6 { visible 0 position 0 0.390 size 0.5 0.012 color 0.1 0.1 0.1 0.8 style rover_sim_colorable { PanelWidgetClass ExorHudBarFill6 { visible 1 position 0 0 size 1 1 color 0 1 0 1 style rover_sim_colorable } } }
+
+		TextWidgetClass ExorHudName7 { visible 0 position 0 0.420 size 1 0.028 color 1 1 1 1 text "" font "gui/fonts/MetronBook16" "exact text" 1 "exact text size" 15 "text halign" left }
+		PanelWidgetClass ExorHudBarBg7 { visible 0 position 0 0.450 size 0.5 0.012 color 0.1 0.1 0.1 0.8 style rover_sim_colorable { PanelWidgetClass ExorHudBarFill7 { visible 1 position 0 0 size 1 1 color 0 1 0 1 style rover_sim_colorable } } }
+	}
+}

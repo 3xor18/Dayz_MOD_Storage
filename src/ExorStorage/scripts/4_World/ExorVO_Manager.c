@@ -65,7 +65,8 @@ class ExorVO_Manager
 	// ------------------------- tick lento (30s) -------------------------
 	void Tick()
 	{
-		ExorStorageSettings settings = GetExorStorageSettings();
+		ExorConfig cfg = GetExorConfig();
+		ExorCfgVehiculos veh = cfg.vehiculos;
 		int now = GetGame().GetTime();
 		int i;
 
@@ -78,16 +79,16 @@ class ExorVO_Manager
 				m_Barrels.Remove(i);
 				continue;
 			}
-			barrel.ExorTick(now, settings);
+			barrel.ExorTick(now, cfg.storage);
 		}
 
 		// --- Vehiculos: dormir los inactivos ---
-		if (!settings.vehiculos_dormir)
+		if (!veh.vehiculos_dormir)
 			return;
-		if (settings.vehiculos_dormir_minutos <= 0)
+		if (veh.vehiculos_dormir_minutos <= 0)
 			return;
 
-		int sleepMs = settings.vehiculos_dormir_minutos * 60000;
+		int sleepMs = veh.vehiculos_dormir_minutos * 60000;
 		int dormidos = 0;
 		int totalDormidos = 0;
 		for (i = m_Vehicles.Count() - 1; i >= 0; i--)
@@ -112,9 +113,9 @@ class ExorVO_Manager
 			}
 			if (now - car.ExorGetLastActive() < sleepMs)
 				continue;
-			if (settings.vehiculos_excluidos.Find(car.GetType()) != -1)
+			if (veh.vehiculos_excluidos.Find(car.GetType()) != -1)
 				continue;
-			if (IsPlayerNear(car.GetPosition(), settings.vehiculos_despertar_metros))
+			if (IsPlayerNear(car.GetPosition(), veh.vehiculos_despertar_metros))
 				continue;
 
 			car.ExorSleep();
@@ -131,8 +132,8 @@ class ExorVO_Manager
 	// ------------------------- tick rapido (5s): despertar -------------------------
 	void WakeTick()
 	{
-		ExorStorageSettings settings = GetExorStorageSettings();
-		if (!settings.vehiculos_dormir)
+		ExorCfgVehiculos veh = GetExorConfig().vehiculos;
+		if (!veh.vehiculos_dormir)
 			return;
 
 		int i;
@@ -146,7 +147,7 @@ class ExorVO_Manager
 			}
 			if (!car.ExorIsSleeping())
 				continue;
-			if (IsPlayerNear(car.GetPosition(), settings.vehiculos_despertar_metros))
+			if (IsPlayerNear(car.GetPosition(), veh.vehiculos_despertar_metros))
 			{
 				car.ExorWake();
 			}

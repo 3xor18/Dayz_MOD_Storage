@@ -9,7 +9,7 @@ class ExorActionFlipVehicleCB : ActionContinuousBaseCB
 {
 	override void CreateActionComponent()
 	{
-		ExorStorageSettings settings = GetExorStorageSettings();
+		ExorCfgVehiculos settings = GetExorConfig().vehiculos;
 		m_ActionData.m_ActionComponent = new CAContinuousTime(settings.voltear_segundos);
 	}
 }
@@ -56,7 +56,7 @@ class ExorActionFlipVehicle : ActionContinuousBase
 		if (!car)
 			return false;
 
-		ExorStorageSettings settings = GetExorStorageSettings();
+		ExorCfgVehiculos settings = GetExorConfig().vehiculos;
 		if (!settings.voltear_vehiculos)
 			return false;
 		if (!ExorIsFlipped(car))

@@ -95,7 +95,7 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	{
 		if (GetGame().IsServer())
 		{
-			ExorStorageSettings settings = GetExorStorageSettings();
+			ExorCfgStorage settings = GetExorConfig().storage;
 			int now = GetGame().GetTime();
 			int cdMs = settings.cooldown_abrir_segundos * 1000;
 			if (cdMs > 0 && m_ExorLastCloseMs > 0 && now - m_ExorLastCloseMs < cdMs)
@@ -129,7 +129,7 @@ class Exor_Barrel_Base : Barrel_ColorBase
 
 	// ------------------------- virtualizacion (Fase 2) -------------------------
 	// Llamado por el manager cada tick
-	void ExorTick(int now, ExorStorageSettings settings)
+	void ExorTick(int now, ExorCfgStorage settings)
 	{
 		// Auto-cierre de barril dejado abierto
 		if (IsOpen())
@@ -232,8 +232,7 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	{
 		if (GetGame().IsServer() && item)
 		{
-			ExorStorageSettings settings = GetExorStorageSettings();
-			if (settings.blacklist.Find(item.GetType()) != -1)
+			if (GetExorConfig().storage.blacklist.Find(item.GetType()) != -1)
 				return false;
 		}
 		return super.CanReceiveItemIntoCargo(item);

@@ -12,7 +12,8 @@ class CfgPatches
 		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed"};
 		weapons[] = {};
 		requiredVersion = 0.1;
-		requiredAddons[] = {"DZ_Data", "DZ_Scripts", "DZ_Gear_Containers", "DZ_Weapons_Ammunition"};
+		// VERIFICAR: DZ_Gear_Camping aporta TerritoryFlag/TerritoryFlagKit (base del mastil)
+		requiredAddons[] = {"DZ_Data", "DZ_Scripts", "DZ_Gear_Containers", "DZ_Weapons_Ammunition", "DZ_Gear_Camping"};
 	};
 };
 
@@ -99,6 +100,7 @@ class CfgVehicles
 		descriptionShort = "Barril 3xor de 500 slots empaquetado. Tenelo en las manos y usa 'Desplegar barril' para colocarlo.";
 		hiddenSelectionsTextures[] = {"ExorStorage\data\exor_barrel_500_co.paa"};
 	};
+
 };
 
 // ============================================================================

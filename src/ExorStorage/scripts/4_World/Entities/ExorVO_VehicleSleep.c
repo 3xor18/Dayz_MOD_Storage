@@ -19,6 +19,10 @@ modded class CarScript
 			m_ExorLastActiveMs = GetGame().GetTime();
 			m_ExorSleeping = false;
 			ExorVO_Manager.RegisterVehicle(this);
+
+			// Fase H: quitar dano a vehiculos (no reciben dano de ningun tipo)
+			if (GetExorConfig().vehiculos.dano.quitar_dano_vehiculos)
+				SetAllowDamage(false);
 		}
 	}
 

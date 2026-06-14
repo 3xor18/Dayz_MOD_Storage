@@ -1,0 +1,37 @@
+PanelWidgetClass ExorMapRoot
+{
+	visible 1
+	position 0.07 0.05 size 0.86 0.9
+	color 0.02 0.02 0.05 0.96
+	style rover_sim_colorable
+	hexactpos 0
+	vexactpos 0
+	hexactsize 0
+	vexactsize 0
+	{
+		MapWidgetClass ExorMapWidget
+		{
+			visible 1
+			position 0.01 0.01 size 0.98 0.9
+			hexactpos 0
+			vexactpos 0
+			hexactsize 0
+			vexactsize 0
+		}
+		TextWidgetClass ExorMapHint
+		{
+			visible 1
+			position 0 0.93 size 1 0.05
+			hexactpos 0
+			vexactpos 0
+			hexactsize 0
+			vexactsize 0
+			color 1 1 1 1
+			text "M / ESC para cerrar   -   verde: party   -   amarillo: marcas"
+			font "gui/fonts/MetronBook16"
+			"exact text" 1
+			"exact text size" 16
+			"text halign" center
+		}
+	}
+}

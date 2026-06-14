@@ -12,10 +12,10 @@ modded class Edible_Base
 			EntityAI root = GetHierarchyRoot();
 			if (root && root.IsInherited(Exor_Barrel_Base))
 			{
-				ExorStorageSettings settings = GetExorStorageSettings();
-				if (settings.multiplicador_comida > 1)
+				float mult = GetExorConfig().storage.multiplicador_comida;
+				if (mult > 1)
 				{
-					delta = delta / settings.multiplicador_comida;
+					delta = delta / mult;
 				}
 			}
 		}

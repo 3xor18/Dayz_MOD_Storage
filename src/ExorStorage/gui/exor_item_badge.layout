@@ -1,0 +1,97 @@
+PanelWidgetClass ExorBadgeRoot
+{
+	visible 1
+	ignorepointer 1
+	position 0 0
+	size 324 46
+	hexactpos 1
+	vexactpos 1
+	hexactsize 1
+	vexactsize 1
+	color 0 0 0 0
+	style blank
+	{
+		ImageWidgetClass ExorRarityBg
+		{
+			visible 1
+			ignorepointer 1
+			position 0 0
+			size 150 20
+			hexactpos 1
+			vexactpos 1
+			hexactsize 1
+			vexactsize 1
+			color 0.5 0.3 0.7 1
+			image0 "set:dayz_gui image:ColorableBar"
+			mode blend
+			"src alpha" 0
+			filter 1
+			{
+				TextWidgetClass ExorRarityText
+				{
+					visible 1
+					ignorepointer 1
+					position 0 0
+					size 1 1
+					hexactpos 0
+					vexactpos 0
+					hexactsize 0
+					vexactsize 0
+					color 1 1 1 1
+					text "EPICO"
+					font "gui/fonts/sdf_MetronBook24"
+					"exact text" 1
+					"exact text size" 14
+					"text halign" center
+					"text valign" center
+				}
+			}
+		}
+		PanelWidgetClass ExorDuraBg
+		{
+			visible 1
+			ignorepointer 1
+			position 0 26
+			size 200 14
+			hexactpos 1
+			vexactpos 1
+			hexactsize 1
+			vexactsize 1
+			color 0.08 0.08 0.08 0.85
+			style rover_sim_colorable
+			{
+				PanelWidgetClass ExorDuraFill
+				{
+					visible 1
+					ignorepointer 1
+					position 0 0
+					size 1 1
+					hexactpos 0
+					vexactpos 0
+					hexactsize 0
+					vexactsize 0
+					color 0 1 0 1
+					style rover_sim_colorable
+				}
+			}
+		}
+		TextWidgetClass ExorDuraText
+		{
+			visible 1
+			ignorepointer 1
+			position 206 24
+			size 110 18
+			hexactpos 1
+			vexactpos 1
+			hexactsize 1
+			vexactsize 1
+			color 1 1 1 1
+			text "100%"
+			font "gui/fonts/sdf_MetronLight24"
+			"exact text" 1
+			"exact text size" 13
+			"text halign" left
+			"text valign" center
+		}
+	}
+}

@@ -9,7 +9,21 @@ class ExorStorageConstants
 
 	// Config en el profile del server (se crea sola con defaults al primer arranque)
 	static const string CONFIG_DIR = "$profile:3xorVanillaOptimization";
+	// settings.json monolitico viejo: solo se usa como ORIGEN de migracion
 	static const string CONFIG_PATH = "$profile:3xorVanillaOptimization\\settings.json";
+	static const string CONFIG_MIGRATED = "$profile:3xorVanillaOptimization\\settings.json.migrated";
+
+	// Config modular: 1 JSON por modulo (Fase A)
+	static const string CFG_STORAGE   = "$profile:3xorVanillaOptimization\\storage.json";
+	static const string CFG_VEHICULOS = "$profile:3xorVanillaOptimization\\vehiculos.json";
+	static const string CFG_MUNICION  = "$profile:3xorVanillaOptimization\\municion.json";
+	static const string CFG_PARTY     = "$profile:3xorVanillaOptimization\\party.json";
+	static const string CFG_SPAWNS    = "$profile:3xorVanillaOptimization\\spawns.json";
+	static const string CFG_MAPA      = "$profile:3xorVanillaOptimization\\mapa.json";
+	static const string CFG_ITEMS     = "$profile:3xorVanillaOptimization\\items.json";
+
+	// Datos del sistema party (Fase B+): grupos persistidos
+	static const string GROUPS_DIR = "$profile:3xorVanillaOptimization\\groups";
 
 	// Datos de virtualizacion (contenido de barriles)
 	static const string STORAGE_DIR = "$profile:3xorVanillaOptimization\\storage";

@@ -27,8 +27,7 @@ modded class Clothing
 		// unicamente cuando el destino es un barril 3xor
 		if (ExorVO_Helpers.ParentIsExorBarrel(parent))
 		{
-			ExorStorageSettings settings = GetExorStorageSettings();
-			if (settings.permitir_ropa_con_items)
+			if (GetExorConfig().storage.permitir_ropa_con_items)
 				return true;
 		}
 		return super.CanPutInCargo(parent);
