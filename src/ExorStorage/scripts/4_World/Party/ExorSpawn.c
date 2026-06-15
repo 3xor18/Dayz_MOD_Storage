@@ -12,8 +12,15 @@
 class ExorSpawnMenuDTO
 {
 	ref TStringArray nombres;
-	bool base_enabled;
-	void ExorSpawnMenuDTO() { nombres = new TStringArray; }
+	ref array<int> punto_cd_seg;  // por punto: segundos restantes de cooldown (0 = disponible)
+	bool base_enabled;            // mostrar el boton "Mi base" (permitido + tiene mastil)
+	int base_cd_seg;              // segundos restantes de cooldown de base (0 = disponible)
+	bool base_flag_down;          // bandera abajo y eso bloquea el respawn en base
+	void ExorSpawnMenuDTO()
+	{
+		nombres = new TStringArray;
+		punto_cd_seg = new array<int>;
+	}
 }
 
 // Cache cliente con la ultima lista recibida (la lee el menu).
@@ -150,6 +157,43 @@ class ExorSpawn
 		return PuntoToPos(chosen);
 	}
 
+	// ------------------------- cooldowns (peek, NO mutan) -------------------------
+	// Segundos restantes de cooldown para spawnear en base (0 = disponible ya).
+	static int BaseCdRemainingSec(string sid)
+	{
+		Ensure();
+		ExorCfgPartyRespawnBase cfg = GetExorConfig().party.respawn_base;
+		if (cfg.cooldown_segundos <= 0)
+			return 0;
+		int last;
+		if (!s_LastBaseMs.Find(sid, last))
+			return 0;
+		int rem = (cfg.cooldown_segundos * 1000) - (GetGame().GetTime() - last);
+		if (rem <= 0)
+			return 0;
+		return rem / 1000;
+	}
+
+	// Segundos restantes de cooldown del punto 'idx' para 'sid' (0 = disponible ya).
+	static int PointCdRemainingSec(string sid, int idx)
+	{
+		Ensure();
+		ExorCfgSpawns spawns = GetExorConfig().spawns;
+		if (idx < 0 || idx >= spawns.puntos.Count())
+			return 0;
+		int cdSec = spawns.puntos.Get(idx).cooldown_segundos;
+		if (cdSec <= 0)
+			return 0;
+		int last;
+		string key = string.Format("%1|%2", sid, idx);
+		if (!s_LastPointMs.Find(key, last))
+			return 0;
+		int rem = (cdSec * 1000) - (GetGame().GetTime() - last);
+		if (rem <= 0)
+			return 0;
+		return rem / 1000;
+	}
+
 	// Posicion final de un punto: aplica el offset aleatorio (distancia_random) + suelo.
 	static vector PuntoToPos(ExorSpawnPunto pt)
 	{
@@ -173,17 +217,23 @@ class ExorSpawn
 		if (!spawns.habilitado || spawns.puntos.Count() == 0)
 			return;	// nada para elegir -> queda el spawn vanilla
 
+		string sidBase = ExorGroupManager.SteamId(player);
+
 		ExorSpawnMenuDTO dto = new ExorSpawnMenuDTO();
 		int i;
 		for (i = 0; i < spawns.puntos.Count(); i++)
+		{
 			dto.nombres.Insert(spawns.puntos.Get(i).nombre);
+			dto.punto_cd_seg.Insert(PointCdRemainingSec(sidBase, i));	// 0 = disponible
+		}
 
 		// opcion "mi base" si esta habilitada, el gate VIP lo permite y el jugador tiene mastil
 		dto.base_enabled = false;
+		dto.base_cd_seg = 0;
+		dto.base_flag_down = false;
 		ExorCfgPartyRespawnBase rb = GetExorConfig().party.respawn_base;
 		if (rb.habilitado)
 		{
-			string sidBase = ExorGroupManager.SteamId(player);
 			bool vipBase = GetExorConfig().vip.IsVip(sidBase);
 			bool permitido = false;
 			if (vipBase && rb.permitir_spawn_mastil_vip)
@@ -193,8 +243,17 @@ class ExorSpawn
 			if (permitido)
 			{
 				ExorGroup g = ExorGroupManager.Get().FindByPlayer(sidBase);
-				if (g && ExorTerritoryManager.Get().FindMastByGroup(g.id))
-					dto.base_enabled = true;
+				if (g)
+				{
+					TerritoryFlag mast = ExorTerritoryManager.Get().FindMastByGroup(g.id);
+					if (mast)
+					{
+						dto.base_enabled = true;
+						dto.base_cd_seg = BaseCdRemainingSec(sidBase);
+						if (GetExorConfig().party.bandera.bajada_bloquea_respawn && !mast.ExorIsFlagRaised())
+							dto.base_flag_down = true;
+					}
+				}
 			}
 		}
 

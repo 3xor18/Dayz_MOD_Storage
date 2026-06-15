@@ -52,6 +52,15 @@ modded class TerritoryFlag
 		}
 	}
 
+	// Re-aplica la animacion de la tela segun el estado izada/bajada persistido.
+	// La usa ExorPostInit tras cargar (con reintentos por si la tela tarda en colgar).
+	void ExorReapplyFlagVisual()
+	{
+		if (!GetGame().IsServer())
+			return;
+		ExorAnimateCloth(m_ExorFlagRaised);
+	}
+
 	// Anima la tela fisica (si hay una colgada) para que coincida con el estado.
 	// phase 0 = arriba (izada), phase 1 = abajo (bajada) [vanilla esta invertido].
 	void ExorAnimateCloth(bool raised)
@@ -254,6 +263,12 @@ modded class TerritoryFlag
 			ExorTerritoryManager.Get().SyncToAll();
 			SetSynchDirty();
 			ExorScheduleWhiteFlagExpiry();
+			// Re-aplicar la animacion de la tela para que coincida con el estado
+			// IZADA/BAJADA persistido (si no, tras reiniciar se ve siempre abajo).
+			// Reintentos por si la tela todavia no cargo como attachment.
+			ExorReapplyFlagVisual();
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorReapplyFlagVisual, 2000, false);
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorReapplyFlagVisual, 5000, false);
 			return;
 		}
 

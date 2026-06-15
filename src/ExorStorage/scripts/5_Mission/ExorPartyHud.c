@@ -112,6 +112,7 @@ modded class MissionGameplay
 	ref ExorPartyHud m_ExorHud;
 	ref ExorNameplates m_ExorPlates;
 	ref ExorMarkersHud m_ExorMarks;
+	ref ExorKillfeed m_ExorKf;
 	float m_ExorHudAccum;
 	bool m_ExorTPrev;
 	bool m_ExorYPrev;
@@ -124,6 +125,8 @@ modded class MissionGameplay
 			return new ExorPartyMenu();
 		if (id == ExorMenuIDs.MAP)
 			return new ExorMapMenu();
+		if (id == ExorMenuIDs.SERVERINFO)
+			return new ExorServerInfoMenu();
 		return super.CreateScriptedMenu(id);
 	}
 
@@ -159,6 +162,14 @@ modded class MissionGameplay
 			m_ExorMarks.Create();
 		}
 		m_ExorMarks.Update();
+
+		// Killfeed: crear una vez y barrer lineas vencidas cada frame
+		if (!m_ExorKf)
+		{
+			m_ExorKf = new ExorKillfeed();
+			m_ExorKf.Create();
+		}
+		m_ExorKf.Update();
 
 		// Tecla M -> abrir/cerrar el mapa del party (lee UAMapToggle, accion existente)
 		if (GetExorConfig().mapa.abrir_con_m && !GetGame().IsInventoryOpen())

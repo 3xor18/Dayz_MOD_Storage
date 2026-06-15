@@ -1,0 +1,15 @@
+PanelWidgetClass si_row
+{
+	visible 1
+	position 0 0
+	size 1 30
+	hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 1
+	color 1 1 1 0.04
+	{
+		TextWidgetClass col_name { position 0.01 0 size 0.29 1 color 0.95 0.95 0.95 1 text "" font "gui/fonts/sdf_MetronBook24" "text halign" left "text valign" center "exact text" 1 "exact text size" 18 }
+		TextWidgetClass col_kills { position 0.31 0 size 0.12 1 color 0.6 1 0.6 1 text "" font "gui/fonts/sdf_MetronBook24" "text halign" center "text valign" center "exact text" 1 "exact text size" 18 }
+		TextWidgetClass col_deaths { position 0.435 0 size 0.12 1 color 1 0.7 0.7 1 text "" font "gui/fonts/sdf_MetronBook24" "text halign" center "text valign" center "exact text" 1 "exact text size" 18 }
+		TextWidgetClass col_suic { position 0.56 0 size 0.13 1 color 1 0.85 0.5 1 text "" font "gui/fonts/sdf_MetronBook24" "text halign" center "text valign" center "exact text" 1 "exact text size" 18 }
+		TextWidgetClass col_dist { position 0.70 0 size 0.295 1 color 0.85 0.9 1 1 text "" font "gui/fonts/sdf_MetronBook24" "text halign" left "text valign" center "exact text" 1 "exact text size" 18 }
+	}
+}

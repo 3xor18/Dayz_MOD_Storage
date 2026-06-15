@@ -16,6 +16,7 @@ modded class MissionServer
 		ExorVO_Manager.Start();
 		ExorGroupManager.Init();
 		ExorPartyLive.Start();
+		ExorRaidLog.Init();	// crea raidlog\ y purga archivos mas viejos que log_dias_retener
 
 		// OJO: este compilador no acepta expresiones partidas en varias lineas (ni ternarios)
 		Print(string.Format("%1 %2 v%3 inicializado", ExorStorageConstants.LOG, ExorStorageConstants.MOD_NAME, ExorStorageConstants.MOD_VERSION));
@@ -28,16 +29,44 @@ modded class MissionServer
 	override void OnClientReadyEvent(PlayerIdentity identity, PlayerBase player)
 	{
 		super.OnClientReadyEvent(identity, player);
+		ExorAfterClientSpawned(player);
+	}
+
+	// RESPAWN (tras morir con un personaje EXISTENTE): re-sincronizar igual que al
+	// conectar (OnClientReadyEvent no se vuelve a disparar en respawn).
+	override void OnClientRespawnEvent(PlayerIdentity identity, PlayerBase player)
+	{
+		super.OnClientRespawnEvent(identity, player);
+		ExorAfterClientSpawned(player);
+	}
+
+	// Sincronizacion comun al estar el personaje listo (conexion / respawn / nuevo).
+	// Deriva la identidad del propio player para poder llamarse tambien diferido.
+	void ExorAfterClientSpawned(PlayerBase player)
+	{
+		if (!player)
+			return;
+		PlayerIdentity identity = player.GetIdentity();
 		ExorGroupManager.Get().OnPlayerConnected(player);
 		ExorTerritoryManager.Get().SyncToPlayer(player);
 
+		// #4b: si reaparece dentro de territorio ajeno, sacarlo al borde (diferido).
+		ExorAntiRaid.KickFromEnemyBaseIfNeeded(player);
+
 		// Enviar al cliente la config relevante (toggles party/mapa/items) para
 		// que respete los JSON del admin aunque no los tenga en su perfil local.
-		if (player && identity)
+		if (identity)
 		{
 			string cfgJson = GetExorConfig().BuildClientJson();
 			player.RPCSingleParam(ExorRPC.CONFIG_SYNC, new Param1<string>(cfgJson), true, identity);
 		}
+	}
+
+	// #4a: al desconectarse, si esta dentro de territorio ajeno, dejar rastro forense.
+	override void OnClientDisconnectedEvent(PlayerIdentity identity, PlayerBase player, int logoutTime, bool authFailed)
+	{
+		ExorAntiRaid.OnDisconnectInEnemyTerritory(player, identity);
+		super.OnClientDisconnectedEvent(identity, player, logoutTime, authFailed);
 	}
 
 	// Personaje NUEVO (primer login O respawn por muerte): abrir la pantalla de
@@ -46,12 +75,27 @@ modded class MissionServer
 	{
 		PlayerBase player = super.OnClientNewEvent(identity, pos, ctx);
 		Print(string.Format("%1 OnClientNewEvent %2", ExorStorageConstants.LOG, identity.GetPlainId()));
+
+		// TEST: cuchillo al spawnear (suicidio/kills faciles al testear). Toggle en spawns.json.
+		if (player && GetExorConfig().spawns.dar_cuchillo_al_spawnear)
+		{
+			EntityAI cuchillo = player.GetInventory().CreateInInventory("CombatKnife");
+			if (!cuchillo)
+				cuchillo = player.GetHumanInventory().CreateInHands("CombatKnife");
+		}
 		ExorCfgSpawns spawns = GetExorConfig().spawns;
 		if (player && spawns.habilitado && spawns.puntos.Count() > 0)
 		{
 			Print(string.Format("%1 programando SPAWN_OPEN (5s) - puntos=%2", ExorStorageConstants.LOG, spawns.puntos.Count()));
 			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorDelayedSendOpen, 5000, false, player);
 		}
+
+		// Personaje NUEVO: OnClientReadyEvent NO se dispara, asi que sincronizamos
+		// el roster/territorio/config diferido (cuando el cliente ya cargo). Si no,
+		// el cliente queda sin roster y no aparecen "Invitar"/"Administrar party".
+		if (player)
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorAfterClientSpawned, 5000, false, player);
+
 		return player;
 	}
 

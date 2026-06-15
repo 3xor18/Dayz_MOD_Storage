@@ -200,6 +200,16 @@ class ExorCfgPartyRespawnBase
 	bool permitir_spawn_mastil_no_vip = false; // el resto (no-VIP) puede spawnear en el mastil
 }
 
+// Anti-raid / proteccion del territorio (todo server-side; el log es forense)
+class ExorCfgPartyProteccion
+{
+	bool bloquear_desmantelar_ajeno = true;       // #2: ajenos NO pueden desmantelar muros/torres en territorio que no es suyo
+	bool log_robo_contenedor = true;              // #3: loguear cuando un ajeno toma items dentro de territorio enemigo
+	bool log_desconexion_base_ajena = true;       // #4a: loguear si un ajeno se desloguea dentro de territorio enemigo
+	bool sacar_de_base_ajena_al_reconectar = true;// #4b: al reconectar dentro de territorio ajeno, teletransportar al borde
+	int log_dias_retener = 7;                     // dias que se conservan los archivos de raidlog (0 = nunca borrar)
+}
+
 class ExorCfgParty
 {
 	int version = 1;
@@ -207,6 +217,7 @@ class ExorCfgParty
 	ref ExorCfgPartyGrupo grupo;
 	ref ExorCfgPartyBandera bandera;
 	ref ExorCfgPartyRespawnBase respawn_base;
+	ref ExorCfgPartyProteccion proteccion;
 
 	void ExorCfgParty()
 	{
@@ -214,6 +225,7 @@ class ExorCfgParty
 		grupo = new ExorCfgPartyGrupo;
 		bandera = new ExorCfgPartyBandera;
 		respawn_base = new ExorCfgPartyRespawnBase;
+		proteccion = new ExorCfgPartyProteccion;
 	}
 
 	void SetDefaults()
@@ -250,6 +262,12 @@ class ExorCfgParty
 		respawn_base.cooldown_segundos = 3600;
 		respawn_base.permitir_spawn_mastil_vip = true;
 		respawn_base.permitir_spawn_mastil_no_vip = false;
+
+		proteccion.bloquear_desmantelar_ajeno = true;
+		proteccion.log_robo_contenedor = true;
+		proteccion.log_desconexion_base_ajena = true;
+		proteccion.sacar_de_base_ajena_al_reconectar = true;
+		proteccion.log_dias_retener = 7;
 	}
 }
 
@@ -270,6 +288,7 @@ class ExorCfgSpawns
 {
 	int version = 1;
 	bool habilitado = true;
+	bool dar_cuchillo_al_spawnear = true;   // TEST: dar un cuchillo al personaje nuevo (suicidio facil al testear). Poner false en prod.
 	ref array<ref ExorSpawnPunto> puntos;
 
 	void ExorCfgSpawns()
@@ -281,6 +300,7 @@ class ExorCfgSpawns
 	{
 		version = 1;
 		habilitado = true;
+		dar_cuchillo_al_spawnear = true;
 		puntos.Clear();
 		// Punto de ejemplo (el admin define los suyos). Editar/reemplazar en spawns.json.
 		ExorSpawnPunto ej = new ExorSpawnPunto();
@@ -353,6 +373,7 @@ class ExorClientCfgDTO
 	ref ExorCfgItems items;
 	ref ExorCfgVehCamara veh_camara;	// camara por asiento (la aplica el cliente en HandleView)
 	ref ExorCfgVehInventario veh_inventario;	// ver ambos inventarios en el auto (cliente)
+	ref ExorCfgServerInfo serverinfo;	// panel de server info (texto de tabs)
 
 	void ExorClientCfgDTO()
 	{
@@ -361,6 +382,7 @@ class ExorClientCfgDTO
 		items = new ExorCfgItems;
 		veh_camara = new ExorCfgVehCamara;
 		veh_inventario = new ExorCfgVehInventario;
+		serverinfo = new ExorCfgServerInfo;
 	}
 }
 
@@ -390,6 +412,67 @@ class ExorCfgVip
 	}
 }
 
+// ----------------------------------------------------------------------------
+// killfeed.json (mensajes de muerte PvP / suicidio arriba a la derecha)
+// ----------------------------------------------------------------------------
+class ExorCfgKillfeed
+{
+	bool habilitado = true;            // master on/off del killfeed
+	int duracion_segundos = 6;         // cuanto dura cada linea en pantalla
+	int max_lineas = 5;                // maximo de lineas simultaneas (la mas vieja se va)
+	bool mostrar_suicidios = true;     // mostrar la linea "se ha suicidado"
+
+	void SetDefaults()
+	{
+		habilitado = true;
+		duracion_segundos = 6;
+		max_lineas = 5;
+		mostrar_suicidios = true;
+	}
+}
+
+// ----------------------------------------------------------------------------
+// serverinfo.json (panel "Información del server" desde ESC: tabs General/Reglas/Score)
+// El texto de General y Reglas lo escribe el admin aca. Se sincroniza al cliente.
+// ----------------------------------------------------------------------------
+class ExorCfgServerInfo
+{
+	bool habilitado = true;            // muestra el boton "Server Info" en el menu de ESC
+	string titulo = "Información del Server";
+	bool tab_general = true;
+	string general_titulo = "General";
+	ref TStringArray general_lineas;
+	bool tab_reglas = true;
+	string reglas_titulo = "Reglas";
+	ref TStringArray reglas_lineas;
+	bool tab_score = true;
+	string score_titulo = "Score";
+
+	void ExorCfgServerInfo()
+	{
+		general_lineas = new TStringArray;
+		reglas_lineas = new TStringArray;
+	}
+
+	void SetDefaults()
+	{
+		habilitado = true;
+		titulo = "Información del Server";
+		tab_general = true;
+		general_titulo = "General";
+		general_lineas = new TStringArray;
+		general_lineas.Insert("Bienvenido al server.");
+		general_lineas.Insert("Editá este texto en serverinfo.json (general_lineas).");
+		tab_reglas = true;
+		reglas_titulo = "Reglas";
+		reglas_lineas = new TStringArray;
+		reglas_lineas.Insert("1. No insultar.");
+		reglas_lineas.Insert("2. Editá las reglas en serverinfo.json (reglas_lineas).");
+		tab_score = true;
+		score_titulo = "Score";
+	}
+}
+
 // ============================================================================
 // Manager de configuracion
 // ============================================================================
@@ -403,6 +486,8 @@ class ExorConfig
 	ref ExorCfgMapa mapa;
 	ref ExorCfgItems items;
 	ref ExorCfgVip vip;
+	ref ExorCfgKillfeed killfeed;
+	ref ExorCfgServerInfo serverinfo;
 	bool m_Synced;	// cliente: true cuando ya recibio la config del server
 
 	void ExorConfig()
@@ -415,6 +500,8 @@ class ExorConfig
 		mapa = new ExorCfgMapa;
 		items = new ExorCfgItems;
 		vip = new ExorCfgVip;
+		killfeed = new ExorCfgKillfeed;
+		serverinfo = new ExorCfgServerInfo;
 	}
 
 	// SERVER: serializa la config relevante al cliente a JSON
@@ -426,6 +513,7 @@ class ExorConfig
 		d.items = items;
 		d.veh_camara = vehiculos.camara;
 		d.veh_inventario = vehiculos.inventario;
+		d.serverinfo = serverinfo;
 		JsonSerializer js = new JsonSerializer();
 		string data;
 		js.WriteToString(d, false, data);
@@ -451,6 +539,8 @@ class ExorConfig
 			c.vehiculos.camara = d.veh_camara;
 		if (d.veh_inventario)
 			c.vehiculos.inventario = d.veh_inventario;
+		if (d.serverinfo)
+			c.serverinfo = d.serverinfo;
 		c.m_Synced = true;
 	}
 
@@ -472,6 +562,8 @@ class ExorConfig
 		c.LoadMapa();
 		c.LoadItems();
 		c.LoadVip();
+		c.LoadKillfeed();
+		c.LoadServerInfo();
 
 		return c;
 	}
@@ -547,6 +639,24 @@ class ExorConfig
 		else
 			vip.SetDefaults();
 		JsonFileLoader<ExorCfgVip>.JsonSaveFile(ExorStorageConstants.CFG_VIP, vip);
+	}
+
+	void LoadKillfeed()
+	{
+		if (FileExist(ExorStorageConstants.CFG_KILLFEED))
+			JsonFileLoader<ExorCfgKillfeed>.JsonLoadFile(ExorStorageConstants.CFG_KILLFEED, killfeed);
+		else
+			killfeed.SetDefaults();
+		JsonFileLoader<ExorCfgKillfeed>.JsonSaveFile(ExorStorageConstants.CFG_KILLFEED, killfeed);
+	}
+
+	void LoadServerInfo()
+	{
+		if (FileExist(ExorStorageConstants.CFG_SERVERINFO))
+			JsonFileLoader<ExorCfgServerInfo>.JsonLoadFile(ExorStorageConstants.CFG_SERVERINFO, serverinfo);
+		else
+			serverinfo.SetDefaults();
+		JsonFileLoader<ExorCfgServerInfo>.JsonSaveFile(ExorStorageConstants.CFG_SERVERINFO, serverinfo);
 	}
 
 	// ---- migracion del settings.json monolitico viejo ----

@@ -119,17 +119,13 @@ class ExorTerritoryManager
 		}
 	}
 
-	// Chequeo autoritativo (server): puede 'player' colocar 'itemType' en 'pos'?
-	bool CanPlaceServer(PlayerBase player, vector pos, string itemType)
+	// Devuelve el mastil AJENO en cuyo radio cae 'pos' (o null si no hay ninguno o
+	// si 'pos' cae solo en territorio propio). 'player' puede ser null (= todo ajeno).
+	// Base reutilizable para: anti-construccion, anti-desmantelar y logs anti-raid.
+	TerritoryFlag FindEnemyTerritoryAt(PlayerBase player, vector pos)
 	{
 		if (!GetExorConfig().party.territorio.habilitado)
-			return true;	// territorio desactivado: sin restriccion
-		if (ExorTerritoryRules.IsBlacklisted(itemType))
-			return false;
-		if (ExorTerritoryRules.BuildNearAllowed())
-			return true;
-		if (ExorTerritoryRules.IsWhitelisted(itemType))
-			return true;
+			return null;
 
 		string myGroupId = "";
 		if (player)
@@ -149,8 +145,25 @@ class ExorTerritoryManager
 			if (m.ExorGetGroupId() == myGroupId && myGroupId != "")
 				continue;	// mi propio territorio
 			if (ExorTerritoryRules.Dist2D(pos, m.GetPosition()) <= radius)
-				return false;	// territorio ajeno
+				return m;	// territorio ajeno
 		}
+		return null;
+	}
+
+	// Chequeo autoritativo (server): puede 'player' colocar 'itemType' en 'pos'?
+	bool CanPlaceServer(PlayerBase player, vector pos, string itemType)
+	{
+		if (!GetExorConfig().party.territorio.habilitado)
+			return true;	// territorio desactivado: sin restriccion
+		if (ExorTerritoryRules.IsBlacklisted(itemType))
+			return false;
+		if (ExorTerritoryRules.BuildNearAllowed())
+			return true;
+		if (ExorTerritoryRules.IsWhitelisted(itemType))
+			return true;
+
+		if (FindEnemyTerritoryAt(player, pos))
+			return false;	// cae en territorio ajeno
 		return true;
 	}
 

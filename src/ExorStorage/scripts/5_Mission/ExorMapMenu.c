@@ -8,6 +8,7 @@ class ExorMapMenu extends UIScriptedMenu
 {
 	protected MapWidget m_Map;
 	protected bool m_MReleased;	// la M que abrio el mapa todavia esta apretada: esperar a soltarla
+	protected bool m_Centered;	// ya se centro el mapa en el jugador (1ra vez en Update)
 
 	override Widget Init()
 	{
@@ -16,12 +17,8 @@ class ExorMapMenu extends UIScriptedMenu
 			return null;
 		m_Map = MapWidget.Cast(layoutRoot.FindAnyWidget("ExorMapWidget"));
 
-		PlayerBase p = PlayerBase.Cast(GetGame().GetPlayer());
-		if (m_Map && p)
-		{
-			m_Map.SetMapPos(p.GetPosition());
-			m_Map.SetScale(0.25);
-		}
+		// El centrado real se hace en el 1er tick del Update (aca el widget aun no
+		// tiene tamaño, asi que SetMapPos no agarra y el mapa abre descentrado).
 		RefreshMarks();
 		return layoutRoot;
 	}
@@ -96,6 +93,19 @@ class ExorMapMenu extends UIScriptedMenu
 	override void Update(float timeslice)
 	{
 		super.Update(timeslice);
+
+		// Centrar + zoom en TU posicion la 1ra vez (ya con el mapa dimensionado).
+		if (!m_Centered && m_Map)
+		{
+			PlayerBase me = PlayerBase.Cast(GetGame().GetPlayer());
+			if (me)
+			{
+				m_Map.SetScale(0.18);
+				m_Map.SetMapPos(me.GetPosition());
+				m_Centered = true;
+			}
+		}
+
 		bool mDown = KeyState(KeyCode.KC_M) > 0;
 		if (!mDown)
 			m_MReleased = true;

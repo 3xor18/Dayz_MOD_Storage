@@ -27,6 +27,36 @@ class ExorRPC
 	static const int MARKER_ADD     = 49228;	// C -> S: poner marca en una posicion del mundo (x,y,z)
 	static const int MARKER_CLEAR   = 49229;	// C -> S: limpiar mis marcas
 	static const int CONFIG_SYNC    = 49230;	// S -> C: config relevante al cliente (toggles party/mapa/items)
+	static const int KILLFEED       = 49231;	// S -> C: evento de killfeed (muerte PvP / suicidio) a TODOS los clientes
+	static const int SCORE_REQ      = 49232;	// C -> S: pedir el leaderboard (al abrir el panel de server info)
+	static const int SCORE_DATA     = 49233;	// S -> C: leaderboard (JSON) para la tab Score
+}
+
+// DTO del killfeed: el server lo serializa a JSON y lo manda a todos los clientes.
+// Incluye duracion/max para que el cliente no necesite sincronizar config aparte.
+class ExorKfDTO
+{
+	string killer;   // nombre del que mato (vacio si suicidio)
+	string victim;   // nombre de la victima
+	string weapon;   // nombre del arma
+	int dist;        // distancia en metros
+	bool suicide;    // true = "se ha suicidado"
+	int dur;         // segundos que dura la linea
+	int max;         // maximo de lineas simultaneas
+}
+
+// Cola estatica de killfeed: el OnRPC (4_World) encola aca; la UI (5_Mission, que
+// se compila despues) la drena cada frame. Asi no rompemos el orden de modulos.
+class ExorKillfeedQueue
+{
+	static ref array<ref ExorKfDTO> s_Pending;
+
+	static void Enqueue(ExorKfDTO d)
+	{
+		if (!s_Pending)
+			s_Pending = new array<ref ExorKfDTO>;
+		s_Pending.Insert(d);
+	}
 }
 
 // ID del menu scripteado de seleccion de spawn (alto para no chocar con vanilla)
@@ -35,6 +65,36 @@ class ExorMenuIDs
 	static const int SPAWN = 47210;
 	static const int PARTY = 47211;
 	static const int MAP   = 47212;
+	static const int SERVERINFO = 47213;
+}
+
+// Una fila del leaderboard (stats por jugador). Server la guarda/persiste; se manda
+// al cliente como array JSON para la tab Score. Visible en 3_Game (server+cliente).
+class ExorStatRow
+{
+	string steamid;
+	string name;
+	int kills;
+	int deaths;
+	int suicides;
+	int max_dist;     // distancia (m) del kill PvP mas lejano
+	string max_weapon;// arma de ese kill mas lejano
+}
+
+class ExorStatsFile
+{
+	ref array<ref ExorStatRow> rows;
+
+	void ExorStatsFile()
+	{
+		rows = new array<ref ExorStatRow>;
+	}
+}
+
+// Cache cliente del leaderboard recibido (lo lee el menu de server info / tab Score).
+class ExorScoreClient
+{
+	static ref ExorStatsFile s_Data;
 }
 
 // Utilidad de tiempo real del server para el auto-kick por inactividad.

@@ -28,4 +28,17 @@ modded class ItemBase
 		}
 		return true;
 	}
+
+	// #3 (anti-raid): cuando este item entra al inventario de un jugador, si el
+	// jugador esta parado dentro de territorio AJENO y no es del party, se loguea
+	// "tomo X" para forense. Solo server. Fuera de territorio ajeno: no hace nada.
+	override void OnInventoryEnter(Man player)
+	{
+		super.OnInventoryEnter(player);
+		if (!GetGame() || !GetGame().IsServer())
+			return;
+		PlayerBase pb = PlayerBase.Cast(player);
+		if (pb)
+			ExorAntiRaid.OnPickupInEnemyTerritory(pb, this);
+	}
 }

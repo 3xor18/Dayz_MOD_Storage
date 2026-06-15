@@ -1,0 +1,87 @@
+PanelWidgetClass si_dim
+{
+	visible 1
+	position 0 0
+	size 1 1
+	color 0 0 0 0.6
+	style rover_sim_colorable
+	hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+	{
+		PanelWidgetClass si_root
+		{
+			visible 1
+			position 0.18 0.10
+			size 0.64 0.80
+			color 0.07 0.07 0.09 0.98
+			style rover_sim_colorable
+			hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+			{
+				TextWidgetClass si_title { position 0 0.015 size 1 0.06 color 1 1 1 1 text "Server Info" font "gui/fonts/sdf_MetronLight36" "text halign" center "text valign" center "exact text" 1 "exact text size" 30 }
+
+				ButtonWidgetClass close_btn { position 0.945 0.012 size 0.045 0.05 color 0 0 0 0
+					{
+						PanelWidgetClass close_btn_bg { ignorepointer 1 position 0 0 size 1 1 color 0.5 0.15 0.15 1 style rover_sim_colorable }
+						TextWidgetClass close_btn_label { ignorepointer 1 position 0 0 size 1 1 color 1 1 1 1 text "X" font "gui/fonts/sdf_MetronBook24" "text halign" center "text valign" center "exact text" 1 "exact text size" 22 }
+					}
+				}
+
+				ButtonWidgetClass tab_general { position 0.02 0.095 size 0.185 0.055 color 0 0 0 0
+					{
+						PanelWidgetClass tab_general_bg { ignorepointer 1 position 0 0 size 1 1 color 0.18 0.18 0.22 1 style rover_sim_colorable }
+						TextWidgetClass tab_general_label { ignorepointer 1 position 0 0 size 1 1 color 1 1 1 1 text "General" font "gui/fonts/sdf_MetronBook24" "text halign" center "text valign" center "exact text" 1 "exact text size" 20 }
+					}
+				}
+				ButtonWidgetClass tab_reglas { position 0.21 0.095 size 0.185 0.055 color 0 0 0 0
+					{
+						PanelWidgetClass tab_reglas_bg { ignorepointer 1 position 0 0 size 1 1 color 0.18 0.18 0.22 1 style rover_sim_colorable }
+						TextWidgetClass tab_reglas_label { ignorepointer 1 position 0 0 size 1 1 color 1 1 1 1 text "Reglas" font "gui/fonts/sdf_MetronBook24" "text halign" center "text valign" center "exact text" 1 "exact text size" 20 }
+					}
+				}
+				ButtonWidgetClass tab_score { position 0.40 0.095 size 0.185 0.055 color 0 0 0 0
+					{
+						PanelWidgetClass tab_score_bg { ignorepointer 1 position 0 0 size 1 1 color 0.18 0.18 0.22 1 style rover_sim_colorable }
+						TextWidgetClass tab_score_label { ignorepointer 1 position 0 0 size 1 1 color 1 1 1 1 text "Score" font "gui/fonts/sdf_MetronBook24" "text halign" center "text valign" center "exact text" 1 "exact text size" 20 }
+					}
+				}
+
+				PanelWidgetClass panel_general { position 0.02 0.17 size 0.96 0.81 color 0 0 0 0
+					{
+						MultilineTextWidgetClass txt_general { position 0.005 0.01 size 0.99 0.98 color 0.92 0.92 0.92 1 text "" font "gui/fonts/sdf_MetronBook24" "exact text" 1 "exact text size" 20 }
+					}
+				}
+
+				PanelWidgetClass panel_reglas { visible 0 position 0.02 0.17 size 0.96 0.81 color 0 0 0 0
+					{
+						MultilineTextWidgetClass txt_reglas { position 0.005 0.01 size 0.99 0.98 color 0.92 0.92 0.92 1 text "" font "gui/fonts/sdf_MetronBook24" "exact text" 1 "exact text size" 20 }
+					}
+				}
+
+				PanelWidgetClass panel_score { visible 0 position 0.02 0.17 size 0.96 0.81 color 0 0 0 0
+					{
+						ButtonWidgetClass hdr_name { position 0.005 0 size 0.30 0.05 color 0 0 0 0
+							{ PanelWidgetClass hdr_name_bg { ignorepointer 1 position 0 0 size 1 1 color 0.22 0.22 0.28 1 style rover_sim_colorable } TextWidgetClass hdr_name_label { ignorepointer 1 position 0.02 0 size 0.98 1 color 1 1 0.6 1 text "Nombre" font "gui/fonts/sdf_MetronBook24" "text halign" left "text valign" center "exact text" 1 "exact text size" 18 } }
+						}
+						ButtonWidgetClass hdr_kills { position 0.31 0 size 0.12 0.05 color 0 0 0 0
+							{ PanelWidgetClass hdr_kills_bg { ignorepointer 1 position 0 0 size 1 1 color 0.22 0.22 0.28 1 style rover_sim_colorable } TextWidgetClass hdr_kills_label { ignorepointer 1 position 0 0 size 1 1 color 1 1 0.6 1 text "Kills" font "gui/fonts/sdf_MetronBook24" "text halign" center "text valign" center "exact text" 1 "exact text size" 18 } }
+						}
+						ButtonWidgetClass hdr_deaths { position 0.435 0 size 0.12 0.05 color 0 0 0 0
+							{ PanelWidgetClass hdr_deaths_bg { ignorepointer 1 position 0 0 size 1 1 color 0.22 0.22 0.28 1 style rover_sim_colorable } TextWidgetClass hdr_deaths_label { ignorepointer 1 position 0 0 size 1 1 color 1 1 0.6 1 text "Deaths" font "gui/fonts/sdf_MetronBook24" "text halign" center "text valign" center "exact text" 1 "exact text size" 18 } }
+						}
+						ButtonWidgetClass hdr_suic { position 0.56 0 size 0.13 0.05 color 0 0 0 0
+							{ PanelWidgetClass hdr_suic_bg { ignorepointer 1 position 0 0 size 1 1 color 0.22 0.22 0.28 1 style rover_sim_colorable } TextWidgetClass hdr_suic_label { ignorepointer 1 position 0 0 size 1 1 color 1 1 0.6 1 text "Suicidios" font "gui/fonts/sdf_MetronBook24" "text halign" center "text valign" center "exact text" 1 "exact text size" 18 } }
+						}
+						ButtonWidgetClass hdr_dist { position 0.70 0 size 0.295 0.05 color 0 0 0 0
+							{ PanelWidgetClass hdr_dist_bg { ignorepointer 1 position 0 0 size 1 1 color 0.22 0.22 0.28 1 style rover_sim_colorable } TextWidgetClass hdr_dist_label { ignorepointer 1 position 0.02 0 size 0.98 1 color 1 1 0.6 1 text "Dist + Arma" font "gui/fonts/sdf_MetronBook24" "text halign" left "text valign" center "exact text" 1 "exact text size" 18 } }
+						}
+
+						ScrollWidgetClass score_scroll { position 0 0.06 size 1 0.93 color 0 0 0 0 "Scrollbar V" 1
+							{
+								WrapSpacerWidgetClass score_list { position 0 0 size 1 30 hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 1 "Size To Content V" 1 }
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}

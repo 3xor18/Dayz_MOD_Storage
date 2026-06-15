@@ -158,4 +158,16 @@ class ExorPartyMenu extends UIScriptedMenu
 			Close();
 		return false;
 	}
+
+	// OnKeyPress no siempre recibe el ESC (lo intercepta el engine). Leemos la
+	// tecla cruda en el Update (misma tecnica que el mapa) para cerrar con ESC.
+	override void Update(float timeslice)
+	{
+		super.Update(timeslice);
+		if (KeyState(KeyCode.KC_ESCAPE) > 0)
+		{
+			Close();
+			return;
+		}
+	}
 }
