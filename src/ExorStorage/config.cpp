@@ -12,8 +12,9 @@ class CfgPatches
 		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed"};
 		weapons[] = {};
 		requiredVersion = 0.1;
-		// VERIFICAR: DZ_Gear_Camping aporta TerritoryFlag/TerritoryFlagKit (base del mastil)
-		requiredAddons[] = {"DZ_Data", "DZ_Scripts", "DZ_Gear_Containers", "DZ_Weapons_Ammunition", "DZ_Gear_Camping"};
+		// DZ_Gear_Camping = TerritoryFlag/Kit. DZ_Characters_Backpacks = GhillieSuit
+		// vanilla (ghillies del slot brazo).
+		requiredAddons[] = {"DZ_Data", "DZ_Scripts", "DZ_Gear_Containers", "DZ_Weapons_Ammunition", "DZ_Gear_Camping", "DZ_Characters_Backpacks"};
 	};
 };
 
@@ -52,6 +53,32 @@ class CfgVehicles
 {
 	class Barrel_ColorBase;	// externa (DZ_Gear_Containers)
 	class Inventory_Base;	// externa (DZ_Data)
+
+	// ------------------------------------------------------------------
+	//  Ghillies VANILLA al slot de la BANDA DEL BRAZO (Armband).
+	//  Truco: Armband es un slot VANILLA (ya tiene proxy en el modelo -> renderiza)
+	//  y casi nadie lo usa. Al mover el ghillie del slot Back -> Armband, el slot
+	//  Back queda libre -> podes llevar bolso y ghillie a la vez.
+	//  Se moddean las VARIANTES vanilla directamente (solo inventorySlot, NO el
+	//  model) para no romper el modelo del suit. Costo: no usas banda de brazo real.
+	// ------------------------------------------------------------------
+	class GhillieSuit_ColorBase;	// base externa (DZ_Characters_Backpacks)
+	class GhillieSuit_Mossy: GhillieSuit_ColorBase
+	{
+		inventorySlot[] = {"Armband"};
+	};
+	class GhillieSuit_Woodland: GhillieSuit_ColorBase
+	{
+		inventorySlot[] = {"Armband"};
+	};
+	class GhillieSuit_Winter: GhillieSuit_ColorBase
+	{
+		inventorySlot[] = {"Armband"};
+	};
+	class GhillieSuit_Tan: GhillieSuit_ColorBase
+	{
+		inventorySlot[] = {"Armband"};
+	};
 
 	// ------------------------------------------------------------------
 	// Barril 3xor desplegado (funcional)
