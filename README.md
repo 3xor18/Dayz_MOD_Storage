@@ -1,147 +1,306 @@
 # 3xor_Vanilla_Optimization
 
-Mod de **optimización del servidor** para DayZ (cliente + servidor): barril 3xor con **virtualización de contenido**, **cobertura de vehículos inactivos** y **stacks de munición** — menos entidades vivas = menos lag. Con **anti-dupe** integrado.
+Mod **todo-en-uno** para DayZ (cliente + servidor), **100% standalone**. Combina sistemas de **comunidad/PvP** (party, territorio, anti-raid, spawns, chat, killfeed, VIP) con **optimización del servidor** (barriles virtualizados, vehículos que se duermen, stacks de munición) — menos entidades vivas = menos lag.
 
 > Antes llamado "3xorStorage"; se renombró porque dejó de ser solo storage.
 
-> Inspirado en *ToFu Virtual Storage* (virtualización) y *MMG Base Storage* (empaquetado en cajas), combinando lo mejor de ambos: el loot guardado deja de cargar al servidor **y** el barril se puede mover de base fácilmente.
+## Dependencias
 
-## Items
+**NINGUNA.** El mod **no requiere ningún otro mod** de Steam Workshop. Solo usa addons **vanilla** de DayZ:
 
-| Classname | Nombre en juego | Capacidad | Logo |
-|---|---|---|---|
-| `Exor_Barrel_500` | 3xor Barrel 500 | 500 slots (10×50) | "3xor" blanco |
-| `Exor_Barrel_500_Packed` | 3xor Barrel 500 (empaquetado) | 5×5 en inventario | "3xor" blanco |
+```
+requiredAddons[] = { DZ_Data, DZ_Scripts, DZ_Gear_Containers, DZ_Weapons_Ammunition, DZ_Gear_Camping };
+```
+
+No depende de Expansion, CF (Community Framework) ni ningún framework externo. Puede convivir con otros mods, pero **ojo**: si corrés Expansion-Groups/Territories al mismo tiempo, los sistemas de grupo/territorio van a chocar (este mod asume ser el único de party/territorio).
+
+---
 
 ## Features
 
-- ✅ **Empaquetar / Desplegar**: con el barril cerrado y vacío, acción *"Empaquetar barril"* → se convierte en una caja transportable. Con la caja en las manos, *"Desplegar barril"* lo coloca de nuevo. Transportá varios a la vez.
-- ✅ **Indestructible y no lockeable**: el loot guardado nunca se destruye (explosiones/balas no lo afectan), pero el barril no acepta CodeLocks ni candados — quien llega hasta él, lo abre. La defensa es tu base, no el barril.
-- ✅ **Virtualización**: pasados X minutos sin interacción (cerrado), el contenido se guarda en disco y los items desaparecen del mundo → menos entidades, menos lag. Al abrirlo se restaura todo.
-- ✅ **Auto-cierre**: un barril dejado abierto se cierra solo pasados X minutos.
-- ✅ **Comida que dura más**: multiplicador configurable de duración dentro del barril (default: el doble). Virtualizada, congelada.
-- ✅ **Anti-dupe**: ID único por barril, JSON crash-safe (se escribe antes de borrar, se consume al restaurar), cooldown de reapertura, logs para admins.
-- ✅ **Mochilas/ropa con items adentro**: solo dentro de barriles 3xor, activable por config.
-- ✅ **Stacks de munición a 100**: solo balas sueltas/bolts/flechas (sin cajas ni granadas). Fijo en config.cpp (ver nota abajo).
-- ✅ **Auto-stack al recoger**: las balas que levantás con "Take" (F) se fusionan solas con las pilas que ya tenés.
-- ✅ **Cantidad de munición al spawnear**: rango aleatorio `{min, max}` configurable por bala (default 15-65); la lista se auto-completa con todas las municiones del juego al arrancar.
-- ✅ **Sueño automático de vehículos**: los autos inactivos X minutos se "duermen" (su física deja de simularse — gran ahorro, los vehículos son de lo más pesado del server) y **despiertan solos** cuando un jugador se acerca. El auto queda visible y en su lugar: los jugadores no notan nada. El CE los sigue contando (no spawnea clones).
-- ✅ **Voltear vehículos**: un auto volcado o de costado se endereza con la acción *"Voltear vehículo"* (40 segundos manteniendo F, configurable — el tiempo largo evita abusos en combate). Requiere motor apagado y sin ocupantes.
+### Party + Territorio (por mástil)
+- **Reclamar territorio**: al colocar el kit de bandera vanilla (soga + 3 palos), la bandera se auto-construye, reclama el territorio y crea el party (quien la pone = líder).
+- **Party** (mirando el mástil, scroll): *Invitar a grupo* (abre invitación 10 min) → el otro ve *Unirse al grupo* · *Cancelar invitación* · *Administrar party* (lista de miembros + expulsar + salir).
+- **Bandera izar/bajar** (cast de 15s): izar = solo miembros; bajar = según config. La bandera abajo puede bloquear el respawn en base.
+- **Bandera blanca** (opcional): protección de N minutos reales tras reclamar (no se puede cambiar la tela); al vencer se libera o se cambia por la bandera configurada.
 
-Roadmap completo y decisiones de diseño: [`docs/PLAN.md`](docs/PLAN.md)
+### Anti-raid (gateado por el radio del mástil ajeno)
+- **No desmantelar** muros/torres en territorio ajeno si no sos del party.
+- **No construir** (deployables, kits, **campos de plantación**) en territorio ajeno — bloqueado en cliente y reforzado server-side.
+- **Logs forenses** (`raidlog/raid_AAAA-MM-DD.txt`, auto-purga): robo de items, deslogueo y expulsión en base ajena, con steamid + nombre + pos + hora.
+- **Anti-combat-log**: al reconectar dentro de territorio ajeno, te teletransporta al borde.
 
-## Configuración del servidor
+### Spawns
+- Pantalla de selección al morir / primer login, con puntos configurables + "Mi base".
+- **Cooldown por punto** y por base, con cuenta regresiva en vivo (gris + rojo cuando no disponible).
+- Respawn en base (cooldown configurable, requiere bandera arriba).
 
-Al primer arranque se crea `<profile>/3xorStorage/settings.json` con los defaults (si ya existía de una versión vieja, se completa solo con los campos nuevos). Ejemplo completo en [`config-examples/settings.json`](config-examples/settings.json).
+### VIP
+- **Spawn en base + Equipamiento**: reemplaza la ropa por un loadout (pantalón/camisa/zapato/bolso + items extra) y gasta 1 uso.
+- **Usos por jugador y por mes**, con el ciclo anclado a la **fecha de ingreso** de cada VIP (entró el 15 → resetea el 15, no el 1°).
 
-| Parámetro | Default | Qué hace | Activo desde |
-|---|---|---|---|
-| `virtualizar_minutos` | `10` | Minutos sin interacción (barril cerrado) para que el contenido se virtualice a disco y los items salgan del mundo. `0` = desactivado. Nota: más bajo = más ahorro, pero abrir un barril dormido tiene una micro-pausa de restauración, y la comida virtualizada congela su deterioro | ✅ v0.2 |
-| `auto_cerrar_minutos` | `5` | Si alguien deja el barril abierto, se cierra solo pasados estos minutos (recién ahí corre el timer de virtualización). `0` = desactivado | ✅ v0.2 |
-| `multiplicador_comida` | `2.0` | La comida dentro del barril se deteriora N veces más lento (`2.0` = dura el doble). Virtualizado, el deterioro queda congelado | ✅ v0.2 |
-| `permitir_ropa_con_items` | `true` | Permite guardar mochilas/ropa **con items adentro**, solo dentro de barriles 3xor (vanilla lo bloquea) | ✅ v0.2 |
-| `blacklist` | `[]` | Classnames que NO se pueden guardar en los barriles | ✅ v0.2 |
-| `cooldown_abrir_segundos` | `3` | Anti-dupe: segundos de espera para volver a abrir el mismo barril. `0` = sin cooldown | ✅ v0.2 |
-| `stack_municion` | auto | **Una entrada por cada bala del juego** → stack máximo. La lista se auto-completa al arrancar (Fase 3) con todas las municiones detectadas (vanilla + mods); después editás la que quieras | ✅ v0.2 |
-| `stack_municion_default` | `100` | Valor de relleno con el que se auto-agregan las balas a `stack_municion` (nuevas balas de updates/mods entran solas con este valor) | ✅ v0.2 |
-| `auto_stack` | `true` | Las balas que recogés se fusionan solas con las pilas que ya tenés | ✅ v0.2 |
-| `spawn_municion` | auto | **Una entrada por bala** → `{ "min": X, "max": Y }`: cada pila de loot spawnea con una cantidad aleatoria entre min y max. También se auto-completa con todas las balas | ✅ v0.2 |
-| `spawn_municion_min_default` / `spawn_municion_max_default` | `15` / `65` | Rango de relleno con el que se auto-agregan las balas a `spawn_municion` | ✅ v0.2 |
-| `municion_excluida` | 40mm + bengalas + RPG/LAW | Munición que NUNCA se toca (ni auto-stack ni spawn). Granadas de mano, humo, gas y cajas ya quedan fuera por diseño | ✅ v0.2 |
-| `vehiculos_dormir` | `true` | Activa el sueño automático de vehículos inactivos | ✅ v0.2 |
-| `vehiculos_dormir_minutos` | `5` | Minutos de inactividad (motor apagado, sin ocupantes) para dormir la física del vehículo. `0` = desactivado | ✅ v0.2 |
-| `vehiculos_despertar_metros` | `30` | El vehículo solo duerme sin jugadores en este radio, y despierta solo cuando alguien entra a él (chequeo cada 5 s) | ✅ v0.2 |
-| `vehiculos_excluidos` | `[]` | Classnames de vehículos que nunca se duermen | ✅ v0.2 |
-| `voltear_vehiculos` | `true` | Activa la acción "Voltear vehículo" sobre autos volcados/de costado | ✅ v0.2 |
-| `voltear_segundos` | `40` | Duración de la acción de voltear (anti-abuso en combate) | ✅ v0.2 |
+### HUD / UI
+- HUD de party (barra de vida + nombre + distancia), **nameplates 3D**, **mapa** (M) con tu posición + la de tu grupo, **marcas** (T pone / Y limpia).
+- **Killfeed** (arriba-derecha) PvP/suicidio.
+- **Panel de info del server** (ESC → "Server Info"): tabs General / Reglas (texto editable) y **Score** (ranking kills/deaths/suicidios/distancia).
+- **Tooltip de items**: pastilla de rareza por tier + barra de durabilidad.
 
-> ⚠️ Única excepción a "todo configurable": el **stack máximo de balas (100)** es fijo en `config.cpp` (CfgMagazines `count`) — el motor no permite cambiarlo por JSON en runtime. Para otro número: editar `config.cpp` y recompilar. `stack_municion` en el JSON queda como referencia/documentación de los valores activos.
+### Chat
+- **2 canales**: GLOBAL (a todos) y ZONA (proximity, radio configurable). Tecla **`.`** cambia el canal.
+- Panel abajo-izquierda (nombre azul + mensaje blanco), líneas con duración configurable. **Reemplaza el chat vanilla.**
+- **Anti-spam**: cooldown entre mensajes + bloqueo de mensaje repetido.
 
-> Los cambios en `settings.json` se aplican reiniciando el server.
+### Vehículos
+- Conductor en 3ª persona / pasajeros forzados a 1ª; ver tu inventario + el del auto; quitar daño (toggle).
+- **Sueño automático**: autos inactivos X min dejan de simular física (gran ahorro) y despiertan solos cuando alguien se acerca.
+- **Voltear vehículo** (acción con hold, anti-abuso).
 
-## types.xml (spawn como loot)
+### Storage (barriles 3xor)
+- `Exor_Barrel_500` (500 slots) + su versión **empaquetable** (caja transportable).
+- **Virtualización** del contenido a disco (menos entidades), **auto-cierre**, **anti-dupe**, comida que dura más, mochilas/ropa con items adentro.
+- **Indestructible y no lockeable** (la defensa es la base, no el barril).
 
-Agregá esto al `types.xml` de tu misión para que el barril spawnee como loot. Recomendado: spawnear la versión **empaquetada** (es la que tiene gracia encontrar y llevarte); la desplegada dejala en `nominal=0` (solo existe cuando un jugador la despliega).
+### Munición
+- **Stacks a 100** (solo balas sueltas/bolts/flechas), **auto-stack** al recoger, **cantidad aleatoria al spawnear** por tipo.
+
+---
+
+## Controles
+
+| Tecla / acción | Qué hace |
+|---|---|
+| Mirar el **mástil** + scroll | Invitar / Unirse / Cancelar invitación / Administrar party / Izar / Bajar bandera |
+| **Enter** | Escribir en el chat (canal actual) |
+| **`.`** | Cambiar canal de chat (GLOBAL ↔ ZONA) |
+| **M** | Abrir/cerrar el mapa |
+| **T** / **Y** | Poner marca / limpiar tus marcas |
+| **ESC** → "Server Info" | Panel de info del server (General/Reglas/Score) |
+
+---
+
+## Configuración
+
+Todo se configura por JSON en `<profile>/3xorVanillaOptimization/`. Cada archivo se crea solo con sus defaults al primer arranque, y los campos nuevos se auto-completan al cargar. **Los cambios se aplican reiniciando el server.** Si existía el `settings.json` monolítico viejo, se migra automáticamente.
+
+### `storage.json`
+| Parámetro | Default | Qué hace |
+|---|---|---|
+| `virtualizar_minutos` | `10` | Min sin interacción (cerrado) para virtualizar el contenido a disco. `0` = off |
+| `auto_cerrar_minutos` | `5` | Cierra solo un barril dejado abierto. `0` = off |
+| `multiplicador_comida` | `2.0` | La comida adentro dura N× más |
+| `permitir_ropa_con_items` | `true` | Permite guardar mochilas/ropa con items adentro |
+| `blacklist` | `[]` | Classnames que no se pueden guardar |
+| `cooldown_abrir_segundos` | `3` | Anti-dupe: espera para reabrir el mismo barril |
+
+### `vehiculos.json`
+| Parámetro | Default | Qué hace |
+|---|---|---|
+| `vehiculos_dormir` | `true` | Activa el sueño de vehículos inactivos |
+| `vehiculos_dormir_minutos` | `5` | Min de inactividad para dormir la física. `0` = off |
+| `vehiculos_despertar_metros` | `30` | Radio para dormir/despertar según jugadores cerca |
+| `vehiculos_excluidos` | `[]` | Vehículos que nunca duermen |
+| `voltear_vehiculos` | `true` | Activa la acción "Voltear vehículo" |
+| `voltear_segundos` | `40` | Duración de la acción de voltear |
+| `camara.conductor_3ra_persona` | `true` | El conductor puede ir en 3ª |
+| `camara.pasajeros_1ra_persona` | `true` | Pasajeros forzados a 1ª |
+| `inventario.ver_ambos_dentro` | `true` | Ver tu inventario + el del auto a la vez |
+| `dano.quitar_dano_vehiculos` | `false` | `true` = los autos no reciben daño |
+
+### `municion.json`
+| Parámetro | Default | Qué hace |
+|---|---|---|
+| `stack_municion_default` | `100` | Relleno con que se auto-agregan las balas a `stack_municion` |
+| `stack_municion` | auto | Mapa classname→stack máx (auto-completado con todas las balas) |
+| `auto_stack` | `true` | Las balas que recogés se fusionan solas |
+| `spawn_municion_min_default` / `_max_default` | `15` / `65` | Relleno del rango de cantidad al spawnear |
+| `spawn_municion` | auto | Mapa classname→`{min,max}` de cantidad al spawnear |
+| `municion_excluida` | 40mm + bengalas + RPG/LAW | Munición que nunca se toca |
+
+> El **stack máximo (100)** es fijo en `config.cpp` (CfgMagazines `count`); el motor no lo deja cambiar por JSON. Para otro número: editar `config.cpp` y recompilar.
+
+### `party.json`
+**`territorio`**
+| Parámetro | Default | Qué hace |
+|---|---|---|
+| `habilitado` | `true` | Activa TODO el sistema bandera=territorio |
+| `radio_metros` | `35` | Radio de anti-construcción alrededor del mástil |
+| `permitir_construir_cerca` | `false` | `true` = ajenos pueden construir cerca |
+| `whitelist_construible` | minas/claymore/plástico | Lo que SÍ se puede poner en territorio ajeno |
+| `blacklist_construible` | `[]` | Lo que nunca se puede poner |
+| `despawn_mastil_sin_miembros` | `true` | Despawnea el mástil si el party se vacía |
+
+**`grupo`**
+| Parámetro | Default | Qué hace |
+|---|---|---|
+| `habilitado` | `true` | Master on/off del sistema de party |
+| `max_miembros` | `8` | Máximo de miembros |
+| `tecla_menu` | `"P"` | Tecla del menú party (config) |
+| `auto_kick_dias` | `0` | Días sin login para auto-kick. `0` = off |
+| `mostrar_posicion_miembros` | `true` | Compartir posición (HUD/nameplates/mapa) |
+| `mostrar_hud` | `true` | Barra de vida arriba-izq |
+| `mostrar_nameplates` | `true` | Nombre 3D sobre la cabeza |
+| `mostrar_distancia_miembros` | `true` | Distancia en HUD/nameplate |
+| `mostrar_propio` | `false` | Incluirte a vos en HUD/nameplates |
+| `permitir_marker_equipo` | `true` | Marcas con T / Y |
+
+**`bandera`**
+| Parámetro | Default | Qué hace |
+|---|---|---|
+| `ajenos_pueden_bajar` | `true` | Ajenos pueden bajar tu bandera |
+| `bajada_bloquea_respawn` | `true` | Bandera abajo bloquea respawn en base |
+| `bandera_blanca` | `false` | Cuelga bandera blanca al reclamar (protección) |
+| `bandera_blanca_minutos` | `10080` | Protección en minutos reales (10080 = 7 días) |
+| `bandera_blanca_cambiar_a` | `"Flag_DayZ"` | Bandera a colgar al expirar (`""` = solo destrabar) |
+
+**`respawn_base`**
+| Parámetro | Default | Qué hace |
+|---|---|---|
+| `habilitado` | `true` | Activa el respawn en base/mástil |
+| `cooldown_segundos` | `3600` | Cooldown del respawn en base |
+| `permitir_spawn_mastil_vip` | `true` | Los VIP pueden spawnear en el mástil |
+| `permitir_spawn_mastil_no_vip` | `false` | Los no-VIP pueden spawnear en el mástil |
+
+**`proteccion`** (anti-raid)
+| Parámetro | Default | Qué hace |
+|---|---|---|
+| `bloquear_desmantelar_ajeno` | `true` | Ajenos no desmantelan en territorio ajeno |
+| `log_robo_contenedor` | `true` | Loguea robo de items en territorio ajeno |
+| `log_desconexion_base_ajena` | `true` | Loguea deslogueo en base ajena |
+| `sacar_de_base_ajena_al_reconectar` | `true` | Teletransporta al borde al reconectar en base ajena |
+| `log_dias_retener` | `7` | Días que se guardan los `raidlog`. `0` = no borrar |
+
+### `spawns.json`
+| Parámetro | Default | Qué hace |
+|---|---|---|
+| `habilitado` | `true` | Activa la pantalla de selección de spawn |
+| `dar_cuchillo_al_spawnear` | `true` | Da un cuchillo al personaje nuevo (test) |
+| `puntos[]` | ejemplo | Cada punto: `nombre`, `x`, `y`(0=al suelo), `z`, `cooldown_segundos`, `distancia_random` (radio aleatorio) |
+
+### `mapa.json`
+| Parámetro | Default | Qué hace |
+|---|---|---|
+| `abrir_con_m` | `true` | Abrir el mapa con M sin el ItemMap físico |
+| `mostrar_mi_posicion` | `true` | Ver tu posición |
+| `mostrar_miembros_party` | `true` | Ver a los miembros del party |
+
+### `items.json`
+| Parámetro | Default | Qué hace |
+|---|---|---|
+| `mostrar_durabilidad` | `true` | Barra de durabilidad en el tooltip |
+| `mostrar_rareza` | `true` | Pastilla de rareza en el tooltip |
+| `rareza_usar_tabla` | `false` | `true` = usar `rareza_tabla`; `false` = heurística |
+| `rareza_tabla` | ejemplos | Mapa classname→tier (comun/poco_comun/raro/epico/legendario) |
+
+### `vip.json`
+| Parámetro | Default | Qué hace |
+|---|---|---|
+| `vips[]` | tu steamid (ejemplo) | Cada VIP: `steamid`, `fecha_ingreso` ("AAAA-MM-DD", vacío = se sella con hoy), `usos_por_mes` (0 = usar default global) |
+| `equip_habilitado` | `true` | Activa el perk "Spawn en base + Equipamiento" |
+| `equip_usos_por_mes` | `7` | Default global de usos por ciclo (si la entrada tiene 0) |
+| `equip_loadout` | ejemplo | `pantalon`, `camisa`, `zapato`, `bolso` (vacío = no tocar) + `items_extra[]` (al cargo de camisa/pantalón) |
+
+### `killfeed.json`
+| Parámetro | Default | Qué hace |
+|---|---|---|
+| `habilitado` | `true` | Master on/off del killfeed |
+| `duracion_segundos` | `6` | Cuánto dura cada línea |
+| `max_lineas` | `5` | Máximo simultáneo |
+| `mostrar_suicidios` | `true` | Mostrar "se ha suicidado" |
+
+### `serverinfo.json`
+| Parámetro | Default | Qué hace |
+|---|---|---|
+| `habilitado` | `true` | Muestra el botón "Server Info" en ESC |
+| `titulo` | "Información del Server" | Título del panel |
+| `tab_general` / `general_titulo` / `general_lineas[]` | on | Tab General (texto editable) |
+| `tab_reglas` / `reglas_titulo` / `reglas_lineas[]` | on | Tab Reglas (texto editable) |
+| `tab_score` / `score_titulo` | on | Tab Score (ranking) |
+
+### `chat.json`
+| Parámetro | Default | Qué hace |
+|---|---|---|
+| `habilitado` | `true` | Master on/off del chat custom |
+| `radio_zona_metros` | `50` | Alcance del canal ZONA (proximity) |
+| `duracion_segundos` | `25` | Cuánto dura cada línea |
+| `max_lineas` | `9` | Máximo simultáneo |
+| `cooldown_segundos` | `2` | Anti-spam: mínimo entre mensajes. `0` = sin límite |
+| `bloquear_repetidos` | `true` | Anti-spam: bloquear el mismo mensaje seguido |
+
+---
+
+## Archivos que crea el mod (en `<profile>/3xorVanillaOptimization/`)
+
+**Config (editables):** `storage.json` · `vehiculos.json` · `municion.json` · `party.json` · `spawns.json` · `mapa.json` · `items.json` · `vip.json` · `killfeed.json` · `serverinfo.json` · `chat.json`
+
+**Datos (los maneja el server, no editar a mano salvo que sepas):**
+- `groups/<id>.json` — grupos/party persistidos
+- `storage/<id>.json` — contenido virtualizado de barriles
+- `raidlog/raid_AAAA-MM-DD.txt` — logs forenses anti-raid (auto-purga)
+- `stats.json` — ranking (kills/deaths/suicidios)
+- `vip_state.json` — usos de equipamiento por VIP/ciclo
+
+---
+
+## types.xml (barril como loot)
+
+Recomendado: spawnear la versión **empaquetada**; la desplegada en `nominal=0`.
 
 ```xml
-<!-- 3xorStorage: caja empaquetada (esta spawnea como loot) -->
 <type name="Exor_Barrel_500_Packed">
-    <nominal>4</nominal>
-    <lifetime>14400</lifetime>
-    <restock>1800</restock>
-    <min>2</min>
-    <quantmin>-1</quantmin>
-    <quantmax>-1</quantmax>
-    <cost>100</cost>
+    <nominal>4</nominal> <lifetime>14400</lifetime> <restock>1800</restock>
+    <min>2</min> <quantmin>-1</quantmin> <quantmax>-1</quantmax> <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0"/>
-    <category name="containers"/>
-    <usage name="Industrial"/>
-    <usage name="Military"/>
+    <category name="containers"/> <usage name="Military"/>
 </type>
-
-<!-- Barril desplegado (NO spawnea; persiste 45 dias como los barriles vanilla) -->
 <type name="Exor_Barrel_500">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
-    <quantmin>-1</quantmin>
-    <quantmax>-1</quantmax>
-    <cost>100</cost>
+    <nominal>0</nominal> <lifetime>3888000</lifetime> <restock>0</restock>
+    <min>0</min> <quantmin>-1</quantmin> <quantmax>-1</quantmax> <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0"/>
     <category name="containers"/>
 </type>
 ```
 
-Ajustá `nominal`/`min` a gusto (cuántos querés que haya en el mapa a la vez). `lifetime 3888000` = 45 días sin interacción antes de despawnear, igual que un barril vanilla.
+> **Tip vanilla:** vehículos/items spawneados por admin/VPP que no estén en `types.xml` los limpia el CE a los ~45 s. Si tu server hace eso, agregá cada classname con `nominal=0` y `lifetime=3888000`.
 
-> **Tip (no es del mod, es DayZ vanilla):** los vehículos spawneados por **admin/VPP o trader** que no estén en `types.xml` los limpia el CE a los ~45 segundos sin jugadores cerca. Si tu server spawnea vehículos así, agregá cada classname de vehículo al `types.xml` con `nominal=0` y `lifetime=3888000`. Los vehículos de `events.xml` no necesitan nada.
+---
 
 ## Estructura del repo
 
 ```
 ├── src/ExorStorage/          # Fuente del PBO (prefix: ExorStorage)
-│   ├── config.cpp            # CfgPatches / CfgMods / CfgVehicles (barril + caja)
+│   ├── config.cpp            # CfgPatches / CfgMods / CfgVehicles / CfgMagazines
 │   ├── data/                 # Texturas .paa (generadas por el build)
+│   ├── gui/                  # Layouts de UI (.layout)
 │   └── scripts/
-│       ├── 3_Game/           # Constantes + settings JSON
-│       ├── 4_World/
-│       │   ├── Entities/     # Clases del barril
-│       │   ├── Actions/      # Empaquetar / Desplegar
-│       │   └── ...           # Registro de acciones + PlayerBase
-│       └── 5_Mission/        # Init del server (carga settings)
-├── assets/textures/          # PNG fuente de las texturas (generadas)
-├── tools/                    # Build: gen_textures.py, pack_pbo.py, build.ps1
-│   └── (+ list_pbo.py / extract_pbo.py para inspeccionar PBOs vanilla)
-├── mod/mod.cpp               # Metadata del mod para el launcher/Workshop
-├── config-examples/          # settings.json de ejemplo
-└── docs/PLAN.md              # Roadmap y decisiones de diseño
+│       ├── 3_Game/           # Config (todos los JSON), RPC, constantes
+│       ├── 4_World/          # Server/world: entidades, acciones, party, anti-raid, chat, stats, VIP...
+│       └── 5_Mission/        # Cliente: HUD, menús, nameplates, killfeed, chat, server info...
+├── assets/textures/          # PNG fuente de las texturas
+├── tools/                    # build.ps1, gen_textures.py, pack_pbo.py
+├── mod/mod.cpp               # Metadata para el launcher/Workshop
+├── keys/                     # 3xorVO.bikey (pública) — la privada NO está en el repo
+└── docs/                     # Plan y documentación de diseño
 ```
 
 ## Build
 
-Requisitos: Windows, Python 3 con Pillow, [DayZ Tools](https://store.steampowered.com/app/830640/DayZ_Tools/) (para `ImageToPAA`).
+Requisitos: Windows, Python 3 con Pillow, [DayZ Tools](https://store.steampowered.com/app/830640/DayZ_Tools/) (para `ImageToPAA` y la firma).
 
 ```powershell
-.\tools\build.ps1                # texturas + PBO -> dist\@3xorStorage
-.\tools\build.ps1 -SkipTextures  # solo re-empaqueta el PBO
+.\tools\build.ps1                # texturas + PBO -> dist\@3xor_Vanilla_Optimization
+.\tools\build.ps1 -SkipTextures  # solo re-empaqueta + firma el PBO
 ```
-
-El resultado queda en `dist/@3xor_Vanilla_Optimization/` listo para copiar al server y al cliente.
 
 ## Instalación
 
 **Servidor:**
 1. Copiar `@3xor_Vanilla_Optimization` a la raíz del server.
 2. Agregar `-mod=@3xor_Vanilla_Optimization` a los parámetros de arranque.
-3. Agregar los items a `types.xml` para que spawneen como loot (o repartirlos por admin).
-4. (Producción) Copiar la `.bikey` a la carpeta `keys/` del server.
+3. Copiar `keys/3xorVO.bikey` a la carpeta `keys/` del server (si no, BattlEye kickea).
+4. (Opcional) Agregar los barriles a `types.xml` para que spawneen como loot.
 
-**Cliente:** suscribirse al mod en Steam Workshop (cuando esté publicado) — el launcher lo carga solo.
+**Cliente:** suscribirse al mod en Steam Workshop — el launcher lo carga solo.
 
-## Estado
+## Firma
 
-**v1.0.0 — completo y verificado en server local.** Todos los sistemas probados in-game: barril (virtualización, nested cargo, anti-dupe, comida, empaquetado, indestructible/no-lockeable), vehículos (dormir/despertar/voltear), munición (stack 100, auto-stack, spawn 15-65). PBO firmado, listo para Workshop.
-
-### Firma
-El PBO se firma en el build con la llave `keys/3xorVO.biprivatekey` (esa llave **no** está en el repo — es privada). La `.bikey` pública viaja con el mod en `keys/` y debe copiarse a la carpeta `keys/` del server.
+El PBO se firma en el build con `keys/3xorVO.biprivatekey` (privada, **no** está en el repo). La `.bikey` pública viaja con el mod en `keys/`.
