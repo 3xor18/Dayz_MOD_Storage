@@ -1,4 +1,4 @@
 name = "3xor_Vanilla_Optimization";
 author = "3xor";
-version = "2.0.0";
-description = "Mod todo-en-uno (server+cliente), standalone sin Expansion: party y territorio por mastil con anti-raid (no desmantelar/robar en base ajena + logs), spawns con cooldown, HUD/nameplates/mapa, killfeed, panel de info del server con ranking, sistema VIP con equipamiento por player, chat con canales (global/zona) y anti-spam, barriles con virtualizacion de contenido, cobertura de vehiculos inactivos y stacks de municion. Menos entidades = menos lag.";
+version = "2.1.0";
+description = "Mod todo-en-uno (server+cliente), standalone sin Expansion: party y territorio por mastil con anti-raid (no desmantelar/robar en base ajena + logs forenses), spawns con cooldown, HUD/nameplates/mapa con marcas (distancia VIP), killfeed, panel de info del server con ranking, sistema VIP (equipamiento + spawn en base, vence a 30 dias), chat con canales (global/zona) y anti-spam, bolsa de cadaver/lapida con loot persistente y optimizado por proximidad, reparar items a pristine + combinar kits gastados, barriles con virtualizacion de contenido, inventario ampliado de vehiculos (600 slots + items anidados), vehiculos inactivos que se duermen y stacks de municion. Menos entidades = menos lag.";

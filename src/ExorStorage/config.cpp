@@ -25,7 +25,7 @@ class CfgMods
 		dir = "3xor_Vanilla_Optimization";
 		name = "3xor_Vanilla_Optimization";
 		author = "3xor";
-		version = "0.2.0";
+		version = "0.3.0";
 		type = "mod";
 		dependencies[] = {"Game", "World", "Mission"};
 		class defs
