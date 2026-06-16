@@ -25,6 +25,7 @@ class ExorStorageConstants
 	static const string CFG_KILLFEED  = "$profile:3xorVanillaOptimization\\killfeed.json";
 	static const string CFG_SERVERINFO = "$profile:3xorVanillaOptimization\\serverinfo.json";
 	static const string CFG_CHAT       = "$profile:3xorVanillaOptimization\\chat.json";
+	static const string CFG_REPARACION = "$profile:3xorVanillaOptimization\\reparacion.json";
 
 	// Datos del sistema party (Fase B+): grupos persistidos
 	static const string GROUPS_DIR = "$profile:3xorVanillaOptimization\\groups";

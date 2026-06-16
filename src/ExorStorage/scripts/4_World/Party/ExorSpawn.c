@@ -297,7 +297,7 @@ class ExorSpawn
 			}
 			if (ExorVipState.Get().RemainingUses(sid) <= 0)
 			{
-				player.MessageImportant("No te quedan usos de equipamiento este ciclo.");
+				player.MessageImportant("No te quedan usos de equipamiento VIP (avisá al admin para renovar).");
 				return;
 			}
 			pos = ChooseBase(sid, player);	// respeta bandera + cooldown (y consume cd de base)

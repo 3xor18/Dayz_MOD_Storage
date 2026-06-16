@@ -1,13 +1,14 @@
 // ============================================================================
 // 3xor_Vanilla_Optimization - Estado VIP persistente (SOLO server)
-// Por steamid guarda: fecha de ingreso (1ra vez que se lo ve como VIP) + usos de
-// equipamiento consumidos en el CICLO actual. El ciclo es mensual pero anclado al
-// DIA de ingreso (entro el 15 -> resetea el 15 de cada mes, no el 1ro).
-// Persistido en vip_state.json. Tambien aplica el loadout VIP al jugador.
+// Por steamid guarda los usos de equipamiento consumidos. Los usos NO se reponen
+// solos: solo se reponen cuando el admin cambia fecha_ingreso en vip.json
+// (= renovacion). El VIP ademas vence a los dias_vip (def 30) dias de fecha_ingreso
+// (eso lo decide ExorCfgVip.IsVip, no este archivo). Persistido en vip_state.json.
+// Tambien aplica el loadout VIP al jugador.
 // ============================================================================
-// La fecha de ingreso vive en vip.json (la maneja el admin). Aca solo guardamos el
-// uso por ciclo + una COPIA del ancla (la fecha contra la que se calculo) para
-// detectar si el admin la cambio / re-ingreso al VIP -> resetear.
+// La fecha de ingreso vive en vip.json (la maneja el admin). Aca solo guardamos los
+// usos + una COPIA del ancla (la fecha contra la que se calculo) para detectar si el
+// admin la cambio (renovacion) -> reponer usos. last_ciclo quedo sin uso (legacy).
 class ExorVipStateRow
 {
 	string steamid;
@@ -67,35 +68,6 @@ class ExorVipState
 		JsonFileLoader<ExorVipStateFile>.JsonSaveFile(ExorStorageConstants.VIP_STATE_FILE, f);
 	}
 
-	// ------------------------- ciclo mensual anclado al ingreso -------------------------
-	static int DaysInMonth(int y, int m)
-	{
-		if (m == 2)
-		{
-			bool leap = (y % 4 == 0 && y % 100 != 0) || (y % 400 == 0);
-			if (leap)
-				return 29;
-			return 28;
-		}
-		if (m == 4 || m == 6 || m == 9 || m == 11)
-			return 30;
-		return 31;
-	}
-
-	// Indice de ciclo: cuantos "meses desde el ingreso" pasaron, contando el corte
-	// en el DIA de ingreso (jd). Clamp del dia al ultimo del mes (ingreso el 31).
-	static int CycleIndex(int jy, int jm, int jd, int y, int m, int d)
-	{
-		int months = (y - jy) * 12 + (m - jm);
-		int eff = jd;
-		int dim = DaysInMonth(y, m);
-		if (eff > dim)
-			eff = dim;
-		if (d < eff)
-			months = months - 1;
-		return months;
-	}
-
 	// Parsea "AAAA-MM-DD". Devuelve true si ok (y deja py/pm/pd seteados).
 	static bool ParseFecha(string s, out int py, out int pm, out int pd)
 	{
@@ -112,9 +84,9 @@ class ExorVipState
 		return true;
 	}
 
-	// Devuelve la fila del VIP. La fecha de ingreso viene de vip.json. Resetea los
-	// usos si cambio el ciclo mensual O si cambio la fecha de ingreso (re-ingreso /
-	// edicion del admin = ciclo nuevo).
+	// Devuelve la fila del VIP. La fecha de ingreso viene de vip.json. Repone los
+	// usos SOLO si el admin cambio la fecha de ingreso (renovacion manual). Sin
+	// reset automatico: si se acaban, no se reponen hasta renovar.
 	ExorVipStateRow EnsureAndRefresh(string sid)
 	{
 		EnsureLoaded();
@@ -141,7 +113,7 @@ class ExorVipState
 			r.anc_y = jy;
 			r.anc_m = jm;
 			r.anc_d = jd;
-			r.last_ciclo = CycleIndex(jy, jm, jd, y, m, d);
+			r.last_ciclo = 0;	// ya no se usa (no hay ciclo mensual)
 			r.usos = 0;
 			m_Rows.Set(sid, r);
 			Save();
@@ -149,26 +121,20 @@ class ExorVipState
 			return r;
 		}
 
-		// Cambio la fecha de ingreso -> re-anclar y resetear.
+		// Cambio la fecha de ingreso (= RENOVACION manual del admin) -> re-anclar y
+		// REPONER los usos. Es la UNICA forma de reponer (no hay reset automatico).
 		if (r.anc_y != jy || r.anc_m != jm || r.anc_d != jd)
 		{
 			r.anc_y = jy;
 			r.anc_m = jm;
 			r.anc_d = jd;
-			r.last_ciclo = CycleIndex(jy, jm, jd, y, m, d);
 			r.usos = 0;
 			Save();
+			Print(string.Format("%1 VIP %2: renovado (nueva fecha %3-%4-%5), usos repuestos", ExorStorageConstants.LOG, sid, jy, jm, jd));
 			return r;
 		}
 
-		// Misma fecha: resetear si paso a otro ciclo mensual.
-		int idx = CycleIndex(jy, jm, jd, y, m, d);
-		if (idx != r.last_ciclo)
-		{
-			r.last_ciclo = idx;
-			r.usos = 0;
-			Save();
-		}
+		// Misma fecha de ingreso: los usos NO se reponen solos.
 		return r;
 	}
 

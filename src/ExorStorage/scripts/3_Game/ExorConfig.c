@@ -385,6 +385,55 @@ class ExorCfgChat
 }
 
 // ----------------------------------------------------------------------------
+// reparacion.json
+//   reparar_a_pristine = al reparar con cualquier kit, el item llega hasta
+//     PRISTINE (verde) en vez de quedar topado en "gastado" (quita el cap vanilla).
+//   kits_stackeables = classnames de kits/consumibles que se pueden COMBINAR
+//     entre si: 2 del mismo tipo gastados se unen en 1 sumando su uso (cap al max).
+//     Funciona para kits cuyo "uso" es QUANTITY (costura/limpieza); los que usan
+//     condicion/health pueden no combinar (a verificar in-game).
+// ----------------------------------------------------------------------------
+class ExorCfgReparacion
+{
+	int version = 1;
+	bool reparar_a_pristine = true;
+	ref TStringArray kits_stackeables;
+
+	void ExorCfgReparacion()
+	{
+		kits_stackeables = new TStringArray;
+	}
+
+	void SetDefaults()
+	{
+		version = 1;
+		reparar_a_pristine = true;
+		kits_stackeables = new TStringArray;
+		kits_stackeables.Insert("SewingKit");
+		kits_stackeables.Insert("LeatherSewingKit");
+		kits_stackeables.Insert("WeaponCleaningKit");
+		kits_stackeables.Insert("SharpeningStone");
+		kits_stackeables.Insert("Whetstone");
+		kits_stackeables.Insert("EpoxyPutty");
+		kits_stackeables.Insert("DuctTape");
+		kits_stackeables.Insert("TireRepairKit");
+	}
+
+	bool EsStackeable(string classname)
+	{
+		if (!kits_stackeables)
+			return false;
+		int i;
+		for (i = 0; i < kits_stackeables.Count(); i++)
+		{
+			if (kits_stackeables.Get(i) == classname)
+				return true;
+		}
+		return false;
+	}
+}
+
+// ----------------------------------------------------------------------------
 // Sync server -> cliente: SOLO la config que el cliente necesita para mostrar
 // (toggles de party/HUD/nameplates/marcas, mapa, durabilidad/rareza+tabla).
 // Lo pesado (municion/storage/vehiculos) es logica de server y NO se envia.
@@ -397,6 +446,7 @@ class ExorClientCfgDTO
 	ref ExorCfgVehCamara veh_camara;	// camara por asiento (la aplica el cliente en HandleView)
 	ref ExorCfgVehInventario veh_inventario;	// ver ambos inventarios en el auto (cliente)
 	ref ExorCfgServerInfo serverinfo;	// panel de server info (texto de tabs)
+	ref ExorCfgReparacion reparacion;	// reparar-a-pristine + lista de kits combinables (el cliente la usa para ofrecer la accion)
 
 	void ExorClientCfgDTO()
 	{
@@ -406,6 +456,7 @@ class ExorClientCfgDTO
 		veh_camara = new ExorCfgVehCamara;
 		veh_inventario = new ExorCfgVehInventario;
 		serverinfo = new ExorCfgServerInfo;
+		reparacion = new ExorCfgReparacion;
 	}
 }
 
@@ -429,15 +480,16 @@ class ExorCfgVipLoadout
 	}
 }
 
-// Una entrada VIP: el steamid + la fecha en que ingreso a la lista (la usa el
-// ciclo mensual de usos de equipamiento). fecha_ingreso vacia = el server la
-// completa con la fecha de hoy al arrancar. Si lo sacas y lo volves a meter como
-// entrada NUEVA (sin fecha), se sella con la fecha de re-ingreso = ciclo nuevo.
+// Una entrada VIP: steamid + fecha de ingreso + usos de equipamiento.
+// fecha_ingreso vacia = el server la sella con HOY al arrancar. El VIP vence a los
+// dias_vip (def 30) dias de fecha_ingreso (ver ExorCfgVip.IsVip). Los usos NO se
+// reponen solos. RENOVAR = editar fecha_ingreso a mano (reinicia los 30 dias y
+// repone los usos) y/o subir usos_por_mes. El usuario avisa cuando se le vence.
 class ExorCfgVipEntry
 {
 	string steamid = "";
-	string fecha_ingreso = "";   // "AAAA-MM-DD" (vacio = el server la completa con hoy)
-	int usos_por_mes = 0;        // usos de equipamiento por ciclo para ESTE player (0 = usar el default global)
+	string fecha_ingreso = "";   // "AAAA-MM-DD" (vacio = el server la sella con hoy)
+	int usos_por_mes = 0;        // usos de equipamiento totales para ESTE player hasta renovar (0 = usar el default global)
 }
 
 // Lista vieja (solo steamids) para migrar al formato nuevo automaticamente.
@@ -451,7 +503,8 @@ class ExorCfgVip
 {
 	ref array<ref ExorCfgVipEntry> vips;
 	bool equip_habilitado = true;        // perk: opcion "Spawn en base + Equipamiento"
-	int equip_usos_por_mes = 7;          // DEFAULT global de usos por ciclo (si la entrada del player tiene 0)
+	int equip_usos_por_mes = 7;          // DEFAULT global de usos de equipamiento (si la entrada del player tiene 0). NO se reponen solos: ver dias_vip.
+	int dias_vip = 30;                   // dias que dura el VIP desde fecha_ingreso. Pasados, IsVip = false (ya no cuenta como VIP). Renovacion = editar fecha_ingreso a mano.
 	ref ExorCfgVipLoadout equip_loadout;
 
 	void ExorCfgVip()
@@ -473,6 +526,7 @@ class ExorCfgVip
 
 		equip_habilitado = true;
 		equip_usos_por_mes = 7;
+		dias_vip = 30;
 		equip_loadout = new ExorCfgVipLoadout();
 		equip_loadout.pantalon = "CargoPants_Black";
 		equip_loadout.camisa = "TacticalShirt_Black";
@@ -482,7 +536,8 @@ class ExorCfgVip
 		equip_loadout.items_extra.Insert("TacticalBaconCan");
 	}
 
-	// Usos por ciclo para este player: el propio de la entrada, o el default global.
+	// Usos de equipamiento para este player (hasta renovar): el propio de la entrada,
+	// o el default global. NO se reponen solos (solo al renovar fecha_ingreso).
 	int UsosPorMes(string sid)
 	{
 		ExorCfgVipEntry e = FindEntry(sid);
@@ -511,9 +566,64 @@ class ExorCfgVip
 		return null;
 	}
 
+	// Dias civiles exactos desde una fecha (algoritmo days-from-civil; exacto para y>=0).
+	static int CivilDays(int y, int m, int d)
+	{
+		int yy = y;
+		if (m <= 2)
+			yy = yy - 1;
+		int era = yy / 400;
+		int yoe = yy - era * 400;
+		int mp;
+		if (m > 2)
+			mp = m - 3;
+		else
+			mp = m + 9;
+		int doy = (153 * mp + 2) / 5 + d - 1;
+		int doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+		return era * 146097 + doe - 719468;
+	}
+
+	// Parsea "AAAA-MM-DD". true si ok (deja py/pm/pd seteados).
+	static bool ParseFechaVip(string s, out int py, out int pm, out int pd)
+	{
+		py = 0;
+		pm = 0;
+		pd = 0;
+		if (s.Length() < 10)
+			return false;
+		py = s.Substring(0, 4).ToInt();
+		pm = s.Substring(5, 2).ToInt();
+		pd = s.Substring(8, 2).ToInt();
+		if (py <= 0 || pm <= 0 || pd <= 0)
+			return false;
+		return true;
+	}
+
+	// Dias transcurridos desde el ingreso de esta entrada. -1 si no tiene fecha valida
+	// (aun sin sellar = recien agregado; se trata como vigente hasta que el server la sella).
+	int DaysSinceIngreso(ExorCfgVipEntry e)
+	{
+		if (!e)
+			return -1;
+		int py, pm, pd;
+		if (!ParseFechaVip(e.fecha_ingreso, py, pm, pd))
+			return -1;
+		int y, m, d;
+		GetYearMonthDay(y, m, d);
+		return CivilDays(y, m, d) - CivilDays(py, pm, pd);
+	}
+
+	// VIP vigente = esta en la lista Y no pasaron dias_vip dias desde fecha_ingreso.
 	bool IsVip(string sid)
 	{
-		return FindEntry(sid) != null;
+		ExorCfgVipEntry e = FindEntry(sid);
+		if (!e)
+			return false;
+		int days = DaysSinceIngreso(e);
+		if (days < 0)
+			return true;	// sin fecha aun (se sella con hoy al arrancar) -> vigente
+		return days < dias_vip;	// dentro de la ventana de dias_vip (def 30) dias
 	}
 
 	// Fecha de ingreso de un VIP ("" si no esta).
@@ -658,6 +768,7 @@ class ExorConfig
 	ref ExorCfgKillfeed killfeed;
 	ref ExorCfgServerInfo serverinfo;
 	ref ExorCfgChat chat;
+	ref ExorCfgReparacion reparacion;
 	bool m_Synced;	// cliente: true cuando ya recibio la config del server
 
 	void ExorConfig()
@@ -673,6 +784,7 @@ class ExorConfig
 		killfeed = new ExorCfgKillfeed;
 		serverinfo = new ExorCfgServerInfo;
 		chat = new ExorCfgChat;
+		reparacion = new ExorCfgReparacion;
 	}
 
 	// SERVER: serializa la config relevante al cliente a JSON
@@ -685,6 +797,7 @@ class ExorConfig
 		d.veh_camara = vehiculos.camara;
 		d.veh_inventario = vehiculos.inventario;
 		d.serverinfo = serverinfo;
+		d.reparacion = reparacion;
 		JsonSerializer js = new JsonSerializer();
 		string data;
 		js.WriteToString(d, false, data);
@@ -712,6 +825,8 @@ class ExorConfig
 			c.vehiculos.inventario = d.veh_inventario;
 		if (d.serverinfo)
 			c.serverinfo = d.serverinfo;
+		if (d.reparacion)
+			c.reparacion = d.reparacion;
 		c.m_Synced = true;
 	}
 
@@ -736,6 +851,7 @@ class ExorConfig
 		c.LoadKillfeed();
 		c.LoadServerInfo();
 		c.LoadChat();
+		c.LoadReparacion();
 
 		return c;
 	}
@@ -840,6 +956,15 @@ class ExorConfig
 		else
 			chat.SetDefaults();
 		JsonFileLoader<ExorCfgChat>.JsonSaveFile(ExorStorageConstants.CFG_CHAT, chat);
+	}
+
+	void LoadReparacion()
+	{
+		if (FileExist(ExorStorageConstants.CFG_REPARACION))
+			JsonFileLoader<ExorCfgReparacion>.JsonLoadFile(ExorStorageConstants.CFG_REPARACION, reparacion);
+		else
+			reparacion.SetDefaults();
+		JsonFileLoader<ExorCfgReparacion>.JsonSaveFile(ExorStorageConstants.CFG_REPARACION, reparacion);
 	}
 
 	// ---- migracion del settings.json monolitico viejo ----

@@ -154,7 +154,7 @@ class ExorSpawnMenu extends UIScriptedMenu
 				string baseTxt = string.Format("Spawn en base + Equipamiento (%1)", m_EquipRemaining);
 				if (m_EquipRemaining <= 0)
 				{
-					m_BtnEquip.SetText("Spawn en base + Equipamiento (0 - prox. mes)");
+					m_BtnEquip.SetText("Spawn en base + Equipamiento (0 - sin usos)");
 					m_BtnEquip.SetColor(colGrey);
 					m_BtnEquip.SetTextColor(colRed);
 				}
