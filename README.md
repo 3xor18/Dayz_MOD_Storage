@@ -9,7 +9,8 @@ Mod **todo-en-uno** para DayZ (cliente + servidor), **100% standalone**. Combina
 **NINGUNA.** El mod **no requiere ningún otro mod** de Steam Workshop. Solo usa addons **vanilla** de DayZ:
 
 ```
-requiredAddons[] = { DZ_Data, DZ_Scripts, DZ_Gear_Containers, DZ_Weapons_Ammunition, DZ_Gear_Camping };
+requiredAddons[] = { DZ_Data, DZ_Scripts, DZ_Gear_Containers, DZ_Weapons_Ammunition,
+                     DZ_Gear_Camping, DZ_Characters_Backpacks, DZ_Characters };
 ```
 
 No depende de Expansion, CF (Community Framework) ni ningún framework externo. Puede convivir con otros mods, pero **ojo**: si corrés Expansion-Groups/Territories al mismo tiempo, los sistemas de grupo/territorio van a chocar (este mod asume ser el único de party/territorio).
@@ -37,10 +38,12 @@ No depende de Expansion, CF (Community Framework) ni ningún framework externo. 
 
 ### VIP
 - **Spawn en base + Equipamiento**: reemplaza la ropa por un loadout (pantalón/camisa/zapato/bolso + items extra) y gasta 1 uso.
-- **Usos por jugador y por mes**, con el ciclo anclado a la **fecha de ingreso** de cada VIP (entró el 15 → resetea el 15, no el 1°).
+- **Vencimiento a los 30 días** (`dias_vip`) desde la `fecha_ingreso`: pasados, deja de contar como VIP automáticamente.
+- **Los usos NO se reponen solos.** La única forma de renovar es **editar a mano** en `vip.json` la `fecha_ingreso` (reinicia los 30 días y repone los usos) y/o subir `usos_por_mes`. Pensado para que el jugador avise cuando se le venció y vos controles.
+- **Distancia en marcas** (ver HUD): solo los VIP ven la distancia a las marcas del party.
 
 ### HUD / UI
-- HUD de party (barra de vida + nombre + distancia), **nameplates 3D**, **mapa** (M) con tu posición + la de tu grupo, **marcas** (T pone / Y limpia).
+- HUD de party (barra de vida + nombre + distancia), **nameplates 3D**, **mapa** (M) con tu posición + la de tu grupo, **marcas** (T pone / Y limpia). Las marcas muestran la **distancia en verde** solo a los jugadores **VIP**.
 - **Killfeed** (arriba-derecha) PvP/suicidio.
 - **Panel de info del server** (ESC → "Server Info"): tabs General / Reglas (texto editable) y **Score** (ranking kills/deaths/suicidios/distancia).
 - **Tooltip de items**: pastilla de rareza por tier + barra de durabilidad.
@@ -54,6 +57,7 @@ No depende de Expansion, CF (Community Framework) ni ningún framework externo. 
 - Conductor en 3ª persona / pasajeros forzados a 1ª; ver tu inventario + el del auto; quitar daño (toggle).
 - **Sueño automático**: autos inactivos X min dejan de simular física (gran ahorro) y despiertan solos cuando alguien se acerca.
 - **Voltear vehículo** (acción con hold, anti-abuso).
+- **Inventario ampliado**: el baúl de los autos vanilla (Hatchback_02, Sedan_02, Offroad_02, Truck_01_Covered) pasa a **600 slots**, y permite guardar **ropa/contenedores con items adentro** (como los barriles). El tamaño de cargo es de build (no se togglea por JSON); lo anidado sí (`inv_items_anidados`).
 
 ### Storage (barriles 3xor)
 - `Exor_Barrel_500` (500 slots) + su versión **empaquetable** (caja transportable).
@@ -62,6 +66,18 @@ No depende de Expansion, CF (Community Framework) ni ningún framework externo. 
 
 ### Munición
 - **Stacks a 100** (solo balas sueltas/bolts/flechas), **auto-stack** al recoger, **cantidad aleatoria al spawnear** por tipo.
+
+### Reparación y kits
+- **Reparar a pristine**: al reparar con cualquier kit, el ítem llega hasta **pristine** (verde) en vez de toparse en "gastado".
+- **Combinar kits gastados**: 2 kits del mismo tipo (costura, limpieza de armas, piedra de afilar, etc.) se **unen sumando su uso** (2 al 50% → 1 al 100%). Lista configurable.
+
+### Bolsa de cadáver (lápida)
+- Al morir, ~1s después el cuerpo se convierte en una **lápida** (sin colisión, no se mueve) con **todo el loot en los slots del equipo** (chaleco/mochila/bolsillos) — se lootea como un cadáver. Las armas conservan su cargador.
+- **Persiste 2h** y **sobrevive el reinicio** del server.
+- **Optimización por proximidad**: si no hay nadie cerca, el loot se virtualiza (sale del mundo); reaparece cuando un jugador se acerca. Todo configurable y apagable.
+
+### Vanilla tweaks
+- **Ghillies al slot del brazalete**: los ghillie vanilla pasan al slot Armband, liberando la espalda (podés llevar **bolso + ghillie** a la vez).
 
 ---
 
@@ -101,6 +117,7 @@ Todo se configura por JSON en `<profile>/3xorVanillaOptimization/`. Cada archivo
 | `vehiculos_excluidos` | `[]` | Vehículos que nunca duermen |
 | `voltear_vehiculos` | `true` | Activa la acción "Voltear vehículo" |
 | `voltear_segundos` | `40` | Duración de la acción de voltear |
+| `inv_items_anidados` | `true` | Permite guardar ropa/contenedores con items adentro en el baúl (el cargo de 600 es siempre, de build) |
 | `camara.conductor_3ra_persona` | `true` | El conductor puede ir en 3ª |
 | `camara.pasajeros_1ra_persona` | `true` | Pasajeros forzados a 1ª |
 | `inventario.ver_ambos_dentro` | `true` | Ver tu inventario + el del auto a la vez |
@@ -195,9 +212,12 @@ Todo se configura por JSON en `<profile>/3xorVanillaOptimization/`. Cada archivo
 | Parámetro | Default | Qué hace |
 |---|---|---|
 | `vips[]` | tu steamid (ejemplo) | Cada VIP: `steamid`, `fecha_ingreso` ("AAAA-MM-DD", vacío = se sella con hoy), `usos_por_mes` (0 = usar default global) |
+| `dias_vip` | `30` | Días que dura el VIP desde `fecha_ingreso`. Pasados, deja de contar como VIP |
 | `equip_habilitado` | `true` | Activa el perk "Spawn en base + Equipamiento" |
-| `equip_usos_por_mes` | `7` | Default global de usos por ciclo (si la entrada tiene 0) |
+| `equip_usos_por_mes` | `7` | Default global de usos de equipamiento (si la entrada tiene 0). **No se reponen solos** |
 | `equip_loadout` | ejemplo | `pantalon`, `camisa`, `zapato`, `bolso` (vacío = no tocar) + `items_extra[]` (al cargo de camisa/pantalón) |
+
+> **Renovar un VIP:** editar su `fecha_ingreso` (reinicia los 30 días **y** repone los usos) y/o subir `usos_por_mes`. Los usos no se reponen automáticamente.
 
 ### `killfeed.json`
 | Parámetro | Default | Qué hace |
@@ -226,18 +246,35 @@ Todo se configura por JSON en `<profile>/3xorVanillaOptimization/`. Cada archivo
 | `cooldown_segundos` | `2` | Anti-spam: mínimo entre mensajes. `0` = sin límite |
 | `bloquear_repetidos` | `true` | Anti-spam: bloquear el mismo mensaje seguido |
 
+### `reparacion.json`
+| Parámetro | Default | Qué hace |
+|---|---|---|
+| `reparar_a_pristine` | `true` | Al reparar con cualquier kit, el ítem llega hasta pristine (verde) |
+| `kits_stackeables` | costura/cuero/limpieza/piedra/whetstone/epoxy/duct tape/tire kit | Classnames de kits que se pueden combinar entre sí sumando su uso |
+
+### `bodycadaver.json`
+| Parámetro | Default | Qué hace |
+|---|---|---|
+| `habilitado` | `true` | Master on/off de la bolsa de cadáver (lápida) |
+| `delay_segundos` | `1` | Demora entre la muerte y la aparición de la lápida |
+| `duracion_minutos` | `120` | Cuánto dura la lápida (2h). Sobrevive reinicio |
+| `acercar_metros` | `10` | Player a ≤ esto → des-virtualiza (deja pikear el loot) |
+| `alejar_metros` | `10` | Radio para considerar "hay alguien cerca" |
+| `virtualizar_minutos` | `5` | Tras N min sin nadie a ≤`alejar_metros` → virtualiza (saca el loot del mundo) |
+
 ---
 
 ## Archivos que crea el mod (en `<profile>/3xorVanillaOptimization/`)
 
-**Config (editables):** `storage.json` · `vehiculos.json` · `municion.json` · `party.json` · `spawns.json` · `mapa.json` · `items.json` · `vip.json` · `killfeed.json` · `serverinfo.json` · `chat.json`
+**Config (editables):** `storage.json` · `vehiculos.json` · `municion.json` · `party.json` · `spawns.json` · `mapa.json` · `items.json` · `vip.json` · `killfeed.json` · `serverinfo.json` · `chat.json` · `reparacion.json` · `bodycadaver.json`
 
 **Datos (los maneja el server, no editar a mano salvo que sepas):**
 - `groups/<id>.json` — grupos/party persistidos
 - `storage/<id>.json` — contenido virtualizado de barriles
+- `bodybags/<id>.json` — contenido virtualizado de bolsas de cadáver
 - `raidlog/raid_AAAA-MM-DD.txt` — logs forenses anti-raid (auto-purga)
 - `stats.json` — ranking (kills/deaths/suicidios)
-- `vip_state.json` — usos de equipamiento por VIP/ciclo
+- `vip_state.json` — usos de equipamiento por VIP
 
 ---
 
