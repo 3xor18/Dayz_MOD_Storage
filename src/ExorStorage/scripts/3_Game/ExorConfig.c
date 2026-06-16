@@ -305,7 +305,7 @@ class ExorCfgSpawns
 		// Punto de ejemplo (el admin define los suyos). Editar/reemplazar en spawns.json.
 		ExorSpawnPunto ej = new ExorSpawnPunto();
 		ej.nombre = "Ejemplo - editar en spawns.json";
-		ej.x = 6000; ej.y = 0; ej.z = 2000; ej.cooldown_segundos = 0;
+		ej.x = 6000; ej.y = 0; ej.z = 2000; ej.cooldown_segundos = 300;
 		ej.distancia_random = 50;
 		puntos.Insert(ej);
 	}
@@ -390,25 +390,171 @@ class ExorClientCfgDTO
 // vip.json (lista de SteamIDs VIP). Hoy se usa para permitir spawn en el mastil;
 // queda listo para colgarle mas beneficios a futuro.
 // ----------------------------------------------------------------------------
-class ExorCfgVip
+// Loadout VIP (mismo para todos los VIP): ropa que REEMPLAZA la de spawn +
+// items extra que se ponen en el cargo de la camisa/pantalon. Vacio = no tocar.
+class ExorCfgVipLoadout
+{
+	string pantalon = "";
+	string camisa = "";
+	string zapato = "";
+	string bolso = "";
+	ref TStringArray items_extra;   // comida/cuchillo/etc -> cargo de camisa o pantalon
+
+	void ExorCfgVipLoadout()
+	{
+		items_extra = new TStringArray;
+	}
+}
+
+// Una entrada VIP: el steamid + la fecha en que ingreso a la lista (la usa el
+// ciclo mensual de usos de equipamiento). fecha_ingreso vacia = el server la
+// completa con la fecha de hoy al arrancar. Si lo sacas y lo volves a meter como
+// entrada NUEVA (sin fecha), se sella con la fecha de re-ingreso = ciclo nuevo.
+class ExorCfgVipEntry
+{
+	string steamid = "";
+	string fecha_ingreso = "";   // "AAAA-MM-DD" (vacio = el server la completa con hoy)
+	int usos_por_mes = 0;        // usos de equipamiento por ciclo para ESTE player (0 = usar el default global)
+}
+
+// Lista vieja (solo steamids) para migrar al formato nuevo automaticamente.
+class ExorCfgVipLegacy
 {
 	ref TStringArray vip_steamids;
+	void ExorCfgVipLegacy() { vip_steamids = new TStringArray; }
+}
+
+class ExorCfgVip
+{
+	ref array<ref ExorCfgVipEntry> vips;
+	bool equip_habilitado = true;        // perk: opcion "Spawn en base + Equipamiento"
+	int equip_usos_por_mes = 7;          // DEFAULT global de usos por ciclo (si la entrada del player tiene 0)
+	ref ExorCfgVipLoadout equip_loadout;
 
 	void ExorCfgVip()
 	{
-		vip_steamids = new TStringArray;
+		vips = new array<ref ExorCfgVipEntry>;
+		equip_loadout = new ExorCfgVipLoadout();
 	}
 
 	void SetDefaults()
 	{
-		vip_steamids = new TStringArray;
+		vips = new array<ref ExorCfgVipEntry>;
+		// Entrada de EJEMPLO (asi se ve como agregar otros players): steamid +
+		// fecha_ingreso (vacio = se sella al arrancar) + usos_por_mes propio.
+		ExorCfgVipEntry ej = new ExorCfgVipEntry();
+		ej.steamid = "76561198722396813";
+		ej.fecha_ingreso = "";
+		ej.usos_por_mes = 20;
+		vips.Insert(ej);
+
+		equip_habilitado = true;
+		equip_usos_por_mes = 7;
+		equip_loadout = new ExorCfgVipLoadout();
+		equip_loadout.pantalon = "CargoPants_Black";
+		equip_loadout.camisa = "TacticalShirt_Black";
+		equip_loadout.zapato = "MilitaryBoots_Black";
+		equip_loadout.bolso = "AssaultBag_Black";
+		equip_loadout.items_extra.Insert("CombatKnife");
+		equip_loadout.items_extra.Insert("TacticalBaconCan");
+	}
+
+	// Usos por ciclo para este player: el propio de la entrada, o el default global.
+	int UsosPorMes(string sid)
+	{
+		ExorCfgVipEntry e = FindEntry(sid);
+		if (e && e.usos_por_mes > 0)
+			return e.usos_por_mes;
+		return equip_usos_por_mes;
+	}
+
+	static string Pad2(int v)
+	{
+		if (v < 10)
+			return "0" + v.ToString();
+		return v.ToString();
+	}
+
+	ExorCfgVipEntry FindEntry(string sid)
+	{
+		if (!vips)
+			return null;
+		int i;
+		for (i = 0; i < vips.Count(); i++)
+		{
+			if (vips.Get(i) && vips.Get(i).steamid == sid)
+				return vips.Get(i);
+		}
+		return null;
 	}
 
 	bool IsVip(string sid)
 	{
-		if (!vip_steamids)
+		return FindEntry(sid) != null;
+	}
+
+	// Fecha de ingreso de un VIP ("" si no esta).
+	string FechaIngreso(string sid)
+	{
+		ExorCfgVipEntry e = FindEntry(sid);
+		if (e)
+			return e.fecha_ingreso;
+		return "";
+	}
+
+	// Migra el formato viejo (vip_steamids[]) y sella con la fecha de hoy las
+	// entradas que esten sin fecha. Devuelve true si cambio algo (para re-guardar).
+	bool MigrateAndStamp()
+	{
+		bool changed = false;
+
+		// 1) Migrar vip_steamids[] viejo -> vips[] (solo si vips quedo vacia)
+		if (vips.Count() == 0 && FileExist(ExorStorageConstants.CFG_VIP))
+		{
+			ExorCfgVipLegacy old = new ExorCfgVipLegacy();
+			JsonFileLoader<ExorCfgVipLegacy>.JsonLoadFile(ExorStorageConstants.CFG_VIP, old);
+			if (old.vip_steamids && old.vip_steamids.Count() > 0)
+			{
+				int k;
+				for (k = 0; k < old.vip_steamids.Count(); k++)
+				{
+					ExorCfgVipEntry e = new ExorCfgVipEntry();
+					e.steamid = old.vip_steamids.Get(k);
+					e.fecha_ingreso = "";
+					vips.Insert(e);
+					changed = true;
+				}
+			}
+		}
+
+		// 2) Sellar con hoy las entradas sin fecha
+		int y, m, d;
+		GetYearMonthDay(y, m, d);
+		string hoy = string.Format("%1-%2-%3", y, Pad2(m), Pad2(d));
+		int i;
+		for (i = 0; i < vips.Count(); i++)
+		{
+			ExorCfgVipEntry en = vips.Get(i);
+			if (en && en.steamid != "" && en.fecha_ingreso == "")
+			{
+				en.fecha_ingreso = hoy;
+				changed = true;
+			}
+		}
+		return changed;
+	}
+
+	// true si hay al menos una pieza/item configurado en el loadout
+	bool TieneLoadout()
+	{
+		if (!equip_loadout)
 			return false;
-		return vip_steamids.Find(sid) > -1;
+		if (equip_loadout.pantalon != "") return true;
+		if (equip_loadout.camisa != "") return true;
+		if (equip_loadout.zapato != "") return true;
+		if (equip_loadout.bolso != "") return true;
+		if (equip_loadout.items_extra && equip_loadout.items_extra.Count() > 0) return true;
+		return false;
 	}
 }
 
@@ -638,6 +784,8 @@ class ExorConfig
 			JsonFileLoader<ExorCfgVip>.JsonLoadFile(ExorStorageConstants.CFG_VIP, vip);
 		else
 			vip.SetDefaults();
+		// Migra vip_steamids[] viejo y sella la fecha de ingreso (hoy) de los nuevos.
+		vip.MigrateAndStamp();
 		JsonFileLoader<ExorCfgVip>.JsonSaveFile(ExorStorageConstants.CFG_VIP, vip);
 	}
 

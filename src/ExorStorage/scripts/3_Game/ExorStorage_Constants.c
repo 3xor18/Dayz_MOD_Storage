@@ -31,6 +31,9 @@ class ExorStorageConstants
 	// Stats persistentes para el Score del panel de server info
 	static const string STATS_FILE = "$profile:3xorVanillaOptimization\\stats.json";
 
+	// Estado persistente de VIP (fecha de ingreso + usos de equipamiento por ciclo)
+	static const string VIP_STATE_FILE = "$profile:3xorVanillaOptimization\\vip_state.json";
+
 	// Datos de virtualizacion (contenido de barriles)
 	static const string STORAGE_DIR = "$profile:3xorVanillaOptimization\\storage";
 

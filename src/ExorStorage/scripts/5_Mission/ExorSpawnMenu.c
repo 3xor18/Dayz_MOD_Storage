@@ -19,6 +19,10 @@ class ExorSpawnMenu extends UIScriptedMenu
 	protected float m_BaseRemain;	// seg restantes de cooldown de base
 	protected bool m_BaseFlagDown;	// bandera abajo bloquea base
 
+	protected ButtonWidget m_BtnEquip;	// "Spawn en base + Equipamiento" (VIP)
+	protected bool m_EquipShown;
+	protected int m_EquipRemaining;		// usos VIP restantes en el ciclo
+
 	override Widget Init()
 	{
 		layoutRoot = GetGame().GetWorkspace().CreateWidgets("ExorStorage/gui/exor_spawn_menu.layout");
@@ -33,6 +37,7 @@ class ExorSpawnMenu extends UIScriptedMenu
 			m_Buttons.Insert(b);
 		}
 		m_BtnBase = ButtonWidget.Cast(layoutRoot.FindAnyWidget("ExorSpawnBtnBase"));
+		m_BtnEquip = ButtonWidget.Cast(layoutRoot.FindAnyWidget("ExorSpawnBtnBaseEquip"));
 
 		m_Names = new TStringArray;
 		m_PointRemain = new array<float>;
@@ -40,6 +45,8 @@ class ExorSpawnMenu extends UIScriptedMenu
 		m_BaseShown = false;
 		m_BaseRemain = 0;
 		m_BaseFlagDown = false;
+		m_EquipShown = false;
+		m_EquipRemaining = 0;
 
 		ExorSpawnMenuDTO dto = ExorSpawnClient.s_DTO;
 		if (dto)
@@ -56,6 +63,8 @@ class ExorSpawnMenu extends UIScriptedMenu
 			m_BaseShown = dto.base_enabled;
 			m_BaseRemain = dto.base_cd_seg;
 			m_BaseFlagDown = dto.base_flag_down;
+			m_EquipShown = dto.equip_enabled;
+			m_EquipRemaining = dto.equip_remaining;
 		}
 
 		Refresh();
@@ -77,8 +86,13 @@ class ExorSpawnMenu extends UIScriptedMenu
 	}
 
 	// Pinta texto/color/disponibilidad de cada boton segun el cooldown actual.
+	// En cooldown: fondo gris + LETRA ROJA. Disponible: color propio + letra clara.
 	void Refresh()
 	{
+		int colRed = ARGB(255, 225, 70, 70);
+		int colTxt = ARGB(255, 235, 235, 235);
+		int colGrey = ARGB(255, 40, 40, 46);
+
 		int i;
 		for (i = 0; i < m_Buttons.Count(); i++)
 		{
@@ -94,12 +108,14 @@ class ExorSpawnMenu extends UIScriptedMenu
 			if (m_PointRemain.Get(i) > 0.5)
 			{
 				b.SetText(m_Names.Get(i) + "   (" + FormatMMSS(m_PointRemain.Get(i)) + ")");
-				b.SetColor(ARGB(255, 40, 40, 46));	// gris = en cooldown
+				b.SetColor(colGrey);
+				b.SetTextColor(colRed);
 			}
 			else
 			{
 				b.SetText(m_Names.Get(i));
-				b.SetColor(ARGB(255, 51, 51, 77));	// normal
+				b.SetColor(ARGB(255, 51, 51, 77));
+				b.SetTextColor(colTxt);
 			}
 		}
 
@@ -111,20 +127,62 @@ class ExorSpawnMenu extends UIScriptedMenu
 				if (m_BaseFlagDown)
 				{
 					m_BtnBase.SetText("Mi base   (bandera abajo)");
-					m_BtnBase.SetColor(ARGB(255, 46, 46, 46));
+					m_BtnBase.SetColor(colGrey);
+					m_BtnBase.SetTextColor(colRed);
 				}
 				else if (m_BaseRemain > 0.5)
 				{
 					m_BtnBase.SetText("Mi base   (" + FormatMMSS(m_BaseRemain) + ")");
-					m_BtnBase.SetColor(ARGB(255, 46, 46, 46));
+					m_BtnBase.SetColor(colGrey);
+					m_BtnBase.SetTextColor(colRed);
 				}
 				else
 				{
 					m_BtnBase.SetText("Mi base");
 					m_BtnBase.SetColor(ARGB(255, 31, 102, 31));	// verde = disponible
+					m_BtnBase.SetTextColor(colTxt);
 				}
 			}
 		}
+
+		// Boton VIP "Spawn en base + Equipamiento (usos)" + timer de la base.
+		if (m_BtnEquip)
+		{
+			m_BtnEquip.Show(m_EquipShown);
+			if (m_EquipShown)
+			{
+				string baseTxt = string.Format("Spawn en base + Equipamiento (%1)", m_EquipRemaining);
+				if (m_EquipRemaining <= 0)
+				{
+					m_BtnEquip.SetText("Spawn en base + Equipamiento (0 - prox. mes)");
+					m_BtnEquip.SetColor(colGrey);
+					m_BtnEquip.SetTextColor(colRed);
+				}
+				else if (m_BaseFlagDown)
+				{
+					m_BtnEquip.SetText(baseTxt + "   (bandera abajo)");
+					m_BtnEquip.SetColor(colGrey);
+					m_BtnEquip.SetTextColor(colRed);
+				}
+				else if (m_BaseRemain > 0.5)
+				{
+					m_BtnEquip.SetText(baseTxt + "   (" + FormatMMSS(m_BaseRemain) + ")");
+					m_BtnEquip.SetColor(colGrey);
+					m_BtnEquip.SetTextColor(colRed);
+				}
+				else
+				{
+					m_BtnEquip.SetText(baseTxt);
+					m_BtnEquip.SetColor(ARGB(255, 90, 70, 150));	// morado VIP disponible
+					m_BtnEquip.SetTextColor(colTxt);
+				}
+			}
+		}
+	}
+
+	bool EquipAvailable()
+	{
+		return m_EquipShown && m_EquipRemaining > 0 && BaseAvailable();
 	}
 
 	bool PointAvailable(int i)
@@ -202,6 +260,14 @@ class ExorSpawnMenu extends UIScriptedMenu
 			if (!BaseAvailable())
 				return true;	// base no disponible: ignora el click
 			p.ExorReqSpawnPick(-1);
+			Close();
+			return true;
+		}
+		if (w == m_BtnEquip)
+		{
+			if (!EquipAvailable())
+				return true;	// sin usos o base no disponible: ignora el click
+			p.ExorReqSpawnPick(-2);
 			Close();
 			return true;
 		}

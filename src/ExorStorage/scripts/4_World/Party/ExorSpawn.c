@@ -16,6 +16,8 @@ class ExorSpawnMenuDTO
 	bool base_enabled;            // mostrar el boton "Mi base" (permitido + tiene mastil)
 	int base_cd_seg;              // segundos restantes de cooldown de base (0 = disponible)
 	bool base_flag_down;          // bandera abajo y eso bloquea el respawn en base
+	bool equip_enabled;           // mostrar "Spawn en base + Equipamiento" (VIP + loadout + base)
+	int equip_remaining;          // usos de equipamiento restantes en el ciclo
 	void ExorSpawnMenuDTO()
 	{
 		nombres = new TStringArray;
@@ -257,6 +259,18 @@ class ExorSpawn
 			}
 		}
 
+		// Opcion VIP "Spawn en base + Equipamiento": requiere ser VIP, tener loadout
+		// configurado y que la base se pueda mostrar. La disponibilidad final (base
+		// arriba/sin cd + usos > 0) la combina el cliente.
+		dto.equip_enabled = false;
+		dto.equip_remaining = 0;
+		ExorCfgVip vipcfg = GetExorConfig().vip;
+		if (vipcfg.equip_habilitado && vipcfg.IsVip(sidBase) && vipcfg.TieneLoadout() && dto.base_enabled)
+		{
+			dto.equip_enabled = true;
+			dto.equip_remaining = ExorVipState.Get().RemainingUses(sidBase);
+		}
+
 		JsonSerializer js = new JsonSerializer();
 		string data;
 		js.WriteToString(dto, false, data);
@@ -271,6 +285,34 @@ class ExorSpawn
 		Ensure();
 		string sid = player.GetIdentity().GetPlainId();
 		vector pos = vector.Zero;
+
+		if (index == -2)
+		{
+			// Spawn en base + Equipamiento VIP (gasta 1 uso del ciclo).
+			ExorCfgVip vip = GetExorConfig().vip;
+			if (!vip.equip_habilitado || !vip.IsVip(sid) || !vip.TieneLoadout())
+			{
+				player.MessageImportant("El equipamiento VIP no está disponible.");
+				return;
+			}
+			if (ExorVipState.Get().RemainingUses(sid) <= 0)
+			{
+				player.MessageImportant("No te quedan usos de equipamiento este ciclo.");
+				return;
+			}
+			pos = ChooseBase(sid, player);	// respeta bandera + cooldown (y consume cd de base)
+			if (pos == vector.Zero)
+			{
+				player.MessageImportant("No podés aparecer en tu base ahora (bandera abajo o en cooldown).");
+				return;
+			}
+			player.SetPosition(pos);
+			ExorVipState.Get().ConsumeUse(sid);
+			ExorVipState.ApplyLoadout(player);
+			int rem = ExorVipState.Get().RemainingUses(sid);
+			player.MessageImportant(string.Format("Apareciste en tu base con equipamiento VIP. Usos restantes: %1", rem));
+			return;
+		}
 
 		if (index < 0)
 		{
