@@ -362,6 +362,29 @@ class ExorCfgItems
 }
 
 // ----------------------------------------------------------------------------
+// chat.json (chat custom con canales: global + zona/proximity)
+// ----------------------------------------------------------------------------
+class ExorCfgChat
+{
+	bool habilitado = true;          // master on/off del chat custom
+	int radio_zona_metros = 50;      // alcance del canal ZONA (proximity)
+	int duracion_segundos = 25;      // cuanto dura cada linea en pantalla
+	int max_lineas = 9;              // maximo de lineas simultaneas (la mas vieja se va)
+	int cooldown_segundos = 2;       // anti-spam: minimo entre mensajes (0 = sin limite)
+	bool bloquear_repetidos = true;  // anti-spam: bloquear el MISMO mensaje seguido
+
+	void SetDefaults()
+	{
+		habilitado = true;
+		radio_zona_metros = 50;
+		duracion_segundos = 25;
+		max_lineas = 9;
+		cooldown_segundos = 2;
+		bloquear_repetidos = true;
+	}
+}
+
+// ----------------------------------------------------------------------------
 // Sync server -> cliente: SOLO la config que el cliente necesita para mostrar
 // (toggles de party/HUD/nameplates/marcas, mapa, durabilidad/rareza+tabla).
 // Lo pesado (municion/storage/vehiculos) es logica de server y NO se envia.
@@ -634,6 +657,7 @@ class ExorConfig
 	ref ExorCfgVip vip;
 	ref ExorCfgKillfeed killfeed;
 	ref ExorCfgServerInfo serverinfo;
+	ref ExorCfgChat chat;
 	bool m_Synced;	// cliente: true cuando ya recibio la config del server
 
 	void ExorConfig()
@@ -648,6 +672,7 @@ class ExorConfig
 		vip = new ExorCfgVip;
 		killfeed = new ExorCfgKillfeed;
 		serverinfo = new ExorCfgServerInfo;
+		chat = new ExorCfgChat;
 	}
 
 	// SERVER: serializa la config relevante al cliente a JSON
@@ -710,6 +735,7 @@ class ExorConfig
 		c.LoadVip();
 		c.LoadKillfeed();
 		c.LoadServerInfo();
+		c.LoadChat();
 
 		return c;
 	}
@@ -805,6 +831,15 @@ class ExorConfig
 		else
 			serverinfo.SetDefaults();
 		JsonFileLoader<ExorCfgServerInfo>.JsonSaveFile(ExorStorageConstants.CFG_SERVERINFO, serverinfo);
+	}
+
+	void LoadChat()
+	{
+		if (FileExist(ExorStorageConstants.CFG_CHAT))
+			JsonFileLoader<ExorCfgChat>.JsonLoadFile(ExorStorageConstants.CFG_CHAT, chat);
+		else
+			chat.SetDefaults();
+		JsonFileLoader<ExorCfgChat>.JsonSaveFile(ExorStorageConstants.CFG_CHAT, chat);
 	}
 
 	// ---- migracion del settings.json monolitico viejo ----

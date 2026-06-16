@@ -30,6 +30,52 @@ class ExorRPC
 	static const int KILLFEED       = 49231;	// S -> C: evento de killfeed (muerte PvP / suicidio) a TODOS los clientes
 	static const int SCORE_REQ      = 49232;	// C -> S: pedir el leaderboard (al abrir el panel de server info)
 	static const int SCORE_DATA     = 49233;	// S -> C: leaderboard (JSON) para la tab Score
+	static const int CHAT_SEND      = 49234;	// C -> S: el jugador manda un mensaje de chat (+canal)
+	static const int CHAT_MSG       = 49235;	// S -> C: mensaje de chat para mostrar (JSON)
+}
+
+// Mensaje de chat: el server lo serializa y lo manda a los destinatarios (todos =
+// global, o dentro del radio = zona). dur/max van adentro para no sincronizar config.
+class ExorChatMsg
+{
+	string name;
+	string text;
+	int channel;   // 0 = global, 1 = zona
+	int dur;       // segundos que dura la linea
+	int max;       // maximo de lineas simultaneas
+}
+
+// Cola estatica cliente: OnRPC (4_World) encola; la UI (5_Mission) la drena por frame.
+class ExorChatQueue
+{
+	static ref array<ref ExorChatMsg> s_Pending;
+	static void Enqueue(ExorChatMsg m)
+	{
+		if (!s_Pending)
+			s_Pending = new array<ref ExorChatMsg>;
+		s_Pending.Insert(m);
+	}
+}
+
+// Estado del canal de chat en el CLIENTE (se togglea con la tecla ".").
+class ExorChat
+{
+	static int s_Channel = 0;   // 0 = global, 1 = zona
+
+	static void Toggle()
+	{
+		if (s_Channel == 0)
+			s_Channel = 1;
+		else
+			s_Channel = 0;
+	}
+
+	static string ChannelName()
+	{
+		if (s_Channel == 1)
+			return "ZONA";
+		return "GLOBAL";
+	}
 }
 
 // DTO del killfeed: el server lo serializa a JSON y lo manda a todos los clientes.

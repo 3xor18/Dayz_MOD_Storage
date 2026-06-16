@@ -42,3 +42,29 @@ modded class ItemBase
 			ExorAntiRaid.OnPickupInEnemyTerritory(pb, this);
 	}
 }
+
+// ============================================================================
+// Refuerzo SERVER-SIDE del campo de plantacion (GardenPlot deriva de ItemBase y
+// se cava por el sistema de hologram, que ya pasa por CanBePlaced en el cliente).
+// Aca, al COMPLETARSE la colocacion en el server, si cae en territorio ajeno (la
+// MISMA regla que CanPlaceServer: respeta territorio propio / sin mastil / whitelist
+// / permitir_construir_cerca) -> se borra. Backstop contra bypass del cliente.
+// Cubre tambien GardenPlotGreenhouse/Polytunnel (heredan de GardenPlot).
+// ============================================================================
+modded class GardenPlot
+{
+	override void OnPlacementComplete(Man player, vector position = "0 0 0", vector orientation = "0 0 0")
+	{
+		super.OnPlacementComplete(player, position, orientation);
+		if (!GetGame() || !GetGame().IsServer())
+			return;
+
+		PlayerBase pb = PlayerBase.Cast(player);
+		if (!ExorTerritoryManager.Get().CanPlaceServer(pb, GetPosition(), GetType()))
+		{
+			if (pb)
+				pb.MessageImportant("No podés hacer campos de plantación en territorio ajeno.");
+			GetGame().ObjectDelete(this);
+		}
+	}
+}

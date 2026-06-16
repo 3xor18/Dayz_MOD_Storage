@@ -113,9 +113,11 @@ modded class MissionGameplay
 	ref ExorNameplates m_ExorPlates;
 	ref ExorMarkersHud m_ExorMarks;
 	ref ExorKillfeed m_ExorKf;
+	ref ExorChatHud m_ExorChat;
 	float m_ExorHudAccum;
 	bool m_ExorTPrev;
 	bool m_ExorYPrev;
+	bool m_ExorDotPrev;
 
 	override UIScriptedMenu CreateScriptedMenu(int id)
 	{
@@ -171,6 +173,17 @@ modded class MissionGameplay
 		}
 		m_ExorKf.Update();
 
+		// Chat custom: crear una vez y drenar/expirar lineas cada frame
+		if (!m_ExorChat)
+		{
+			m_ExorChat = new ExorChatHud();
+			m_ExorChat.Create();
+		}
+		m_ExorChat.Update();
+
+		// Tecla "." -> cambiar canal de chat (global/zona)
+		ExorChatKey();
+
 		// Tecla M -> abrir/cerrar el mapa del party (lee UAMapToggle, accion existente)
 		if (GetExorConfig().mapa.abrir_con_m && !GetGame().IsInventoryOpen())
 		{
@@ -214,6 +227,25 @@ modded class MissionGameplay
 
 		m_ExorTPrev = tDown;
 		m_ExorYPrev = yDown;
+	}
+
+	// Tecla "." -> togglea el canal de chat (GLOBAL/ZONA). Bloqueada si hay menu o
+	// inventario abierto (asi el "." se escribe normal dentro de la caja de chat).
+	void ExorChatKey()
+	{
+		bool blocked = GetGame().IsInventoryOpen();
+		if (GetGame().GetUIManager() && GetGame().GetUIManager().GetMenu())
+			blocked = true;
+
+		bool dot = KeyState(KeyCode.KC_PERIOD) > 0;
+		if (!blocked && dot && !m_ExorDotPrev)
+		{
+			ExorChat.Toggle();
+			PlayerBase p = PlayerBase.Cast(GetGame().GetPlayer());
+			if (p)
+				p.MessageImportant("Canal de chat: " + ExorChat.ChannelName());
+		}
+		m_ExorDotPrev = dot;
 	}
 
 	void ExorToggleMap()

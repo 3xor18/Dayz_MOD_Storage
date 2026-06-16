@@ -1,0 +1,54 @@
+PanelWidgetClass ExorChatRoot
+{
+	visible 1
+	position 0 0
+	size 1 1
+	color 0 0 0 0
+	hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+	{
+		TextWidgetClass ExorChR0S0 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR0S1 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBlack22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR0S2 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR0S3 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+
+		TextWidgetClass ExorChR1S0 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR1S1 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBlack22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR1S2 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR1S3 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+
+		TextWidgetClass ExorChR2S0 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR2S1 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBlack22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR2S2 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR2S3 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+
+		TextWidgetClass ExorChR3S0 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR3S1 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBlack22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR3S2 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR3S3 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+
+		TextWidgetClass ExorChR4S0 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR4S1 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBlack22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR4S2 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR4S3 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+
+		TextWidgetClass ExorChR5S0 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR5S1 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBlack22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR5S2 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR5S3 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+
+		TextWidgetClass ExorChR6S0 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR6S1 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBlack22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR6S2 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR6S3 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+
+		TextWidgetClass ExorChR7S0 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR7S1 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBlack22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR7S2 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR7S3 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+
+		TextWidgetClass ExorChR8S0 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR8S1 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBlack22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR8S2 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+		TextWidgetClass ExorChR8S3 { visible 0 position 0 0 size 1000 32 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 1 1 1 1 text "" font "gui/fonts/MetronBook22" "exact text" 1 "exact text size" 26 "text halign" left "text valign" center }
+	}
+}

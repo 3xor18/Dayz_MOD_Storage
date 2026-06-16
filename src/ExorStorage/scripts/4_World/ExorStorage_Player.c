@@ -298,6 +298,17 @@ modded class PlayerBase
 			case ExorRPC.SCORE_DATA:
 				ExorOnScoreData(ctx);
 				break;
+			case ExorRPC.CHAT_SEND:
+				if (GetGame().IsServer())
+				{
+					Param2<string, int> cp = new Param2<string, int>("", 0);
+					if (ctx.Read(cp))
+						ExorChatServer.Handle(this, cp.param1, cp.param2);
+				}
+				break;
+			case ExorRPC.CHAT_MSG:
+				ExorOnChatMsg(ctx);
+				break;
 			case ExorRPC.SPAWN_PICK:
 				if (GetGame().IsServer())
 				{
@@ -379,6 +390,27 @@ modded class PlayerBase
 		}
 		ExorScoreClient.s_Data = f;
 		Print(string.Format("%1 cliente SCORE_DATA ok, filas=%2", ExorStorageConstants.LOG, f.rows.Count()));
+	}
+
+	// ------------------------- chat -------------------------
+	// Cliente -> server: manda un mensaje de chat con el canal actual.
+	void ExorReqChat(string text, int channel)
+	{
+		RPCSingleParam(ExorRPC.CHAT_SEND, new Param2<string, int>(text, channel), true, null);
+	}
+
+	// Cliente: recibe un mensaje de chat y lo encola para la UI.
+	void ExorOnChatMsg(ParamsReadContext ctx)
+	{
+		Param1<string> p = new Param1<string>("");
+		if (!ctx.Read(p))
+			return;
+		ExorChatMsg m = new ExorChatMsg();
+		JsonSerializer js = new JsonSerializer();
+		string err;
+		if (!js.ReadFromString(m, p.param1, err))
+			return;
+		ExorChatQueue.Enqueue(m);
 	}
 
 	void ExorOnRosterSync(ParamsReadContext ctx)
