@@ -1,12 +1,12 @@
 # 3xorStorage — Plan de desarrollo
 
-Mod cliente+servidor para DayZ inspirado en **ToFu Virtual Storage** (virtualización de contenido) y **MMG Base Storage** (muebles empaquetables en cajas).
+Mod cliente+servidor para DayZ: virtualización del contenido de los contenedores (menos entidades vivas en el mundo) y muebles/barriles empaquetables en cajas. Desarrollo propio sobre vanilla DayZ.
 
 ## Objetivos
 
 1. Reducir el lag del servidor sacando del mundo el loot guardado (menos entidades vivas).
 2. Prevenir el dupeo de items guardados.
-3. Que los barriles sean fáciles de transportar (empaquetado → caja → desplegar), la gran limitación de ToFu.
+3. Que los barriles sean fáciles de transportar (empaquetado → caja → desplegar).
 
 ## Items
 
@@ -70,7 +70,7 @@ Obtención: spawn como loot (`types.xml`) + entrega por admins/eventos. **No** s
 ## Decisiones pendientes
 - Posición de los logos "3xor" en la textura: el tileo actual es provisional; se ajusta cuando veamos el UV real in-game.
 
-## Limitaciones conocidas (heredadas del enfoque, igual que ToFu)
+## Limitaciones conocidas (inherentes al enfoque de virtualización)
 
 - Items con estado especial complejo pueden necesitar blacklist.
 - El loot virtualizado es invisible para el CE (economía) del juego.

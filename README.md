@@ -260,7 +260,7 @@ Recomendado: spawnear la versión **empaquetada**; la desplegada en `nominal=0`.
 </type>
 ```
 
-> **Tip vanilla:** vehículos/items spawneados por admin/VPP que no estén en `types.xml` los limpia el CE a los ~45 s. Si tu server hace eso, agregá cada classname con `nominal=0` y `lifetime=3888000`.
+> **Tip vanilla:** vehículos/items spawneados por herramientas de admin que no estén en `types.xml` los limpia el CE a los ~45 s. Si tu server hace eso, agregá cada classname con `nominal=0` y `lifetime=3888000`.
 
 ---
 
