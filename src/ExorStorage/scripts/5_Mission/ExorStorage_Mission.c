@@ -59,6 +59,10 @@ modded class MissionServer
 		{
 			string cfgJson = GetExorConfig().BuildClientJson();
 			player.RPCSingleParam(ExorRPC.CONFIG_SYNC, new Param1<string>(cfgJson), true, identity);
+
+			// avisar al cliente si es VIP (para features VIP client-side, ej. distancia en marcas)
+			bool isVip = GetExorConfig().vip.IsVip(identity.GetPlainId());
+			player.RPCSingleParam(ExorRPC.VIP_STATUS, new Param1<bool>(isVip), true, identity);
 		}
 	}
 

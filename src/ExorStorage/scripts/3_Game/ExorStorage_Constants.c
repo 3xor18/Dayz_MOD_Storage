@@ -26,6 +26,7 @@ class ExorStorageConstants
 	static const string CFG_SERVERINFO = "$profile:3xorVanillaOptimization\\serverinfo.json";
 	static const string CFG_CHAT       = "$profile:3xorVanillaOptimization\\chat.json";
 	static const string CFG_REPARACION = "$profile:3xorVanillaOptimization\\reparacion.json";
+	static const string CFG_BODYCADAVER = "$profile:3xorVanillaOptimization\\bodycadaver.json";
 
 	// Datos del sistema party (Fase B+): grupos persistidos
 	static const string GROUPS_DIR = "$profile:3xorVanillaOptimization\\groups";
@@ -38,6 +39,9 @@ class ExorStorageConstants
 
 	// Datos de virtualizacion (contenido de barriles)
 	static const string STORAGE_DIR = "$profile:3xorVanillaOptimization\\storage";
+
+	// Datos de virtualizacion del contenido de bolsas de cadaver
+	static const string BODYBAG_DIR = "$profile:3xorVanillaOptimization\\bodybags";
 
 	// Log forense anti-raid (1 archivo por dia: raid_YYYY-MM-DD.txt, auto-purga)
 	static const string RAIDLOG_DIR = "$profile:3xorVanillaOptimization\\raidlog";

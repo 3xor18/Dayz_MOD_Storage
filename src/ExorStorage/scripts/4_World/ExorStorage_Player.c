@@ -13,6 +13,10 @@ modded class PlayerBase
 	// --- Killfeed (server): ultimo daño recibido, para saber arma/atacante al morir ---
 	protected EntityAI m_ExorKfSource;           // entidad que causo el ultimo daño (arma/atacante)
 
+	// --- Bolsa de cadaver (server): ropa copiada + armas/manos (entidades reales a mover) ---
+	protected ref array<ref ExorVO_ItemData> m_ExorDeathLoot;
+	protected ref array<EntityAI> m_ExorDeathWeapons;
+
 	// ------------------------- acciones -------------------------
 	override void SetActions(out TInputActionMap InputActionMap)
 	{
@@ -69,12 +73,68 @@ modded class PlayerBase
 			m_ExorKfSource = source;
 	}
 
-	// Al morir: si el killfeed esta activo, arma el mensaje y lo manda a todos.
+	// Al morir: killfeed + programar la bolsa de cadaver.
 	override void EEKilled(Object killer)
 	{
 		if (GetGame().IsServer())
+		{
 			ExorBuildKillfeed(killer);
+			ExorScheduleBodyBag();
+		}
 		super.EEKilled(killer);
+	}
+
+	// Programa la conversion del cuerpo en bolsa de cadaver (server).
+	void ExorScheduleBodyBag()
+	{
+		ExorCfgBodyCadaver cfg = GetExorConfig().bodycadaver;
+		if (!cfg.habilitado)
+			return;
+
+		// Con el cuerpo INTACTO: la ROPA se copia (capturar+recrear, cae en sus slots)
+		// y las ARMAS se guardan para MOVER la entidad real (copiar un arma pierde el
+		// cargador). 1s despues el motor ya pudo dropear cosas, por eso se hace aca.
+		m_ExorDeathLoot = new array<ref ExorVO_ItemData>;
+		m_ExorDeathWeapons = new array<EntityAI>;
+		GameInventory inv = GetInventory();
+		int natt = 0;
+		if (inv)
+		{
+			natt = inv.AttachmentCount();
+			int i;
+			for (i = 0; i < natt; i++)
+			{
+				EntityAI att = inv.GetAttachmentFromIndex(i);
+				if (!att)
+					continue;
+				if (Weapon_Base.Cast(att))
+					m_ExorDeathWeapons.Insert(att);	// arma puesta (espalda/hombro) -> mover real
+				else
+					m_ExorDeathLoot.Insert(ExorVO_Serializer.CaptureItem(att));	// ropa -> copiar
+			}
+		}
+		// lo que tenga en manos (arma u otro) tambien se mueve real
+		EntityAI hands = null;
+		if (GetHumanInventory())
+			hands = GetHumanInventory().GetEntityInHands();
+		if (hands)
+			m_ExorDeathWeapons.Insert(hands);
+
+		Print(string.Format("%1 muerte: %2 prendas + %3 armas/manos para la bolsa (attachments=%4)", ExorStorageConstants.LOG, m_ExorDeathLoot.Count(), m_ExorDeathWeapons.Count(), natt));
+
+		int delayMs = cfg.delay_segundos * 1000;
+		if (delayMs < 1)
+			delayMs = 1;
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorDoSpawnBodyBag, delayMs, false);
+	}
+
+	// 'this' es el cadaver -> spawnear la bolsa con el loot recreado + el arma real movida.
+	void ExorDoSpawnBodyBag()
+	{
+		Exor_BodyBag bag = Exor_BodyBag.SpawnFromLoot(GetPosition(), m_ExorDeathLoot, m_ExorDeathWeapons);
+		if (!bag)
+			return;
+		GetGame().ObjectDelete(this);	// borrar el cuerpo - las armas reales ya se movieron
 	}
 
 	// Nombre legible del arma usada (server).
@@ -284,6 +344,13 @@ modded class PlayerBase
 			case ExorRPC.CONFIG_SYNC:
 				ExorOnConfigSync(ctx);
 				break;
+			case ExorRPC.VIP_STATUS:
+			{
+				Param1<bool> vp = new Param1<bool>(false);
+				if (ctx.Read(vp))
+					ExorVipClient.s_IsVip = vp.param1;
+				break;
+			}
 			case ExorRPC.KILLFEED:
 				ExorOnKillfeed(ctx);
 				break;

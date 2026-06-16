@@ -101,6 +101,7 @@ class ExorMarkersHud
 	protected bool m_Tried;
 	protected ref array<TextWidget> m_Texts;
 	protected ref array<Widget> m_Arrows;
+	protected ref array<TextWidget> m_Dists;	// distancia en verde (solo VIP)
 
 	void Create()
 	{
@@ -112,11 +113,13 @@ class ExorMarkersHud
 			return;
 		m_Texts = new array<TextWidget>;
 		m_Arrows = new array<Widget>;
+		m_Dists = new array<TextWidget>;
 		int i;
 		for (i = 0; i < 8; i++)
 		{
 			m_Texts.Insert(TextWidget.Cast(m_Root.FindAnyWidget("ExorMarkText" + i.ToString())));
 			m_Arrows.Insert(m_Root.FindAnyWidget("ExorMarkArrow" + i.ToString()));
+			m_Dists.Insert(TextWidget.Cast(m_Root.FindAnyWidget("ExorMarkDist" + i.ToString())));
 		}
 	}
 
@@ -178,6 +181,24 @@ class ExorMarkersHud
 				tw.SetText(k.label);
 				tw.SetPos(screen[0] - 100, screen[1] - triSize - 20);
 				tw.Show(true);
+
+				// distancia en verde, pegada despues del nombre. SOLO VIP; el resto
+				// ve la marca igual que hoy (sin distancia).
+				TextWidget dw = m_Dists.Get(shown);
+				if (dw)
+				{
+					if (ExorVipClient.s_IsVip)
+					{
+						int nw, nh;
+						tw.GetTextSize(nw, nh);	// ancho del nombre para pegar la distancia al lado
+						int mts = Math.Round(dist);
+						dw.SetText("[" + mts.ToString() + "mts]");
+						dw.SetPos(screen[0] + (nw / 2.0) + 2, screen[1] - triSize - 20);
+						dw.Show(true);
+					}
+					else
+						dw.Show(false);
+				}
 				shown++;
 			}
 		}
@@ -187,6 +208,7 @@ class ExorMarkersHud
 		{
 			if (m_Texts.Get(j)) m_Texts.Get(j).Show(false);
 			if (m_Arrows.Get(j)) m_Arrows.Get(j).Show(false);
+			if (m_Dists.Get(j)) m_Dists.Get(j).Show(false);
 		}
 	}
 }

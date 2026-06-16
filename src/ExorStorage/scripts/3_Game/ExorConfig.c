@@ -434,6 +434,37 @@ class ExorCfgReparacion
 }
 
 // ----------------------------------------------------------------------------
+// bodycadaver.json
+//   Al morir un jugador, ~delay_segundos despues el cuerpo se convierte en una
+//   "bolsa de cadaver" (contenedor) con TODO su loot (ropa + cargo + arma caida).
+//   Se puede cargar para transportarla (camina lento). Dura duracion_minutos y
+//   sobrevive reinicio. Se VIRTUALIZA (su loot se saca del mundo) cuando no hay
+//   players a menos de alejar_metros por virtualizar_minutos, y se DES-virtualiza
+//   cuando un player se acerca a menos de acercar_metros.
+// ----------------------------------------------------------------------------
+class ExorCfgBodyCadaver
+{
+	int version = 1;
+	bool habilitado = true;         // master on/off de TODO el modulo de la lapida
+	int delay_segundos = 1;         // demora entre la muerte y la aparicion de la lapida
+	int duracion_minutos = 120;     // cuanto dura la lapida (2h). Sobrevive reinicio.
+	float acercar_metros = 10;      // player a <= esto -> des-virtualiza (deja pikear el loot)
+	float alejar_metros = 10;       // si NO hay player a <= esto...
+	int virtualizar_minutos = 5;    // ...por este tiempo -> virtualiza (saca el loot del mundo)
+
+	void SetDefaults()
+	{
+		version = 1;
+		habilitado = true;
+		delay_segundos = 1;
+		duracion_minutos = 120;
+		acercar_metros = 10;
+		alejar_metros = 10;
+		virtualizar_minutos = 5;
+	}
+}
+
+// ----------------------------------------------------------------------------
 // Sync server -> cliente: SOLO la config que el cliente necesita para mostrar
 // (toggles de party/HUD/nameplates/marcas, mapa, durabilidad/rareza+tabla).
 // Lo pesado (municion/storage/vehiculos) es logica de server y NO se envia.
@@ -769,6 +800,7 @@ class ExorConfig
 	ref ExorCfgServerInfo serverinfo;
 	ref ExorCfgChat chat;
 	ref ExorCfgReparacion reparacion;
+	ref ExorCfgBodyCadaver bodycadaver;
 	bool m_Synced;	// cliente: true cuando ya recibio la config del server
 
 	void ExorConfig()
@@ -785,6 +817,7 @@ class ExorConfig
 		serverinfo = new ExorCfgServerInfo;
 		chat = new ExorCfgChat;
 		reparacion = new ExorCfgReparacion;
+		bodycadaver = new ExorCfgBodyCadaver;
 	}
 
 	// SERVER: serializa la config relevante al cliente a JSON
@@ -852,6 +885,7 @@ class ExorConfig
 		c.LoadServerInfo();
 		c.LoadChat();
 		c.LoadReparacion();
+		c.LoadBodyCadaver();
 
 		return c;
 	}
@@ -965,6 +999,15 @@ class ExorConfig
 		else
 			reparacion.SetDefaults();
 		JsonFileLoader<ExorCfgReparacion>.JsonSaveFile(ExorStorageConstants.CFG_REPARACION, reparacion);
+	}
+
+	void LoadBodyCadaver()
+	{
+		if (FileExist(ExorStorageConstants.CFG_BODYCADAVER))
+			JsonFileLoader<ExorCfgBodyCadaver>.JsonLoadFile(ExorStorageConstants.CFG_BODYCADAVER, bodycadaver);
+		else
+			bodycadaver.SetDefaults();
+		JsonFileLoader<ExorCfgBodyCadaver>.JsonSaveFile(ExorStorageConstants.CFG_BODYCADAVER, bodycadaver);
 	}
 
 	// ---- migracion del settings.json monolitico viejo ----

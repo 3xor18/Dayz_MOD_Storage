@@ -32,6 +32,14 @@ class ExorRPC
 	static const int SCORE_DATA     = 49233;	// S -> C: leaderboard (JSON) para la tab Score
 	static const int CHAT_SEND      = 49234;	// C -> S: el jugador manda un mensaje de chat (+canal)
 	static const int CHAT_MSG       = 49235;	// S -> C: mensaje de chat para mostrar (JSON)
+	static const int VIP_STATUS     = 49236;	// S -> C: si el jugador local es VIP (para features VIP del cliente, ej. distancia en marcas)
+}
+
+// Estado VIP del jugador LOCAL en el cliente (lo setea el server por RPC VIP_STATUS).
+// Lo usan features VIP client-side (ej. mostrar la distancia en las marcas del party).
+class ExorVipClient
+{
+	static bool s_IsVip;
 }
 
 // Mensaje de chat: el server lo serializa y lo manda a los destinatarios (todos =

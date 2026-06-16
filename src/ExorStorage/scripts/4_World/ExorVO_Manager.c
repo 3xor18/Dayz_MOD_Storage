@@ -10,11 +10,13 @@ class ExorVO_Manager
 
 	ref array<Exor_Barrel_Base> m_Barrels;
 	ref array<CarScript> m_Vehicles;
+	ref array<Exor_BodyBag> m_BodyBags;
 
 	void ExorVO_Manager()
 	{
 		m_Barrels = new array<Exor_Barrel_Base>;
 		m_Vehicles = new array<CarScript>;
+		m_BodyBags = new array<Exor_BodyBag>;
 	}
 
 	static ExorVO_Manager Get()
@@ -62,6 +64,19 @@ class ExorVO_Manager
 		}
 	}
 
+	static void RegisterBodyBag(Exor_BodyBag bag)
+	{
+		if (Get().m_BodyBags.Find(bag) == -1)
+			Get().m_BodyBags.Insert(bag);
+	}
+
+	static void UnregisterBodyBag(Exor_BodyBag bag)
+	{
+		int idx = Get().m_BodyBags.Find(bag);
+		if (idx != -1)
+			Get().m_BodyBags.Remove(idx);
+	}
+
 	// ------------------------- tick lento (30s) -------------------------
 	void Tick()
 	{
@@ -80,6 +95,18 @@ class ExorVO_Manager
 				continue;
 			}
 			barrel.ExorTick(now, cfg.storage);
+		}
+
+		// --- Bolsas de cadaver: TTL + virtualizar por lejania ---
+		for (i = m_BodyBags.Count() - 1; i >= 0; i--)
+		{
+			Exor_BodyBag bag = m_BodyBags.Get(i);
+			if (!bag)
+			{
+				m_BodyBags.Remove(i);
+				continue;
+			}
+			bag.ExorBagTick(now);
 		}
 
 		// --- Vehiculos: dormir los inactivos ---
@@ -132,6 +159,19 @@ class ExorVO_Manager
 	// ------------------------- tick rapido (5s): despertar -------------------------
 	void WakeTick()
 	{
+		int b;
+		// Bolsas de cadaver: des-virtualizar cuando un player vivo se acerca
+		for (b = m_BodyBags.Count() - 1; b >= 0; b--)
+		{
+			Exor_BodyBag bag = m_BodyBags.Get(b);
+			if (!bag)
+			{
+				m_BodyBags.Remove(b);
+				continue;
+			}
+			bag.ExorBagWake();
+		}
+
 		ExorCfgVehiculos veh = GetExorConfig().vehiculos;
 		if (!veh.vehiculos_dormir)
 			return;
@@ -163,6 +203,21 @@ class ExorVO_Manager
 		{
 			Man p = players.Get(i);
 			if (p && vector.Distance(p.GetPosition(), pos) < radius)
+				return true;
+		}
+		return false;
+	}
+
+	// Como IsPlayerNear pero solo cuenta players VIVOS (un cadaver tambien es un Man).
+	static bool IsAlivePlayerNear(vector pos, float radius)
+	{
+		array<Man> players = new array<Man>;
+		GetGame().GetPlayers(players);
+		int i;
+		for (i = 0; i < players.Count(); i++)
+		{
+			PlayerBase p = PlayerBase.Cast(players.Get(i));
+			if (p && p.IsAlive() && vector.Distance(p.GetPosition(), pos) < radius)
 				return true;
 		}
 		return false;

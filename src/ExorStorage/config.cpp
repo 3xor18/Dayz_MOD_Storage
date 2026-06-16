@@ -9,12 +9,12 @@ class CfgPatches
 {
 	class ExorStorage
 	{
-		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed"};
+		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_BodyBag"};
 		weapons[] = {};
 		requiredVersion = 0.1;
-		// DZ_Gear_Camping = TerritoryFlag/Kit. DZ_Characters_Backpacks = GhillieSuit
-		// vanilla (ghillies del slot brazo).
-		requiredAddons[] = {"DZ_Data", "DZ_Scripts", "DZ_Gear_Containers", "DZ_Weapons_Ammunition", "DZ_Gear_Camping", "DZ_Characters_Backpacks"};
+		// DZ_Gear_Camping = TerritoryFlag/Kit + SeaChest. DZ_Characters_Backpacks =
+		// GhillieSuit vanilla. DZ_Characters = modelo del cuerpo (bolsa de cadaver).
+		requiredAddons[] = {"DZ_Data", "DZ_Scripts", "DZ_Gear_Containers", "DZ_Weapons_Ammunition", "DZ_Gear_Camping", "DZ_Characters_Backpacks", "DZ_Characters"};
 	};
 };
 
@@ -126,6 +126,35 @@ class CfgVehicles
 		displayName = "3xor Barrel 500 (empaquetado)";
 		descriptionShort = "Barril 3xor de 500 slots empaquetado. Tenelo en las manos y usa 'Desplegar barril' para colocarlo.";
 		hiddenSelectionsTextures[] = {"ExorStorage\data\exor_barrel_500_co.paa"};
+	};
+
+	// ------------------------------------------------------------------
+	//  Bolsa de cadaver: al morir, el cuerpo se convierte en este contenedor
+	//  con todo el loot. Hereda de SeaChest (carriable en manos + cargo +
+	//  persistencia). El loot/virtualizacion/TTL los maneja ExorBodyBag.c.
+	//  INTENTO de modelo = cuerpo del player. Si queda invisible o en T-pose,
+	//  BORRAR la linea 'model' -> usa el modelo del SeaChest (visible, funcional).
+	// ------------------------------------------------------------------
+	class SeaChest;	// externa (DZ_Gear_Camping) - contenedor base carriable
+	class Exor_BodyBag: SeaChest
+	{
+		scope = 2;
+		displayName = "Cuerpo";
+		descriptionShort = "Cuerpo de un jugador caído. Tiene sus pertenencias en los slots del equipo. No se puede mover.";
+		// Modelo = lápida vanilla (tumba). OJO: tiene colision solida -> puede
+		// bloquear el paso en pasillos/puertas (pendiente: desactivar colision).
+		model = "\DZ\structures\Specific\Cemeteries\Cemetery_Tombstone1.p3d";
+		weight = 35000;
+		rotationFlags = 17;
+		// SLOTS DEL EQUIPO DEL PLAYER: al lootear la bolsa se ve igual que un
+		// cadaver (chaleco/mochila/bolsillos con sus items, cada uno en su slot).
+		// Al morir, la ropa puesta se recrea en estos slots (ExorBodyBag.c).
+		attachments[] = {"Headgear", "Mask", "Eyewear", "Gloves", "Armband", "Vest", "Body", "Hips", "Back", "Legs", "Feet", "Shoulder", "Melee"};
+		class Cargo
+		{
+			itemsCargoSize[] = {7, 5};	// chico: arma caida / items sueltos
+			openable = 0;
+		};
 	};
 
 };
