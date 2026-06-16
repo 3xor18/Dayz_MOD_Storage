@@ -157,6 +157,30 @@ class CfgVehicles
 		};
 	};
 
+	// --------------------------------------------------------------------
+	// FASE 1 - Inventario ampliado de vehiculos vanilla: cargo a 600 {10,60}.
+	// Override del Cargo (padre = CarScript). Las variantes de color heredan.
+	// OJO: el tamano de cargo es de BUILD, NO se togglea por JSON.
+	// --------------------------------------------------------------------
+	class CarScript;	// base externa de los autos
+	class Hatchback_02: CarScript
+	{
+		class Cargo { itemsCargoSize[] = {10, 60}; };
+	};
+	class Sedan_02: CarScript
+	{
+		class Cargo { itemsCargoSize[] = {10, 60}; };
+	};
+	class Offroad_02: CarScript
+	{
+		class Cargo { itemsCargoSize[] = {10, 60}; };
+	};
+	class Truck_01_Base: CarScript {};	// fwd (padre del truck cubierto)
+	class Truck_01_Covered: Truck_01_Base
+	{
+		class Cargo { itemsCargoSize[] = {10, 60}; };
+	};
+
 };
 
 // ============================================================================

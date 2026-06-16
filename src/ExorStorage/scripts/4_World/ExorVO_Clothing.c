@@ -17,17 +17,35 @@ class ExorVO_Helpers
 			return true;
 		return false;
 	}
+
+	// El destino (o su raiz) es un vehiculo (auto vanilla)?
+	static bool ParentIsVehicle(EntityAI parent)
+	{
+		if (!parent)
+			return false;
+		if (parent.IsInherited(CarScript))
+			return true;
+		EntityAI root = parent.GetHierarchyRoot();
+		if (root && root.IsInherited(CarScript))
+			return true;
+		return false;
+	}
 }
 
 modded class Clothing
 {
 	override bool CanPutInCargo(EntityAI parent)
 	{
-		// Vanilla bloquea guardar ropa con items adentro; lo permitimos
-		// unicamente cuando el destino es un barril 3xor
+		// Vanilla bloquea guardar ropa con items adentro; lo permitimos cuando
+		// el destino es un barril 3xor, o el baul de un vehiculo (toggle aparte).
 		if (ExorVO_Helpers.ParentIsExorBarrel(parent))
 		{
 			if (GetExorConfig().storage.permitir_ropa_con_items)
+				return true;
+		}
+		if (ExorVO_Helpers.ParentIsVehicle(parent))
+		{
+			if (GetExorConfig().vehiculos.inv_items_anidados)
 				return true;
 		}
 		return super.CanPutInCargo(parent);

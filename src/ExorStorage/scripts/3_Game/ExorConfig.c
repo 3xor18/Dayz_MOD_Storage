@@ -73,6 +73,7 @@ class ExorCfgVehiculos
 	ref TStringArray vehiculos_excluidos;
 	bool voltear_vehiculos = true;
 	int voltear_segundos = 40;
+	bool inv_items_anidados = true;       // EXTRA: permitir ropa/contenedores CON items adentro en el baul (como los barriles). El cargo de 600 es SIEMPRE (config), esto solo gatea lo anidado.
 	ref ExorCfgVehCamara camara;
 	ref ExorCfgVehInventario inventario;
 	ref ExorCfgVehDano dano;
@@ -93,6 +94,7 @@ class ExorCfgVehiculos
 		vehiculos_despertar_metros = 30;
 		voltear_vehiculos = true;
 		voltear_segundos = 40;
+		inv_items_anidados = true;
 		vehiculos_excluidos.Clear();
 		camara.conductor_3ra_persona = true;
 		camara.pasajeros_1ra_persona = true;
