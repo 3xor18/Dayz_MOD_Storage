@@ -37,8 +37,15 @@ modded class PlayerBase
 	}
 
 	// ------------------------- camara por asiento en vehiculos (cliente) -------------------------
-	// Fuerza 1ra persona a los pasajeros (y al conductor si conductor_3ra_persona=off).
-	// HandleView corre cada frame en el path de camara; re-forzamos despues del toggle vanilla.
+	// HandleView corre cada frame en el path de camara. super() ya resolvio el toggle
+	// vanilla (y en server 1pp puso m_Camera3rdPerson=false). Nosotros re-forzamos
+	// DESPUES segun el asiento + config:
+	//   - Pasajeros con pasajeros_1ra_persona=on  -> 1ra forzada (siempre, anti-peek).
+	//   - Conductor con conductor_3ra_persona=off  -> 1ra forzada.
+	//   - Conductor con conductor_3ra_persona=on   -> 3ra. En server 1pp el engine la
+	//     resetea a 1ra cada frame, asi que la RE-forzamos a 3ra (como @vehicle3pp).
+	//     En server 3pp no forzamos: el conductor puede togglear V libremente.
+	//   - Idem pasajeros si pasajeros_1ra_persona=off (3ra permitida).
 	override void HandleView()
 	{
 		super.HandleView();
@@ -50,16 +57,22 @@ modded class PlayerBase
 			return;	// no tocar durante las transiciones de entrada/salida
 
 		ExorCfgVehCamara cam = GetExorConfig().vehiculos.camara;
+		bool server1pp = GetGame().GetWorld().Is3rdPersonDisabled();
 		bool isDriver = (hcv.GetVehicleSeat() == DayZPlayerConstants.VEHICLESEAT_DRIVER);
+
 		if (isDriver)
 		{
 			if (!cam.conductor_3ra_persona)
 				SetIsInThirdPerson(false);	// conductor forzado a 1ra
+			else if (server1pp)
+				SetIsInThirdPerson(true);	// server 1pp: re-forzar 3ra al conductor cada frame
 		}
 		else
 		{
 			if (cam.pasajeros_1ra_persona)
 				SetIsInThirdPerson(false);	// pasajeros forzados a 1ra
+			else if (server1pp)
+				SetIsInThirdPerson(true);	// server 1pp + 3ra permitida: re-forzar a pasajeros
 		}
 	}
 

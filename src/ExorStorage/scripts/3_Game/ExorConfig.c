@@ -207,6 +207,7 @@ class ExorCfgPartyProteccion
 {
 	bool bloquear_desmantelar_ajeno = true;       // #2: ajenos NO pueden desmantelar muros/torres en territorio que no es suyo
 	bool log_robo_contenedor = true;              // #3: loguear cuando un ajeno toma items dentro de territorio enemigo
+	bool log_abrir_barril_ajeno = true;           // #5: loguear cuando un ajeno ABRE un barril 3xor dentro de territorio enemigo
 	bool log_desconexion_base_ajena = true;       // #4a: loguear si un ajeno se desloguea dentro de territorio enemigo
 	bool sacar_de_base_ajena_al_reconectar = true;// #4b: al reconectar dentro de territorio ajeno, teletransportar al borde
 	int log_dias_retener = 7;                     // dias que se conservan los archivos de raidlog (0 = nunca borrar)
@@ -267,6 +268,7 @@ class ExorCfgParty
 
 		proteccion.bloquear_desmantelar_ajeno = true;
 		proteccion.log_robo_contenedor = true;
+		proteccion.log_abrir_barril_ajeno = true;
 		proteccion.log_desconexion_base_ajena = true;
 		proteccion.sacar_de_base_ajena_al_reconectar = true;
 		proteccion.log_dias_retener = 7;
@@ -480,6 +482,7 @@ class ExorClientCfgDTO
 	ref ExorCfgVehInventario veh_inventario;	// ver ambos inventarios en el auto (cliente)
 	ref ExorCfgServerInfo serverinfo;	// panel de server info (texto de tabs)
 	ref ExorCfgReparacion reparacion;	// reparar-a-pristine + lista de kits combinables (el cliente la usa para ofrecer la accion)
+	bool permitir_construir_cerca;	// toggle de anti-construccion (el cliente lo usa en CanPlaceClient/holograma)
 
 	void ExorClientCfgDTO()
 	{
@@ -833,6 +836,7 @@ class ExorConfig
 		d.veh_inventario = vehiculos.inventario;
 		d.serverinfo = serverinfo;
 		d.reparacion = reparacion;
+		d.permitir_construir_cerca = party.territorio.permitir_construir_cerca;
 		JsonSerializer js = new JsonSerializer();
 		string data;
 		js.WriteToString(d, false, data);
@@ -862,6 +866,7 @@ class ExorConfig
 			c.serverinfo = d.serverinfo;
 		if (d.reparacion)
 			c.reparacion = d.reparacion;
+		c.party.territorio.permitir_construir_cerca = d.permitir_construir_cerca;
 		c.m_Synced = true;
 	}
 

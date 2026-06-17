@@ -163,7 +163,15 @@ class CfgVehicles
 	// OJO: el tamano de cargo es de BUILD, NO se togglea por JSON.
 	// --------------------------------------------------------------------
 	class CarScript;	// base externa de los autos
-	class Hatchback_02: CarScript
+	class OffroadHatchback: CarScript	// Olga 24
+	{
+		class Cargo { itemsCargoSize[] = {10, 60}; };
+	};
+	class CivilianSedan: CarScript		// Sedan (viejo)
+	{
+		class Cargo { itemsCargoSize[] = {10, 60}; };
+	};
+	class Hatchback_02: CarScript		// Gunter 2
 	{
 		class Cargo { itemsCargoSize[] = {10, 60}; };
 	};

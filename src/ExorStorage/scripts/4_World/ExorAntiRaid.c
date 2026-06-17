@@ -40,7 +40,10 @@ class ExorAntiRaid
 	// true => hay que BLOQUEAR el desmantelado de 'obj' por 'player'.
 	// Solo si: feature on + territorio on + 'obj' es parte de base/torre + cae
 	// dentro del radio de un mastil AJENO. Lejos de todo mastil -> false (libre).
-	static bool BloqueaDesmantelarAjeno(PlayerBase player, Object obj)
+	// exigirBaseVanilla=true: solo bloquea si 'obj' hereda de BaseBuildingBase
+	// (partes de base VANILLA). Para muros de BBP se pasa false: BBP NO hereda de
+	// BaseBuildingBase y su accion (ActionDismantleBBP) ya apunta solo a partes BBP.
+	static bool BloqueaDesmantelarAjeno(PlayerBase player, Object obj, bool exigirBaseVanilla = true)
 	{
 		if (!GetGame() || !GetGame().IsServer())
 			return false;
@@ -51,7 +54,7 @@ class ExorAntiRaid
 			return false;
 		if (!GetExorConfig().party.territorio.habilitado)
 			return false;
-		if (!obj.IsInherited(BaseBuildingBase))
+		if (exigirBaseVanilla && !obj.IsInherited(BaseBuildingBase))
 			return false;	// solo muros / portones / torres / partes de base
 		return ExorTerritoryManager.Get().FindEnemyTerritoryAt(player, obj.GetPosition()) != null;
 	}
@@ -78,6 +81,32 @@ class ExorAntiRaid
 		string nm = ExorGroupManager.PlayerName(player);
 		string detalle = string.Format("tomo '%1' dentro de territorio de %2", item.GetType(), GroupLabel(m));
 		ExorRaidLog.Write("ROBO_ITEM", sid, nm, player.GetPosition(), detalle);
+	}
+
+	// ------------------------- #5: abrir barril 3xor ajeno -------------------------
+	// Loguea cuando un ajeno ABRE un barril 3xor que esta dentro de territorio
+	// enemigo. Se gatea por la posicion del BARRIL (lo que se esta raideando), no
+	// del jugador. Lo dispara modded ActionOpenBarrel.OnExecuteServer.
+	static void OnOpenBarrelInEnemyTerritory(PlayerBase player, EntityAI barrel)
+	{
+		if (!GetGame() || !GetGame().IsServer())
+			return;
+		if (!player || !barrel)
+			return;
+		ExorCfgPartyProteccion p = GetExorConfig().party.proteccion;
+		if (!p.log_abrir_barril_ajeno)
+			return;
+		if (!GetExorConfig().party.territorio.habilitado)
+			return;
+
+		TerritoryFlag m = ExorTerritoryManager.Get().FindEnemyTerritoryAt(player, barrel.GetPosition());
+		if (!m)
+			return;	// el barril no esta en territorio ajeno: no se loguea
+
+		string sid = ExorGroupManager.SteamId(player);
+		string nm = ExorGroupManager.PlayerName(player);
+		string detalle = string.Format("abrio un barril dentro del territorio de %1", GroupLabel(m));
+		ExorRaidLog.Write("ABRE_BARRIL", sid, nm, barrel.GetPosition(), detalle);
 	}
 
 	// ------------------------- #4a: deslogueo en base ajena -------------------------
@@ -170,3 +199,26 @@ modded class ActionDismantlePart
 		return ok;
 	}
 }
+
+// ===========================================================================
+// Cobertura BaseBuildingPlus (BBP): BBP usa su PROPIA accion ActionDismantleBBP
+// (NO la vanilla ActionDismantlePart) y sus muros NO heredan de BaseBuildingBase.
+// Se hookea igual, gateado por territorio ajeno (exigirBaseVanilla=false).
+// Compila SOLO si BBP esta cargado (BaseBuildingPlus hace #define BBP): en un
+// server vanilla este bloque NO existe y el mod carga limpio. Requiere que
+// @3xor cargue DESPUES de BBP para que el #define este activo al compilar.
+// ===========================================================================
+#ifdef BBP
+modded class ActionDismantleBBP
+{
+	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
+	{
+		bool ok = super.ActionCondition(player, target, item);
+		if (!ok)
+			return false;
+		if (target && ExorAntiRaid.BloqueaDesmantelarAjeno(player, target.GetObject(), false))
+			return false;
+		return ok;
+	}
+}
+#endif

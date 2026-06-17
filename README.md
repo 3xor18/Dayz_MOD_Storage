@@ -26,9 +26,9 @@ No depende de Expansion, CF (Community Framework) ni ningún framework externo. 
 - **Bandera blanca** (opcional): protección de N minutos reales tras reclamar (no se puede cambiar la tela); al vencer se libera o se cambia por la bandera configurada.
 
 ### Anti-raid (gateado por el radio del mástil ajeno)
-- **No desmantelar** muros/torres en territorio ajeno si no sos del party.
+- **No desmantelar** estructuras (muros, puertas, ventanas, torres, etc.) en territorio ajeno si no sos del party — cubre construcciones **vanilla y BaseBuildingPlus (BBP)** (la cobertura BBP se activa sola si BBP está cargado; en un server vanilla no afecta nada).
 - **No construir** (deployables, kits, **campos de plantación**) en territorio ajeno — bloqueado en cliente y reforzado server-side.
-- **Logs forenses** (`raidlog/raid_AAAA-MM-DD.txt`, auto-purga): robo de items, deslogueo y expulsión en base ajena, con steamid + nombre + pos + hora.
+- **Logs forenses** (`raidlog/raid_AAAA-MM-DD.txt`, auto-purga): robo de items, **apertura de barriles 3xor**, deslogueo y expulsión en base ajena, con steamid + nombre + pos + hora.
 - **Anti-combat-log**: al reconectar dentro de territorio ajeno, te teletransporta al borde.
 
 ### Spawns
@@ -54,10 +54,10 @@ No depende de Expansion, CF (Community Framework) ni ningún framework externo. 
 - **Anti-spam**: cooldown entre mensajes + bloqueo de mensaje repetido.
 
 ### Vehículos
-- Conductor en 3ª persona / pasajeros forzados a 1ª; ver tu inventario + el del auto; quitar daño (toggle).
+- **Conductor en 3ª persona** (forzada — funciona incluso en servers de solo-1ª-persona) / pasajeros forzados a 1ª; ver tu inventario + el del auto; quitar daño (toggle).
 - **Sueño automático**: autos inactivos X min dejan de simular física (gran ahorro) y despiertan solos cuando alguien se acerca.
 - **Voltear vehículo** (acción con hold, anti-abuso).
-- **Inventario ampliado**: el baúl de los autos vanilla (Hatchback_02, Sedan_02, Offroad_02, Truck_01_Covered) pasa a **600 slots**, y permite guardar **ropa/contenedores con items adentro** (como los barriles). El tamaño de cargo es de build (no se togglea por JSON); lo anidado sí (`inv_items_anidados`).
+- **Inventario ampliado**: el baúl de **todos los autos vanilla** (Olga 24/OffroadHatchback, Sedan/CivilianSedan, Gunter 2/Hatchback_02, Sedan_02, ADA 4x4/Offroad_02, M3S/Truck_01_Covered) pasa a **600 slots**, y permite guardar **ropa/contenedores con items adentro** (como los barriles). El tamaño de cargo es de build (no se togglea por JSON); lo anidado sí (`inv_items_anidados`).
 
 ### Storage (barriles 3xor)
 - `Exor_Barrel_500` (500 slots) + su versión **empaquetable** (caja transportable).
@@ -118,7 +118,7 @@ Todo se configura por JSON en `<profile>/3xorVanillaOptimization/`. Cada archivo
 | `voltear_vehiculos` | `true` | Activa la acción "Voltear vehículo" |
 | `voltear_segundos` | `40` | Duración de la acción de voltear |
 | `inv_items_anidados` | `true` | Permite guardar ropa/contenedores con items adentro en el baúl (el cargo de 600 es siempre, de build) |
-| `camara.conductor_3ra_persona` | `true` | El conductor puede ir en 3ª |
+| `camara.conductor_3ra_persona` | `true` | El conductor va en 3ª (forzada, incluso en servers de 1ª persona) |
 | `camara.pasajeros_1ra_persona` | `true` | Pasajeros forzados a 1ª |
 | `inventario.ver_ambos_dentro` | `true` | Ver tu inventario + el del auto a la vez |
 | `dano.quitar_dano_vehiculos` | `false` | `true` = los autos no reciben daño |
@@ -180,8 +180,9 @@ Todo se configura por JSON en `<profile>/3xorVanillaOptimization/`. Cada archivo
 **`proteccion`** (anti-raid)
 | Parámetro | Default | Qué hace |
 |---|---|---|
-| `bloquear_desmantelar_ajeno` | `true` | Ajenos no desmantelan en territorio ajeno |
+| `bloquear_desmantelar_ajeno` | `true` | Ajenos no desmantelan en territorio ajeno (vanilla + BBP) |
 | `log_robo_contenedor` | `true` | Loguea robo de items en territorio ajeno |
+| `log_abrir_barril_ajeno` | `true` | Loguea apertura de barriles 3xor en territorio ajeno |
 | `log_desconexion_base_ajena` | `true` | Loguea deslogueo en base ajena |
 | `sacar_de_base_ajena_al_reconectar` | `true` | Teletransporta al borde al reconectar en base ajena |
 | `log_dias_retener` | `7` | Días que se guardan los `raidlog`. `0` = no borrar |
