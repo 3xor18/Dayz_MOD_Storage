@@ -211,6 +211,11 @@ class ExorCfgPartyProteccion
 	bool log_desconexion_base_ajena = true;       // #4a: loguear si un ajeno se desloguea dentro de territorio enemigo
 	bool sacar_de_base_ajena_al_reconectar = true;// #4b: al reconectar dentro de territorio ajeno, teletransportar al borde
 	int log_dias_retener = 7;                     // dias que se conservan los archivos de raidlog (0 = nunca borrar)
+	bool aviso_clan_inactivo = true;              // #6: avisar en el raidlog si un clan no conecta a nadie hace 'inactividad_dias'
+	int inactividad_dias = 21;                    // umbral de inactividad de un clan en dias (21 = 3 semanas; 0 = off)
+	bool log_combat_log = true;                   // #7: loguear deslogueo dentro de una zona de combate PvP (combat-log)
+	int combat_log_minutos = 8;                   // minutos reales que la zona de combate sigue viva tras el ultimo daño PvP (0 = off)
+	float combat_log_radio = 150;                 // radio (m) de la zona de combate alrededor de cada participante (tirador y victima); 150 cubre PvP largo por el anclaje a ambos extremos
 }
 
 class ExorCfgParty
@@ -272,6 +277,11 @@ class ExorCfgParty
 		proteccion.log_desconexion_base_ajena = true;
 		proteccion.sacar_de_base_ajena_al_reconectar = true;
 		proteccion.log_dias_retener = 7;
+		proteccion.aviso_clan_inactivo = true;
+		proteccion.inactividad_dias = 21;
+		proteccion.log_combat_log = true;
+		proteccion.combat_log_minutos = 8;
+		proteccion.combat_log_radio = 150;
 	}
 }
 
@@ -480,7 +490,8 @@ class ExorClientCfgDTO
 	ref ExorCfgItems items;
 	ref ExorCfgVehCamara veh_camara;	// camara por asiento (la aplica el cliente en HandleView)
 	ref ExorCfgVehInventario veh_inventario;	// ver ambos inventarios en el auto (cliente)
-	ref ExorCfgServerInfo serverinfo;	// panel de server info (texto de tabs)
+	// serverinfo va por SU PROPIO RPC (SERVERINFO_SYNC), no en este bundle: el texto
+	// largo del panel hacia el JSON demasiado grande y el sync entero fallaba.
 	ref ExorCfgReparacion reparacion;	// reparar-a-pristine + lista de kits combinables (el cliente la usa para ofrecer la accion)
 	bool permitir_construir_cerca;	// toggle de anti-construccion (el cliente lo usa en CanPlaceClient/holograma)
 
@@ -491,7 +502,6 @@ class ExorClientCfgDTO
 		items = new ExorCfgItems;
 		veh_camara = new ExorCfgVehCamara;
 		veh_inventario = new ExorCfgVehInventario;
-		serverinfo = new ExorCfgServerInfo;
 		reparacion = new ExorCfgReparacion;
 	}
 }
@@ -508,6 +518,9 @@ class ExorCfgVipLoadout
 	string camisa = "";
 	string zapato = "";
 	string bolso = "";
+	string guantes = "";
+	string mascara = "";
+	bool full_comida_bebida = true;   // al equipar, dejar al VIP con 100% comida (energia) y bebida (agua)
 	ref TStringArray items_extra;   // comida/cuchillo/etc -> cargo de camisa o pantalon
 
 	void ExorCfgVipLoadout()
@@ -567,7 +580,10 @@ class ExorCfgVip
 		equip_loadout.pantalon = "CargoPants_Black";
 		equip_loadout.camisa = "TacticalShirt_Black";
 		equip_loadout.zapato = "MilitaryBoots_Black";
-		equip_loadout.bolso = "AssaultBag_Black";
+		equip_loadout.bolso = "TortillaBag";
+		equip_loadout.guantes = "TacticalGloves_Green";
+		equip_loadout.mascara = "BalaclavaMask_Blackskull";
+		equip_loadout.full_comida_bebida = true;
 		equip_loadout.items_extra.Insert("CombatKnife");
 		equip_loadout.items_extra.Insert("TacticalBaconCan");
 	}
@@ -722,6 +738,8 @@ class ExorCfgVip
 		if (equip_loadout.camisa != "") return true;
 		if (equip_loadout.zapato != "") return true;
 		if (equip_loadout.bolso != "") return true;
+		if (equip_loadout.guantes != "") return true;
+		if (equip_loadout.mascara != "") return true;
 		if (equip_loadout.items_extra && equip_loadout.items_extra.Count() > 0) return true;
 		return false;
 	}
@@ -762,6 +780,8 @@ class ExorCfgServerInfo
 	ref TStringArray reglas_lineas;
 	bool tab_score = true;
 	string score_titulo = "Score";
+	string discord_texto = "Discord";              // texto del boton grande en la tab General
+	string discord_url = "https://www.google.com"; // a donde lleva el boton al hacer click (por ahora Google)
 
 	void ExorCfgServerInfo()
 	{
@@ -775,9 +795,26 @@ class ExorCfgServerInfo
 		titulo = "Información del Server";
 		tab_general = true;
 		general_titulo = "General";
+		discord_texto = "Discord";
+		discord_url = "https://www.google.com";
 		general_lineas = new TStringArray;
-		general_lineas.Insert("Bienvenido al server.");
-		general_lineas.Insert("Editá este texto en serverinfo.json (general_lineas).");
+		general_lineas.Insert("Bienvenido al servidor.");
+		general_lineas.Insert("");
+		general_lineas.Insert("== TERRITORIO Y PARTY ==");
+		general_lineas.Insert("Para armar tu base creá un kit de mástil con palos y cuerda y colocalo: se construirá el mástil y reclamarás el territorio.");
+		general_lineas.Insert("Al reclamarlo se coloca una bandera blanca que dura 7 días; pasados esos días se reemplaza automáticamente por otra (o podrás reemplazarla vos).");
+		general_lineas.Insert("Para sumar a alguien a tu territorio, invitalo mirando el mástil y que él acepte mirando ese mismo mástil. Para sacarlo, también desde el mástil ('Administrar party').");
+		general_lineas.Insert("Los teams que no se conecten durante 3 semanas perderán su base: el servidor lleva un log que avisa cuando un team entero queda inactivo.");
+		general_lineas.Insert("");
+		general_lineas.Insert("== REGLAS ANTI-RAID ==");
+		general_lineas.Insert("No se permite saltar muros ni entrar a bases ajenas glitcheando o usando scripts. Hay logs para detectarlo y se aplicará ban permanente.");
+		general_lineas.Insert("No se permite lootear cosas en bases que no son tuyas. Hay logs; si ocurre en horario de no-raid, el ban será permanente.");
+		general_lineas.Insert("");
+		general_lineas.Insert("== COMBAT-LOG ==");
+		general_lineas.Insert("El combat-log no está permitido: si en tu zona hay PvP (aunque no dispares vos) y te desconectás antes de los 8 minutos, serás baneado. Hay logs que lo registran.");
+		general_lineas.Insert("");
+		general_lineas.Insert("== ANTI-CHEAT ==");
+		general_lineas.Insert("Quienes maten a través de estructuras o hagan prefire serán detectados por los logs: se les pedirá un scan y, de confirmarse, se aplicará posible ban permanente.");
 		tab_reglas = true;
 		reglas_titulo = "Reglas";
 		reglas_lineas = new TStringArray;
@@ -834,7 +871,6 @@ class ExorConfig
 		d.items = items;
 		d.veh_camara = vehiculos.camara;
 		d.veh_inventario = vehiculos.inventario;
-		d.serverinfo = serverinfo;
 		d.reparacion = reparacion;
 		d.permitir_construir_cerca = party.territorio.permitir_construir_cerca;
 		JsonSerializer js = new JsonSerializer();
@@ -862,12 +898,32 @@ class ExorConfig
 			c.vehiculos.camara = d.veh_camara;
 		if (d.veh_inventario)
 			c.vehiculos.inventario = d.veh_inventario;
-		if (d.serverinfo)
-			c.serverinfo = d.serverinfo;
 		if (d.reparacion)
 			c.reparacion = d.reparacion;
 		c.party.territorio.permitir_construir_cerca = d.permitir_construir_cerca;
 		c.m_Synced = true;
+	}
+
+	// SERVER: serializa SOLO el serverinfo (panel) para su RPC propio. Se manda aparte
+	// del bundle grande porque el texto del panel puede ser largo y el JSON combinado
+	// se pasaba del limite, haciendo fallar TODO el sync.
+	string BuildServerInfoJson()
+	{
+		JsonSerializer js = new JsonSerializer();
+		string data;
+		js.WriteToString(serverinfo, false, data);
+		return data;
+	}
+
+	// CLIENTE: aplica el serverinfo recibido por su RPC propio.
+	static void ApplyServerInfoJson(string json)
+	{
+		ExorCfgServerInfo si = new ExorCfgServerInfo();
+		JsonSerializer js = new JsonSerializer();
+		string err;
+		if (!js.ReadFromString(si, json, err))
+			return;
+		GetExorConfig().serverinfo = si;
 	}
 
 	static ref ExorConfig Load()
@@ -983,11 +1039,19 @@ class ExorConfig
 
 	void LoadServerInfo()
 	{
+		// El contenido lo escribe el admin a mano (texto de tabs). NO re-guardar si ya
+		// existe: un re-guardado en cada arranque le pisaba el texto si el JSON tenia
+		// cualquier error sutil (coma de mas, comillas tipograficas, tilde mal codificada)
+		// porque el parser falla en silencio y deja el objeto vacio. Solo se crea 1 vez.
 		if (FileExist(ExorStorageConstants.CFG_SERVERINFO))
+		{
 			JsonFileLoader<ExorCfgServerInfo>.JsonLoadFile(ExorStorageConstants.CFG_SERVERINFO, serverinfo);
+		}
 		else
+		{
 			serverinfo.SetDefaults();
-		JsonFileLoader<ExorCfgServerInfo>.JsonSaveFile(ExorStorageConstants.CFG_SERVERINFO, serverinfo);
+			JsonFileLoader<ExorCfgServerInfo>.JsonSaveFile(ExorStorageConstants.CFG_SERVERINFO, serverinfo);
+		}
 	}
 
 	void LoadChat()

@@ -17,6 +17,7 @@ modded class MissionServer
 		ExorGroupManager.Init();
 		ExorPartyLive.Start();
 		ExorRaidLog.Init();	// crea raidlog\ y purga archivos mas viejos que log_dias_retener
+		ExorGroupManager.Get().ScanInactiveClans();	// avisa al raidlog de clanes sin conexion hace 'inactividad_dias'
 
 		// OJO: este compilador no acepta expresiones partidas en varias lineas (ni ternarios)
 		Print(string.Format("%1 %2 v%3 inicializado", ExorStorageConstants.LOG, ExorStorageConstants.MOD_NAME, ExorStorageConstants.MOD_VERSION));
@@ -60,6 +61,11 @@ modded class MissionServer
 			string cfgJson = GetExorConfig().BuildClientJson();
 			player.RPCSingleParam(ExorRPC.CONFIG_SYNC, new Param1<string>(cfgJson), true, identity);
 
+			// serverinfo (texto del panel) en su PROPIO RPC: el texto puede ser largo y
+			// metido en el bundle de arriba lo hacia fallar entero por tamaño.
+			string siJson = GetExorConfig().BuildServerInfoJson();
+			player.RPCSingleParam(ExorRPC.SERVERINFO_SYNC, new Param1<string>(siJson), true, identity);
+
 			// avisar al cliente si es VIP (para features VIP client-side, ej. distancia en marcas)
 			bool isVip = GetExorConfig().vip.IsVip(identity.GetPlainId());
 			player.RPCSingleParam(ExorRPC.VIP_STATUS, new Param1<bool>(isVip), true, identity);
@@ -67,9 +73,11 @@ modded class MissionServer
 	}
 
 	// #4a: al desconectarse, si esta dentro de territorio ajeno, dejar rastro forense.
+	// #6: si se desloguea en pleno PvP (combat-log), dejar rastro con ambos steamids.
 	override void OnClientDisconnectedEvent(PlayerIdentity identity, PlayerBase player, int logoutTime, bool authFailed)
 	{
 		ExorAntiRaid.OnDisconnectInEnemyTerritory(player, identity);
+		ExorAntiRaid.OnCombatLogout(player, identity);
 		super.OnClientDisconnectedEvent(identity, player, logoutTime, authFailed);
 	}
 

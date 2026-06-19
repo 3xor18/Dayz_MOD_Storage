@@ -186,6 +186,8 @@ class ExorVipState
 		EntityAI pantalon = ExorCreatePiece(player, lo.pantalon);
 		ExorCreatePiece(player, lo.zapato);
 		ExorCreatePiece(player, lo.bolso);
+		ExorCreatePiece(player, lo.guantes);
+		ExorCreatePiece(player, lo.mascara);
 
 		// 3) items extra: al cargo de camisa, si no de pantalon, si no donde haya
 		if (lo.items_extra)
@@ -204,6 +206,15 @@ class ExorVipState
 				if (!placed)
 					player.GetInventory().CreateInInventory(extra);
 			}
+		}
+
+		// 4) saciedad: dejar al VIP con 100% comida (energia) y bebida (agua)
+		if (lo.full_comida_bebida)
+		{
+			if (player.GetStatEnergy())
+				player.GetStatEnergy().Set(player.GetStatEnergy().GetMax());
+			if (player.GetStatWater())
+				player.GetStatWater().Set(player.GetStatWater().GetMax());
 		}
 	}
 

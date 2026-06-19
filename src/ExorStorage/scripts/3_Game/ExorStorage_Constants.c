@@ -43,8 +43,8 @@ class ExorStorageConstants
 	// Datos de virtualizacion del contenido de bolsas de cadaver
 	static const string BODYBAG_DIR = "$profile:3xorVanillaOptimization\\bodybags";
 
-	// Log forense anti-raid (1 archivo por dia: raid_YYYY-MM-DD.txt, auto-purga)
-	static const string RAIDLOG_DIR = "$profile:3xorVanillaOptimization\\raidlog";
+	// Log de auditoria del server (1 archivo por dia: audit_YYYY-MM-DD.txt, auto-purga)
+	static const string AUDITLOG_DIR = "$profile:3xorVanillaOptimization\\ServerAuditLog";
 
 	// Duracion de las acciones (segundos)
 	static const float PACK_SECONDS = 3;

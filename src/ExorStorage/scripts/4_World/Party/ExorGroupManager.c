@@ -211,6 +211,10 @@ class ExorGroupManager
 
 	void DisbandGroup(ExorGroup g, string reason)
 	{
+		// Volcar el roster al log forense ANTES de borrar el grupo: al disolverse se
+		// borra groups/<id>.json y se perderia la lista de miembros/ex-miembros (que
+		// sirve justamente para banear a un clan completo). Asi queda rastro en el raidlog.
+		ExorLogDisband(g, reason);
 		int i;
 		for (i = 0; i < g.members.Count(); i++)
 		{
@@ -449,6 +453,7 @@ class ExorGroupManager
 			return;
 		}
 
+		g.AddFormer(sid, PlayerName(player), ExorTimeUtil.TodayNumber(), "salio");
 		g.RemoveMember(sid);
 		player.ExorSetGroupId("");
 		SyncToPlayer(player, null);
@@ -482,6 +487,7 @@ class ExorGroupManager
 		}
 
 		string nm = mm.name;
+		g.AddFormer(targetSid, nm, ExorTimeUtil.TodayNumber(), "expulsado");
 		g.RemoveMember(targetSid);
 		SaveGroup(g);
 		SyncGroup(g);
@@ -512,6 +518,7 @@ class ExorGroupManager
 
 		// Actualizar nombre + ultimo login
 		g.AddOrUpdate(sid, PlayerName(player), ExorTimeUtil.TodayNumber());
+		g.inactivity_alert_day = 0;	// alguien se conecto: re-armar el aviso de inactividad
 		player.ExorSetGroupId(g.id);
 		AutoKickScan(g);
 		SaveGroup(g);
@@ -533,8 +540,92 @@ class ExorGroupManager
 			if (today - mm.last_seen_day >= days)
 			{
 				Print(string.Format("%1 Party: auto-kick de %2 (%3 dias sin login)", ExorStorageConstants.LOG, mm.name, today - mm.last_seen_day));
+				g.AddFormer(mm.steamid, mm.name, today, "auto-kick inactividad");
 				g.RemoveMember(mm.steamid);
 			}
 		}
+	}
+
+	// ------------------------- aviso de clanes inactivos -------------------------
+	// Recorre todos los grupos y, si NINGUN miembro actual se conecto en los ultimos
+	// 'inactividad_dias', escribe un aviso al log forense diario (ExorRaidLog) con las
+	// coordenadas de la base. Dedup: 1 aviso por clan por dia (inactivity_alert_day),
+	// re-armado cuando alguien se conecta (ver OnPlayerConnected). Se llama en
+	// MissionServer.OnInit tras cargar los grupos; como el server reinicia seguido,
+	// eso alcanza para avisar al menos 1 vez por dia mientras el clan siga inactivo.
+	void ScanInactiveClans()
+	{
+		if (!GetGame() || !GetGame().IsServer())
+			return;
+		ExorCfgPartyProteccion p = GetExorConfig().party.proteccion;
+		if (!p.aviso_clan_inactivo)
+			return;
+		int umbral = p.inactividad_dias;
+		if (umbral <= 0)
+			return;
+
+		int today = ExorTimeUtil.TodayNumber();
+		int avisados = 0;
+		int i;
+		for (i = 0; i < m_Groups.Count(); i++)
+		{
+			ExorGroup g = m_Groups.Get(i);
+			if (g.members.Count() == 0)
+				continue;
+			int last = g.MostRecentSeenDay();
+			if (last < 0)
+				continue;
+			int dias = today - last;
+			if (dias < umbral)
+				continue;
+			if (g.inactivity_alert_day == today)
+				continue;	// ya se aviso hoy de este clan
+
+			string ownerName = "?";
+			ExorGroupMember owner = g.FindMember(g.owner_id);
+			if (owner)
+				ownerName = owner.name;
+			vector basePos = Vector(g.mast_x, g.mast_y, g.mast_z);
+			string detalle = string.Format("clan %1 (lider %2, %3 miembros) sin conexion hace %4 dias (umbral %5)",
+				g.id, ownerName, g.members.Count(), dias, umbral);
+			ExorRaidLog.Write("CLAN_INACTIVO", g.owner_id, ownerName, basePos, detalle);
+
+			g.inactivity_alert_day = today;
+			SaveGroup(g);
+			avisados++;
+		}
+		if (avisados > 0)
+			Print(string.Format("%1 Party: %2 clan(es) inactivo(s) avisados al raidlog (umbral %3 dias)", ExorStorageConstants.LOG, avisados, umbral));
+	}
+
+	// Vuelca al log forense el roster completo (miembros + ex-miembros) de un grupo
+	// que se esta por disolver, para conservar la info de quien estuvo en el clan.
+	void ExorLogDisband(ExorGroup g, string reason)
+	{
+		if (!g)
+			return;
+		string ids = "";
+		int i;
+		for (i = 0; i < g.members.Count(); i++)
+		{
+			if (ids != "")
+				ids += ", ";
+			ids += g.members.Get(i).name + "=" + g.members.Get(i).steamid;
+		}
+		string exids = "";
+		for (i = 0; i < g.former_members.Count(); i++)
+		{
+			if (exids != "")
+				exids += ", ";
+			exids += g.former_members.Get(i).name + "=" + g.former_members.Get(i).steamid;
+		}
+		string ownerName = "?";
+		ExorGroupMember owner = g.FindMember(g.owner_id);
+		if (owner)
+			ownerName = owner.name;
+		vector basePos = Vector(g.mast_x, g.mast_y, g.mast_z);
+		string detalle = string.Format("clan %1 (lider %2) disuelto: %3 | miembros: [%4] | ex-miembros: [%5]",
+			g.id, ownerName, reason, ids, exids);
+		ExorRaidLog.Write("CLAN_DISUELTO", g.owner_id, ownerName, basePos, detalle);
 	}
 }

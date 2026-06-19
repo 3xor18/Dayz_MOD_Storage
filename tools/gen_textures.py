@@ -91,6 +91,36 @@ def stamp_text(img, color):
     return img
 
 
+def make_discord():
+    """Icono estilo Discord: cuadrado redondeado blurple + mascota blanca (aprox)."""
+    ss = 4
+    out = 512
+    w = out * ss
+    img = Image.new("RGBA", (w, w), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    blurple = (88, 101, 242, 255)
+    white = (255, 255, 255, 255)
+
+    def s(v):
+        return int(v * ss)
+
+    # fondo redondeado (cuadrado redondeado tipo app icon)
+    pad = s(20)
+    d.rounded_rectangle([pad, pad, w - pad, w - pad], radius=s(116), fill=blurple)
+    # cuerpo de la mascota (capsula ancha)
+    d.rounded_rectangle([s(150), s(188), s(362), s(350)], radius=s(96), fill=white)
+    # patas inferiores
+    d.ellipse([s(150), s(286), s(240), s(378)], fill=white)
+    d.ellipse([s(272), s(286), s(362), s(378)], fill=white)
+    # muesca entre las patas
+    d.ellipse([s(236), s(338), s(276), s(404)], fill=blurple)
+    # ojos
+    d.ellipse([s(205), s(226), s(244), s(298)], fill=blurple)
+    d.ellipse([s(268), s(226), s(307), s(298)], fill=blurple)
+
+    return img.resize((out, out), Image.LANCZOS)
+
+
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     base = make_camo(seed=3018)
@@ -100,6 +130,10 @@ def main():
         out = os.path.abspath(os.path.join(OUT_DIR, name))
         img.save(out)
         print("OK", out)
+
+    disc_out = os.path.abspath(os.path.join(OUT_DIR, "exor_discord_ca.png"))
+    make_discord().save(disc_out)
+    print("OK", disc_out)
 
 
 if __name__ == "__main__":

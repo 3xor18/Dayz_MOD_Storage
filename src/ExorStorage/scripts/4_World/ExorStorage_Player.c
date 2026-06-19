@@ -3,6 +3,7 @@
 // Enforce no permite dos 'modded class PlayerBase' en el mismo mod, asi que
 // TODO lo del jugador vive aca: acciones (storage) + party (Fase B).
 // ============================================================================
+
 modded class PlayerBase
 {
 	// --- Party ---
@@ -82,8 +83,20 @@ modded class PlayerBase
 	override void EEHitBy(TotalDamageResult damageResult, int damageType, EntityAI source, int component, string dmgZone, string ammo, vector modelPos, float speedCoef)
 	{
 		super.EEHitBy(damageResult, damageType, source, component, dmgZone, ammo, modelPos, speedCoef);
-		if (GetGame().IsServer())
-			m_ExorKfSource = source;
+		if (!GetGame().IsServer())
+			return;
+		m_ExorKfSource = source;
+
+		// Combat-log (modelo de ZONA): si el daño viene de OTRO jugador, registrar una
+		// zona de combate en AMBOS extremos (victima y atacante) -> cubre PvP corto y largo.
+		// La deteccion al desloguearse es por PRESENCIA en la zona, no por intercambio de daño.
+		if (!source || !GetIdentity())
+			return;
+		PlayerBase atk = PlayerBase.Cast(source.GetHierarchyRootPlayer());
+		if (!atk || atk == this || !atk.GetIdentity())
+			return;
+		ExorCombatZones.Register(GetPosition());
+		ExorCombatZones.Register(atk.GetPosition());
 	}
 
 	// Al morir: killfeed + programar la bolsa de cadaver.
@@ -357,6 +370,13 @@ modded class PlayerBase
 			case ExorRPC.CONFIG_SYNC:
 				ExorOnConfigSync(ctx);
 				break;
+			case ExorRPC.SERVERINFO_SYNC:
+			{
+				Param1<string> sip = new Param1<string>("");
+				if (ctx.Read(sip))
+					ExorConfig.ApplyServerInfoJson(sip.param1);
+				break;
+			}
 			case ExorRPC.VIP_STATUS:
 			{
 				Param1<bool> vp = new Param1<bool>(false);

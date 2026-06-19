@@ -22,7 +22,7 @@ if (-not $SkipTextures) {
 
     Write-Host "[2/3] Convirtiendo PNG -> PAA..." -ForegroundColor Cyan
     New-Item -ItemType Directory -Force "$repo\src\ExorStorage\data" | Out-Null
-    foreach ($name in @("exor_barrel_500_co")) {
+    foreach ($name in @("exor_barrel_500_co", "exor_discord_ca")) {
         & $ImageToPAA "$repo\assets\textures\$name.png" "$repo\src\ExorStorage\data\$name.paa"
         if ($LASTEXITCODE -ne 0) { throw "ImageToPAA fallo para $name" }
     }

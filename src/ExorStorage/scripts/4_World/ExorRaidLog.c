@@ -1,7 +1,7 @@
 // ============================================================================
-// 3xor_Vanilla_Optimization - Log forense anti-raid (SOLO server)
-// Escribe 1 archivo por dia en $profile:3xorVanillaOptimization\raidlog\:
-//   raid_YYYY-MM-DD.txt   (1 evento por linea)
+// 3xor_Vanilla_Optimization - Log de auditoria del server (SOLO server)
+// Escribe 1 archivo por dia en $profile:3xorVanillaOptimization\ServerAuditLog\:
+//   audit_YYYY-MM-DD.txt   (1 evento por linea)
 // Auto-purga: al arrancar borra los archivos mas viejos que log_dias_retener.
 // Formato de linea:
 //   [YYYY-MM-DD HH:MM:SS] EVENTO | steam=<id> | jugador=<nombre> | pos=<X, Z> | <detalle>
@@ -14,8 +14,8 @@ class ExorRaidLog
 	{
 		if (!GetGame() || !GetGame().IsServer())
 			return;
-		if (!FileExist(ExorStorageConstants.RAIDLOG_DIR))
-			MakeDirectory(ExorStorageConstants.RAIDLOG_DIR);
+		if (!FileExist(ExorStorageConstants.AUDITLOG_DIR))
+			MakeDirectory(ExorStorageConstants.AUDITLOG_DIR);
 		PurgeOld();
 	}
 
@@ -46,7 +46,7 @@ class ExorRaidLog
 
 	static string FilePath(string dayStamp)
 	{
-		return string.Format("%1\\raid_%2.txt", ExorStorageConstants.RAIDLOG_DIR, dayStamp);
+		return string.Format("%1\\audit_%2.txt", ExorStorageConstants.AUDITLOG_DIR, dayStamp);
 	}
 
 	// Escribe una linea de evento. pos se loguea como <X, Z> (convencion del .ADM).
@@ -54,8 +54,8 @@ class ExorRaidLog
 	{
 		if (!GetGame() || !GetGame().IsServer())
 			return;
-		if (!FileExist(ExorStorageConstants.RAIDLOG_DIR))
-			MakeDirectory(ExorStorageConstants.RAIDLOG_DIR);
+		if (!FileExist(ExorStorageConstants.AUDITLOG_DIR))
+			MakeDirectory(ExorStorageConstants.AUDITLOG_DIR);
 
 		string path = FilePath(DayStamp());
 		FileHandle fh = OpenFile(path, FileMode.APPEND);
@@ -78,7 +78,7 @@ class ExorRaidLog
 			return;	// 0 = nunca borrar
 
 		int today = ExorTimeUtil.TodayNumber();
-		string pattern = string.Format("%1\\raid_*.txt", ExorStorageConstants.RAIDLOG_DIR);
+		string pattern = string.Format("%1\\audit_*.txt", ExorStorageConstants.AUDITLOG_DIR);
 		string fileName;
 		FileAttr attr;
 		FindFileHandle h = FindFile(pattern, fileName, attr, FindFileFlags.ALL);
@@ -104,19 +104,19 @@ class ExorRaidLog
 		int fileDay = ExorTimeUtil.DayNumber(y, mo, d);
 		if (today - fileDay >= keepDays)
 		{
-			DeleteFile(string.Format("%1\\%2", ExorStorageConstants.RAIDLOG_DIR, fileName));
+			DeleteFile(string.Format("%1\\%2", ExorStorageConstants.AUDITLOG_DIR, fileName));
 			Print(string.Format("%1 RaidLog: %2 borrado (mas de %3 dias)", ExorStorageConstants.LOG, fileName, keepDays));
 		}
 	}
 
-	// Extrae Y/M/D de "raid_YYYY-MM-DD.txt" por posiciones fijas.
+	// Extrae Y/M/D de "audit_YYYY-MM-DD.txt" por posiciones fijas (prefijo "audit_" = 6 chars).
 	static bool ParseDate(string fileName, out int y, out int mo, out int d)
 	{
-		if (fileName.Length() < 19)
+		if (fileName.Length() < 20)
 			return false;
-		string sy = fileName.Substring(5, 4);
-		string sm = fileName.Substring(10, 2);
-		string sd = fileName.Substring(13, 2);
+		string sy = fileName.Substring(6, 4);
+		string sm = fileName.Substring(11, 2);
+		string sd = fileName.Substring(14, 2);
 		y = sy.ToInt();
 		mo = sm.ToInt();
 		d = sd.ToInt();

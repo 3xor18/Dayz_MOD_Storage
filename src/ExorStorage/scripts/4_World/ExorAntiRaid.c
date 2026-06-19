@@ -7,6 +7,107 @@
 //   #4 Log de deslogueo + sacar al reconectar dentro de territorio ajeno -> Mission
 // El log forense lo escribe ExorRaidLog (1 archivo por dia, auto-purga 7 dias).
 // ============================================================================
+// ===========================================================================
+// Combat-log por ZONA (server). Cuando hay daño PvP se registra una zona de
+// combate en la posicion de CADA participante (tirador + victima), asi cubre PvP
+// corto y largo sin un radio gigante. La zona vive 'combat_log_minutos' y se
+// refresca con cada daño cercano. Al desloguearse, si el jugador esta dentro del
+// radio de una zona viva = combat-log (por PRESENCIA, haya disparado o no).
+// SIN escaneo por tick: la zona solo se evalua en el momento de desconectar.
+// ===========================================================================
+class ExorCombatZone
+{
+	float x;
+	float z;
+	int last_min;   // NowMinutes de la ultima actividad PvP de la zona
+}
+
+class ExorCombatZones
+{
+	static ref array<ref ExorCombatZone> s_Zones;
+
+	static float Dist2D(float ax, float az, float bx, float bz)
+	{
+		float dx = ax - bx;
+		float dz = az - bz;
+		return Math.Sqrt((dx * dx) + (dz * dz));
+	}
+
+	static void PurgeExpired(int now, int ventana)
+	{
+		if (!s_Zones)
+			return;
+		int i;
+		for (i = s_Zones.Count() - 1; i >= 0; i--)
+		{
+			if (now - s_Zones.Get(i).last_min > ventana)
+				s_Zones.Remove(i);
+		}
+	}
+
+	// Registra/refresca una zona en 'pos'. Si ya hay una zona dentro del radio, solo
+	// le actualiza el timestamp (un tiroteo largo no spamea zonas). Distancia
+	// horizontal: ignora la altura (torres / sotanos cuentan igual).
+	static void Register(vector pos)
+	{
+		if (!GetGame() || !GetGame().IsServer())
+			return;
+		ExorCfgPartyProteccion p = GetExorConfig().party.proteccion;
+		if (!p.log_combat_log || p.combat_log_minutos <= 0)
+			return;
+		if (!s_Zones)
+			s_Zones = new array<ref ExorCombatZone>;
+		int now = ExorTimeUtil.NowMinutes();
+		PurgeExpired(now, p.combat_log_minutos);
+		float radio = p.combat_log_radio;
+		int i;
+		for (i = 0; i < s_Zones.Count(); i++)
+		{
+			ExorCombatZone z = s_Zones.Get(i);
+			if (Dist2D(pos[0], pos[2], z.x, z.z) <= radio)
+			{
+				z.last_min = now;
+				return;
+			}
+		}
+		ExorCombatZone nz = new ExorCombatZone();
+		nz.x = pos[0];
+		nz.z = pos[2];
+		nz.last_min = now;
+		s_Zones.Insert(nz);
+	}
+
+	// true si 'pos' cae dentro de una zona viva; devuelve el elapsed (min) de la mas reciente.
+	static bool IsInActiveZone(vector pos, out int elapsedMin)
+	{
+		elapsedMin = -1;
+		if (!s_Zones)
+			return false;
+		ExorCfgPartyProteccion p = GetExorConfig().party.proteccion;
+		int now = ExorTimeUtil.NowMinutes();
+		int ventana = p.combat_log_minutos;
+		float radio = p.combat_log_radio;
+		bool found = false;
+		int i;
+		for (i = 0; i < s_Zones.Count(); i++)
+		{
+			ExorCombatZone z = s_Zones.Get(i);
+			if (now - z.last_min > ventana)
+				continue;
+			if (Dist2D(pos[0], pos[2], z.x, z.z) <= radio)
+			{
+				int e = now - z.last_min;
+				if (!found || e < elapsedMin)
+				{
+					elapsedMin = e;
+					found = true;
+				}
+			}
+		}
+		return found;
+	}
+}
+
 class ExorAntiRaid
 {
 	// ------------------------- helpers de territorio -------------------------
@@ -128,6 +229,32 @@ class ExorAntiRaid
 
 		string detalle = string.Format("se deslogueo dentro de territorio de %1", GroupLabel(m));
 		ExorRaidLog.Write("LOGOUT_BASE_AJENA", identity.GetPlainId(), identity.GetName(), player.GetPosition(), detalle);
+	}
+
+	// ------------------------- #6: combat-log (deslogueo en zona de combate) -------------------------
+	// Si el jugador se desloguea estando DENTRO de una zona de combate PvP viva (ver
+	// ExorCombatZones, alimentado por PlayerBase.EEHitBy), se deja rastro. Es por
+	// PRESENCIA: no importa si le dispararon o no, solo estar en el area del tiroteo.
+	static void OnCombatLogout(PlayerBase player, PlayerIdentity identity)
+	{
+		if (!GetGame() || !GetGame().IsServer())
+			return;
+		if (!player || !identity)
+			return;
+		ExorCfgPartyProteccion p = GetExorConfig().party.proteccion;
+		if (!p.log_combat_log || p.combat_log_minutos <= 0)
+			return;
+		if (!player.IsAlive())
+			return;	// murio: no es deslogueo de combate
+
+		int elapsed;
+		if (!ExorCombatZones.IsInActiveZone(player.GetPosition(), elapsed))
+			return;	// no esta dentro de ninguna zona de combate viva
+
+		int radioM = Math.Round(p.combat_log_radio);
+		string detalle = string.Format("se deslogueo dentro de zona de combate PvP (radio %1m) | combate activo hace %2 min (ventana %3)",
+			radioM, elapsed, p.combat_log_minutos);
+		ExorRaidLog.Write("COMBAT_LOG", identity.GetPlainId(), identity.GetName(), player.GetPosition(), detalle);
 	}
 
 	// ------------------------- #4b: sacar al reconectar -------------------------

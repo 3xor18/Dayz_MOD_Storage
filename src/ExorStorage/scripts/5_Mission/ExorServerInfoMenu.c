@@ -12,6 +12,7 @@ class ExorServerInfoMenu extends UIScriptedMenu
 	protected ButtonWidget m_TabReglas;
 	protected ButtonWidget m_TabScore;
 	protected ButtonWidget m_Close;
+	protected ButtonWidget m_DiscordBtn;
 	protected Widget m_PanelGeneral;
 	protected Widget m_PanelReglas;
 	protected Widget m_PanelScore;
@@ -36,6 +37,7 @@ class ExorServerInfoMenu extends UIScriptedMenu
 		m_TabReglas  = ButtonWidget.Cast(layoutRoot.FindAnyWidget("tab_reglas"));
 		m_TabScore   = ButtonWidget.Cast(layoutRoot.FindAnyWidget("tab_score"));
 		m_Close      = ButtonWidget.Cast(layoutRoot.FindAnyWidget("close_btn"));
+		m_DiscordBtn = ButtonWidget.Cast(layoutRoot.FindAnyWidget("discord_btn"));
 		m_PanelGeneral = layoutRoot.FindAnyWidget("panel_general");
 		m_PanelReglas  = layoutRoot.FindAnyWidget("panel_reglas");
 		m_PanelScore   = layoutRoot.FindAnyWidget("panel_score");
@@ -95,9 +97,49 @@ class ExorServerInfoMenu extends UIScriptedMenu
 		{
 			if (i > 0)
 				s = s + "\n";
-			s = s + a.Get(i);
+			s = s + WrapLine(a.Get(i), 70);
 		}
 		return s;
+	}
+
+	// El MultilineTextWidget no corta las lineas largas (se salen del cuadro), asi que
+	// las cortamos por palabras a <= maxChars y unimos con \n. Asi entra en el ancho del
+	// box y el scroll vertical maneja el alto.
+	string WrapLine(string line, int maxChars)
+	{
+		int n = line.Length();
+		if (n <= maxChars)
+			return line;
+		string outp = "";
+		string cur = "";
+		int i = 0;
+		while (i < n)
+		{
+			int sp = line.IndexOfFrom(i, " ");
+			string word;
+			if (sp == -1)
+			{
+				word = line.Substring(i, n - i);
+				i = n;
+			}
+			else
+			{
+				word = line.Substring(i, sp - i);
+				i = sp + 1;
+			}
+			if (cur == "")
+				cur = word;
+			else if (cur.Length() + 1 + word.Length() <= maxChars)
+				cur = cur + " " + word;
+			else
+			{
+				outp = outp + cur + "\n";
+				cur = word;
+			}
+		}
+		if (cur != "")
+			outp = outp + cur;
+		return outp;
 	}
 
 	void SetBtnLabel(ButtonWidget b, string txt)
@@ -148,6 +190,13 @@ class ExorServerInfoMenu extends UIScriptedMenu
 		if (w == m_TabReglas)  { ShowTab(1); return true; }
 		if (w == m_TabScore)   { ShowTab(2); return true; }
 		if (w == m_Close)      { Close(); return true; }
+		if (w == m_DiscordBtn)
+		{
+			string url = GetExorConfig().serverinfo.discord_url;
+			if (url != "")
+				GetGame().OpenURL(url);
+			return true;
+		}
 		if (w == m_HdrName)    { m_SortCol = 0; RenderScore(); return true; }
 		if (w == m_HdrKills)   { m_SortCol = 1; RenderScore(); return true; }
 		if (w == m_HdrDeaths)  { m_SortCol = 2; RenderScore(); return true; }
