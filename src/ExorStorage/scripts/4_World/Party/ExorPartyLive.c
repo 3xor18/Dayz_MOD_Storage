@@ -61,10 +61,11 @@ class ExorPartyLive
 	{
 		if (!GetGame().IsServer())
 			return;
-		// 250 ms (antes 1000): a 1 Hz el nombre/HUD del compañero se quedaba quieto
-		// y "saltaba" al moverse. A 4 Hz sigue fluido. Carga de red despreciable
-		// (party chico, MEMBER_SYNC va sin confirmacion).
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().Tick, 250, true);
+		// 125 ms (8 Hz): a 1 Hz el nombre/HUD del compañero se quedaba quieto y
+		// "saltaba" al moverse; a 4 Hz quedaba casi perfecto, a 8 Hz fluido. Carga
+		// de red despreciable (party chico, MEMBER_SYNC va sin confirmacion). Bajar
+		// mas de 125 ms es rendimiento decreciente (no se nota y gasta al pedo).
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().Tick, 125, true);
 	}
 
 	void Tick()
