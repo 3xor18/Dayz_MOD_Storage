@@ -223,6 +223,7 @@ class ExorGroupManager
 			{
 				pb.ExorSetGroupId("");
 				SyncToPlayer(pb, null);
+				ExorPartyLive.Get().ClearForPlayer(pb);	// limpiar HUD/nameplates/marcas al disolverse
 				pb.MessageImportant(reason);
 			}
 		}
@@ -457,6 +458,7 @@ class ExorGroupManager
 		g.RemoveMember(sid);
 		player.ExorSetGroupId("");
 		SyncToPlayer(player, null);
+		ExorPartyLive.Get().ClearForPlayer(player);	// limpiar HUD/nameplates/marcas del que sale
 		player.MessageImportant("Saliste del party.");
 		SaveGroup(g);
 		SyncGroup(g);
@@ -497,6 +499,7 @@ class ExorGroupManager
 		{
 			kicked.ExorSetGroupId("");
 			SyncToPlayer(kicked, null);
+			ExorPartyLive.Get().ClearForPlayer(kicked);	// limpiar HUD/nameplates/marcas del expulsado
 			kicked.MessageImportant("Fuiste sacado del party.");
 		}
 		leader.MessageImportant(string.Format("%1 fue sacado del party.", nm));

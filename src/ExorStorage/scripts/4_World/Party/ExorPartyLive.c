@@ -61,7 +61,10 @@ class ExorPartyLive
 	{
 		if (!GetGame().IsServer())
 			return;
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().Tick, 1000, true);
+		// 250 ms (antes 1000): a 1 Hz el nombre/HUD del compañero se quedaba quieto
+		// y "saltaba" al moverse. A 4 Hz sigue fluido. Carga de red despreciable
+		// (party chico, MEMBER_SYNC va sin confirmacion).
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().Tick, 250, true);
 	}
 
 	void Tick()
@@ -126,6 +129,28 @@ class ExorPartyLive
 			js.WriteToString(dto, false, data);
 			rcv.RPCSingleParam(ExorRPC.MEMBER_SYNC, new Param1<string>(data), false, rcv.GetIdentity());
 		}
+	}
+
+	// Vacia el HUD/nameplates/marcas de un jugador que dejo de estar en el party
+	// (salio / fue expulsado / se disolvio). Sin esto el server simplemente deja
+	// de empujarle data y el cliente conserva la ULTIMA recibida (seguia viendo a
+	// los ex-compañeros y sus marcas hasta morir/reloguear). Mandamos un live y
+	// unas marcas VACIAS (confiable) para que el cliente limpie.
+	void ClearForPlayer(PlayerBase p)
+	{
+		if (!GetGame().IsServer() || !p || !p.GetIdentity())
+			return;
+		JsonSerializer js = new JsonSerializer();
+
+		ExorLiveDTO emptyLive = new ExorLiveDTO();
+		string d1;
+		js.WriteToString(emptyLive, false, d1);
+		p.RPCSingleParam(ExorRPC.MEMBER_SYNC, new Param1<string>(d1), true, p.GetIdentity());
+
+		ExorMarkersDTO emptyMk = new ExorMarkersDTO();
+		string d2;
+		js.WriteToString(emptyMk, false, d2);
+		p.RPCSingleParam(ExorRPC.MARKER_SYNC, new Param1<string>(d2), true, p.GetIdentity());
 	}
 
 	// ------------------------- marcas -------------------------
