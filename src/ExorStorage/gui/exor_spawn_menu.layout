@@ -13,8 +13,8 @@ PanelWidgetClass ExorSpawnRoot
 		PanelWidgetClass ExorSpawnPanel
 		{
 			visible 1
-			position 0.34 0.16
-			size 0.32 0.68
+			position 0.34 0.05
+			size 0.32 0.90
 			color 0.06 0.07 0.12 1
 			style rover_sim_colorable
 			halign left_ref
@@ -27,8 +27,8 @@ PanelWidgetClass ExorSpawnRoot
 				TextWidgetClass ExorSpawnTitle
 				{
 					visible 1
-					position 0.02 0.025
-					size 0.96 0.08
+					position 0.02 0.012
+					size 0.96 0.048
 					hexactpos 0
 					vexactpos 0
 					hexactsize 0
@@ -44,8 +44,8 @@ PanelWidgetClass ExorSpawnRoot
 				ButtonWidgetClass ExorSpawnBtn0
 				{
 					visible 1
-					position 0.05 0.13
-					size 0.9 0.08
+					position 0.05 0.060
+					size 0.9 0.052
 					color 0.2 0.2 0.3 1
 					style rover_sim_colorable
 					text "punto 0"
@@ -54,8 +54,8 @@ PanelWidgetClass ExorSpawnRoot
 				ButtonWidgetClass ExorSpawnBtn1
 				{
 					visible 1
-					position 0.05 0.23
-					size 0.9 0.08
+					position 0.05 0.126
+					size 0.9 0.052
 					color 0.2 0.2 0.3 1
 					style rover_sim_colorable
 					text "punto 1"
@@ -64,8 +64,8 @@ PanelWidgetClass ExorSpawnRoot
 				ButtonWidgetClass ExorSpawnBtn2
 				{
 					visible 1
-					position 0.05 0.33
-					size 0.9 0.08
+					position 0.05 0.192
+					size 0.9 0.052
 					color 0.2 0.2 0.3 1
 					style rover_sim_colorable
 					text "punto 2"
@@ -74,8 +74,8 @@ PanelWidgetClass ExorSpawnRoot
 				ButtonWidgetClass ExorSpawnBtn3
 				{
 					visible 1
-					position 0.05 0.43
-					size 0.9 0.08
+					position 0.05 0.258
+					size 0.9 0.052
 					color 0.2 0.2 0.3 1
 					style rover_sim_colorable
 					text "punto 3"
@@ -84,8 +84,8 @@ PanelWidgetClass ExorSpawnRoot
 				ButtonWidgetClass ExorSpawnBtn4
 				{
 					visible 1
-					position 0.05 0.53
-					size 0.9 0.08
+					position 0.05 0.324
+					size 0.9 0.052
 					color 0.2 0.2 0.3 1
 					style rover_sim_colorable
 					text "punto 4"
@@ -94,18 +94,78 @@ PanelWidgetClass ExorSpawnRoot
 				ButtonWidgetClass ExorSpawnBtn5
 				{
 					visible 1
-					position 0.05 0.63
-					size 0.9 0.08
+					position 0.05 0.390
+					size 0.9 0.052
 					color 0.2 0.2 0.3 1
 					style rover_sim_colorable
 					text "punto 5"
 					font "gui/fonts/MetronBook16"
 				}
+				ButtonWidgetClass ExorSpawnBtn6
+				{
+					visible 1
+					position 0.05 0.456
+					size 0.9 0.052
+					color 0.2 0.2 0.3 1
+					style rover_sim_colorable
+					text "punto 6"
+					font "gui/fonts/MetronBook16"
+				}
+				ButtonWidgetClass ExorSpawnBtn7
+				{
+					visible 1
+					position 0.05 0.522
+					size 0.9 0.052
+					color 0.2 0.2 0.3 1
+					style rover_sim_colorable
+					text "punto 7"
+					font "gui/fonts/MetronBook16"
+				}
+				ButtonWidgetClass ExorSpawnBtn8
+				{
+					visible 1
+					position 0.05 0.588
+					size 0.9 0.052
+					color 0.2 0.2 0.3 1
+					style rover_sim_colorable
+					text "punto 8"
+					font "gui/fonts/MetronBook16"
+				}
+				ButtonWidgetClass ExorSpawnBtn9
+				{
+					visible 1
+					position 0.05 0.654
+					size 0.9 0.052
+					color 0.2 0.2 0.3 1
+					style rover_sim_colorable
+					text "punto 9"
+					font "gui/fonts/MetronBook16"
+				}
+				ButtonWidgetClass ExorSpawnBtn10
+				{
+					visible 1
+					position 0.05 0.720
+					size 0.9 0.052
+					color 0.2 0.2 0.3 1
+					style rover_sim_colorable
+					text "punto 10"
+					font "gui/fonts/MetronBook16"
+				}
+				ButtonWidgetClass ExorSpawnBtn11
+				{
+					visible 1
+					position 0.05 0.786
+					size 0.9 0.052
+					color 0.2 0.2 0.3 1
+					style rover_sim_colorable
+					text "punto 11"
+					font "gui/fonts/MetronBook16"
+				}
 				ButtonWidgetClass ExorSpawnBtnBase
 				{
 					visible 1
-					position 0.05 0.78
-					size 0.9 0.08
+					position 0.05 0.858
+					size 0.9 0.052
 					color 0.12 0.4 0.12 1
 					style rover_sim_colorable
 					text "Mi base"
@@ -114,8 +174,8 @@ PanelWidgetClass ExorSpawnRoot
 				ButtonWidgetClass ExorSpawnBtnBaseEquip
 				{
 					visible 1
-					position 0.05 0.88
-					size 0.9 0.08
+					position 0.05 0.924
+					size 0.9 0.052
 					color 0.35 0.27 0.58 1
 					style rover_sim_colorable
 					text "Spawn en base + Equipamiento"

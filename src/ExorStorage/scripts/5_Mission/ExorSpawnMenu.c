@@ -31,7 +31,8 @@ class ExorSpawnMenu extends UIScriptedMenu
 
 		m_Buttons = new array<ButtonWidget>;
 		int i;
-		for (i = 0; i < 6; i++)
+		// Debe coincidir con la cantidad de botones ExorSpawnBtnN del .layout.
+		for (i = 0; i < 12; i++)
 		{
 			ButtonWidget b = ButtonWidget.Cast(layoutRoot.FindAnyWidget("ExorSpawnBtn" + i.ToString()));
 			m_Buttons.Insert(b);
