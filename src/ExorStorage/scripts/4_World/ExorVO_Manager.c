@@ -34,8 +34,9 @@ class ExorVO_Manager
 			return;
 		ExorVO_Serializer.EnsureDirs();
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().Tick, ExorStorageConstants.TICK_MS, true);
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().BarrelTick, ExorStorageConstants.BARREL_TICK_MS, true);
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().WakeTick, ExorStorageConstants.WAKE_TICK_MS, true);
-		Print(string.Format("%1 Manager iniciado (tick %2 ms, wake-tick %3 ms)", ExorStorageConstants.LOG, ExorStorageConstants.TICK_MS, ExorStorageConstants.WAKE_TICK_MS));
+		Print(string.Format("%1 Manager iniciado (tick %2 ms, barrel-tick %3 ms, wake-tick %4 ms)", ExorStorageConstants.LOG, ExorStorageConstants.TICK_MS, ExorStorageConstants.BARREL_TICK_MS, ExorStorageConstants.WAKE_TICK_MS));
 	}
 
 	// ------------------------- registro -------------------------
@@ -77,15 +78,46 @@ class ExorVO_Manager
 			Get().m_BodyBags.Remove(idx);
 	}
 
-	// ------------------------- tick lento (30s) -------------------------
-	void Tick()
+	// Virtualiza TODOS los barriles y bodybags con contenido. Se llama al APAGAR el
+	// server (OnMissionFinish): asi su contenido anidado pasa al JSON ANTES de que el
+	// engine guarde la persistencia -> al reiniciar no quedan items reales en
+	// bag-in-barril que el motor tire al piso por "invalid location" (anidado profundo).
+	static void VirtualizeAll()
+	{
+		ExorVO_Manager m = Get();
+		int virt = 0;
+		int i;
+		for (i = 0; i < m.m_Barrels.Count(); i++)
+		{
+			Exor_Barrel_Base b = m.m_Barrels.Get(i);
+			if (b && !b.ExorIsVirtualized() && b.ExorCargoCount() > 0)
+			{
+				b.ExorVirtualize();
+				virt++;
+			}
+		}
+		int j;
+		for (j = 0; j < m.m_BodyBags.Count(); j++)
+		{
+			Exor_BodyBag bag = m.m_BodyBags.Get(j);
+			if (bag && !bag.ExorIsVirtualized() && bag.ExorCargoCount() > 0)
+			{
+				bag.ExorVirtualize();
+				virt++;
+			}
+		}
+		Print(string.Format("%1 VirtualizeAll (apagado): %2 contenedores virtualizados a disco", ExorStorageConstants.LOG, virt));
+	}
+
+	// ------------------------- tick RAPIDO (5s): barriles + bodybags -------------------------
+	void BarrelTick()
 	{
 		ExorConfig cfg = GetExorConfig();
-		ExorCfgVehiculos veh = cfg.vehiculos;
 		int now = GetGame().GetTime();
 		int i;
 
-		// --- Barriles: auto-cierre y virtualizacion ---
+		// --- Barriles: auto-cierre (siempre) + virtualizacion (con THROTTLE) ---
+		int budget = ExorStorageConstants.MAX_VIRT_PER_TICK;
 		for (i = m_Barrels.Count() - 1; i >= 0; i--)
 		{
 			Exor_Barrel_Base barrel = m_Barrels.Get(i);
@@ -94,7 +126,10 @@ class ExorVO_Manager
 				m_Barrels.Remove(i);
 				continue;
 			}
-			barrel.ExorTick(now, cfg.storage);
+			// allowVirtualize=budget>0: si se acabo el cupo de este tick, el barril igual
+			// se auto-cierra pero NO virtualiza (lo hara en el proximo tick) -> sin pico.
+			if (barrel.ExorTick(now, cfg.storage, budget > 0))
+				budget--;
 		}
 
 		// --- Bolsas de cadaver: TTL + virtualizar por lejania ---
@@ -108,6 +143,15 @@ class ExorVO_Manager
 			}
 			bag.ExorBagTick(now);
 		}
+	}
+
+	// ------------------------- tick lento (30s): vehiculos -------------------------
+	void Tick()
+	{
+		ExorConfig cfg = GetExorConfig();
+		ExorCfgVehiculos veh = cfg.vehiculos;
+		int now = GetGame().GetTime();
+		int i;
 
 		// --- Vehiculos: dormir los inactivos ---
 		if (!veh.vehiculos_dormir)

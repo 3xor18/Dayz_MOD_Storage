@@ -38,6 +38,10 @@ if ($LASTEXITCODE -ne 0) { throw "pack_pbo.py fallo" }
 $dist = "$repo\dist\@3xor_Vanilla_Optimization"
 Copy-Item "$repo\mod\mod.cpp" "$dist\mod.cpp" -Force
 
+# meta.cpp: linkea la carpeta con el item del Workshop (publishedid). Sin esto el
+# Publisher no sabe que item actualizar y apunta a id=0. Item: 3xor Vanilla+ (3740765915).
+if (Test-Path "$repo\mod\meta.cpp") { Copy-Item "$repo\mod\meta.cpp" "$dist\meta.cpp" -Force }
+
 # Firmar el PBO (obligatorio para mods de cliente; si no, BattlEye kickea)
 $ds = "D:\SteamLibrary\steamapps\common\DayZ Tools\Bin\DsUtils\DSSignFile.exe"
 $privKey = "$repo\keys\3xorVO.biprivatekey"

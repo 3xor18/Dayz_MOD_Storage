@@ -95,13 +95,47 @@ class ExorStats
 		JsonFileLoader<ExorStatsFile>.JsonSaveFile(ExorStorageConstants.STATS_FILE, f);
 	}
 
-	// JSON del leaderboard completo (el cliente lo ordena segun la columna clickeada)
+	// Cuantas filas como maximo viajan al cliente. El leaderboard se manda como UN
+	// string en un solo RPC (SCORE_DATA) y DayZ corta los strings grandes: con muchos
+	// jugadores el JSON completo (>12k chars con ~100 players) se pasaba del limite y
+	// no llegaba -> la tab Score salia vacia. Recortando al Top N por kills nunca se
+	// pasa, y es lo que un leaderboard muestra igual. El cliente igual puede re-ordenar
+	// estas N filas por la columna que clickee.
+	static const int SCORE_MAX_ROWS = 30;
+
+	// JSON del leaderboard: Top N por kills (ver SCORE_MAX_ROWS)
 	string BuildJson()
 	{
 		EnsureLoaded();
-		ExorStatsFile f = new ExorStatsFile();
+
+		// pasar el map a un array para poder ordenarlo y recortarlo
+		array<ref ExorStatRow> all = new array<ref ExorStatRow>;
 		foreach (string k2, ExorStatRow r2 : m_Rows)
-			f.rows.Insert(r2);
+			all.Insert(r2);
+
+		// orden descendente por kills (listas chicas -> bubble sort)
+		int n = all.Count();
+		int i, j;
+		for (i = 0; i < n - 1; i++)
+		{
+			for (j = 0; j < n - 1 - i; j++)
+			{
+				if (all.Get(j + 1).kills > all.Get(j).kills)
+				{
+					ExorStatRow tmp = all.Get(j);
+					all.Set(j, all.Get(j + 1));
+					all.Set(j + 1, tmp);
+				}
+			}
+		}
+
+		ExorStatsFile f = new ExorStatsFile();
+		int lim = all.Count();
+		if (lim > SCORE_MAX_ROWS)
+			lim = SCORE_MAX_ROWS;
+		for (i = 0; i < lim; i++)
+			f.rows.Insert(all.Get(i));
+
 		JsonSerializer js = new JsonSerializer();
 		string data;
 		js.WriteToString(f, false, data);

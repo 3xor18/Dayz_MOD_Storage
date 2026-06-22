@@ -201,9 +201,12 @@ class Exor_BodyBag extends Container_Base
 
 		ExorVO_ContainerFile f = new ExorVO_ContainerFile();
 		JsonFileLoader<ExorVO_ContainerFile>.JsonLoadFile(path, f);
+		// armar el loot BAJO TIERRA (no se ve el parpadeo) y moverlo a la bolsa
+		vector hidden = GetPosition();
+		hidden[1] = hidden[1] - 1000.0;
 		int i;
 		for (i = 0; i < f.items.Count(); i++)
-			ExorVO_Serializer.RestoreItem(f.items.Get(i), this, GetPosition());
+			ExorVO_Serializer.RestoreItem(f.items.Get(i), this, hidden);
 
 		DeleteFile(path);	// consumido tras restaurar (anti-dupe)
 		m_ExorVirtualizedSync = false;
@@ -258,6 +261,10 @@ class Exor_BodyBag extends Container_Base
 		bag.SetOrientation("0 0 0");
 		bag.SetPosition(pos);
 
+		// el loot se ARMA bajo tierra (no se ve el parpadeo) y se mueve a la bolsa
+		vector hidden = pos;
+		hidden[1] = hidden[1] - 1000.0;
+
 		int captured = 0;
 		int restored = 0;
 		if (loot)
@@ -268,7 +275,7 @@ class Exor_BodyBag extends Container_Base
 				if (!loot.Get(i))
 					continue;
 				captured++;
-				if (ExorVO_Serializer.RestoreItem(loot.Get(i), bag, pos))	// cada prenda cae en su slot (ANY)
+				if (ExorVO_Serializer.RestoreItem(loot.Get(i), bag, hidden))	// cada prenda cae en su slot (ANY)
 					restored++;
 			}
 		}
@@ -290,7 +297,7 @@ class Exor_BodyBag extends Container_Base
 				}
 				// fallback: no se pudo mover -> copiar para no perder el arma (el mag
 				// podria quedar suelto en el cargo) y borrar el original.
-				ExorVO_Serializer.RestoreItem(ExorVO_Serializer.CaptureItem(it), bag, pos);
+				ExorVO_Serializer.RestoreItem(ExorVO_Serializer.CaptureItem(it), bag, hidden);
 				GetGame().ObjectDelete(it);
 				Print(string.Format("%1 AVISO: %2 no se pudo mover -> copiada (fallback)", ExorStorageConstants.LOG, it.GetType()));
 			}

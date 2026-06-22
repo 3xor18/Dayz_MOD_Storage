@@ -21,8 +21,17 @@ class ExorMunicionSpawnRango
 class ExorCfgStorage
 {
 	int version = 1;
-	int virtualizar_minutos = 10;     // 0 = off
-	int auto_cerrar_minutos = 5;      // 0 = off
+	// Virtualizacion ON: tras un rato sin tocar, el barril saca su loot del mundo (a disco)
+	// para ALIVIAR al server (corazon del mod) Y quedar a prueba de reinicios/crash (el JSON
+	// es el respaldo). Al abrir, restaura cada item en su lugar (ver ExorVO_Serializer).
+	// Timing en SEGUNDOS (recomendado: cerrar 10s, virtualizar 30s).
+	// El auto-cierre NO mide desde el ultimo movimiento, sino la CERCANIA del jugador:
+	// mientras haya alguien a menos de cerrar_distancia_metros, el barril queda abierto;
+	// recien se cierra auto_cerrar_segundos DESPUES de que el jugador se aleja. Asi nunca
+	// se cierra mientras lo estas usando (aunque te quedes ordenando tu inventario).
+	int auto_cerrar_segundos = 10;       // se cierra a los Xs de que NO haya nadie cerca (0 = off)
+	int virtualizar_segundos = 10;       // virtualiza a los Xs de cerrado (0 = off)
+	float cerrar_distancia_metros = 5.0; // radio para considerar "hay un jugador usando el barril"
 	float multiplicador_comida = 2.0;
 	bool permitir_ropa_con_items = true;
 	ref TStringArray blacklist;
@@ -36,8 +45,9 @@ class ExorCfgStorage
 	void SetDefaults()
 	{
 		version = 1;
-		virtualizar_minutos = 10;
-		auto_cerrar_minutos = 5;
+		auto_cerrar_segundos = 10;
+		virtualizar_segundos = 10;
+		cerrar_distancia_metros = 5.0;
 		multiplicador_comida = 2.0;
 		permitir_ropa_con_items = true;
 		cooldown_abrir_segundos = 3;
@@ -1093,9 +1103,9 @@ class ExorConfig
 		ExorStorageSettings old = new ExorStorageSettings();
 		JsonFileLoader<ExorStorageSettings>.JsonLoadFile(ExorStorageConstants.CONFIG_PATH, old);
 
-		// storage
-		storage.virtualizar_minutos = old.virtualizar_minutos;
-		storage.auto_cerrar_minutos = old.auto_cerrar_minutos;
+		// storage (el settings.json viejo estaba en MINUTOS -> pasar a segundos)
+		storage.virtualizar_segundos = old.virtualizar_minutos * 60;
+		storage.auto_cerrar_segundos = old.auto_cerrar_minutos * 60;
 		storage.multiplicador_comida = old.multiplicador_comida;
 		storage.permitir_ropa_con_items = old.permitir_ropa_con_items;
 		storage.cooldown_abrir_segundos = old.cooldown_abrir_segundos;

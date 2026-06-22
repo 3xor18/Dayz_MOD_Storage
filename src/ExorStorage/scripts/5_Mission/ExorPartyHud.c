@@ -149,13 +149,14 @@ modded class MissionGameplay
 			m_ExorHud.Update();
 		}
 
-		// Nameplates 3D: cada frame (la proyeccion sigue a la camara)
+		// Nameplates 3D: cada frame (la proyeccion sigue a la camara). Pasa el delta-time
+		// para suavizar (interpolar) la posicion de los companeros entre updates de red.
 		if (!m_ExorPlates)
 		{
 			m_ExorPlates = new ExorNameplates();
 			m_ExorPlates.Create();
 		}
-		m_ExorPlates.Update();
+		m_ExorPlates.Update(timeslice);
 
 		// Marcas 3D: cada frame
 		if (!m_ExorMarks)

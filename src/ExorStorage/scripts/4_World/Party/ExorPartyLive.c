@@ -29,6 +29,8 @@ class ExorMarker
 	float x;
 	float y;
 	float z;
+	string owner;	// steamid del que la puso (server-only, para borrar con la Y)
+	int placed_ms;	// uptime ms en que se puso (server-only, para expirar a los 10 min)
 }
 
 class ExorMarkersDTO
@@ -44,10 +46,17 @@ class ExorPartyLive
 {
 	static ref ExorPartyLive s_Instance;
 	ref map<string, ref ExorMarkersDTO> m_MarkersByGroup;	// groupId -> marcas
+	ref map<string, int> m_MarkCounter;	// groupId -> contador correlativo (1,2,3...)
+	ref map<string, int> m_MarkLastMs;	// groupId -> uptime ms de la ultima marca
+	int m_LastSweepMs;	// ultima vez que se barrieron marcas vencidas
+
+	static const int MARK_TTL_MS = 600000;	// 10 min: a los 10 min la marca se borra y el contador se reinicia
 
 	void ExorPartyLive()
 	{
 		m_MarkersByGroup = new map<string, ref ExorMarkersDTO>;
+		m_MarkCounter = new map<string, int>;
+		m_MarkLastMs = new map<string, int>;
 	}
 
 	static ExorPartyLive Get()
@@ -70,6 +79,14 @@ class ExorPartyLive
 
 	void Tick()
 	{
+		// Barrer marcas vencidas (>10 min) cada ~5s, independiente de la config de posicion
+		int nowMs = GetGame().GetTime();
+		if (nowMs - m_LastSweepMs > 5000)
+		{
+			m_LastSweepMs = nowMs;
+			SweepExpiredMarkers(nowMs);
+		}
+
 		// Respetar config: si el party esta off o no se comparte posicion, no empujar nada
 		ExorCfgPartyGrupo cg = GetExorConfig().party.grupo;
 		if (!cg.habilitado || !cg.mostrar_posicion_miembros)
@@ -177,18 +194,27 @@ class ExorPartyLive
 			m = new ExorMarkersDTO();
 			m_MarkersByGroup.Set(g.id, m);
 		}
-		string pname = ExorGroupManager.PlayerName(player);
-		// numero: nombre-1, nombre-2, ... (cuantas marcas ya tiene este jugador)
-		int num = 1;
-		int n;
-		for (n = 0; n < m.markers.Count(); n++)
-		{
-			if (m.markers.Get(n).label.IndexOf(pname + "-") == 0)
-				num++;
-		}
+		// Etiqueta = contador CORRELATIVO del grupo (1,2,3,4...): sube en CADA marca de
+		// CUALQUIER miembro y es compartido (BroadcastMarkers). Se reinicia a 0 si paso
+		// mas de MARK_TTL_MS (10 min) sin marcar (a la par que se vencen las marcas).
+		string sid = ExorGroupManager.SteamId(player);
+		int nowMs = GetGame().GetTime();
+		int last;
+		if (!m_MarkLastMs.Find(g.id, last))
+			last = 0;
+		int cnt;
+		if (!m_MarkCounter.Find(g.id, cnt))
+			cnt = 0;
+		if (last == 0 || nowMs - last > MARK_TTL_MS)
+			cnt = 0;	// reinicio tras 10 min sin marcar
+		cnt = cnt + 1;
+		m_MarkCounter.Set(g.id, cnt);
+		m_MarkLastMs.Set(g.id, nowMs);
 
 		ExorMarker mk = new ExorMarker();
-		mk.label = pname + "-" + num.ToString();
+		mk.label = cnt.ToString();
+		mk.owner = sid;
+		mk.placed_ms = nowMs;
 		mk.x = pos[0];
 		mk.y = pos[1];
 		mk.z = pos[2];
@@ -204,19 +230,47 @@ class ExorPartyLive
 		ExorGroup g = ExorGroupManager.Get().FindByPlayer(ExorGroupManager.SteamId(player));
 		if (!g)
 			return;
-		string pname = ExorGroupManager.PlayerName(player);
+		// borra TUS marcas (las que pusiste vos, identificadas por steamid)
+		string sid = ExorGroupManager.SteamId(player);
 		ExorMarkersDTO m;
 		if (m_MarkersByGroup.Find(g.id, m))
 		{
 			int i;
 			for (i = m.markers.Count() - 1; i >= 0; i--)
 			{
-				if (m.markers.Get(i).label.IndexOf(pname + "-") == 0)
+				if (m.markers.Get(i).owner == sid)
 					m.markers.Remove(i);
 			}
 		}
 		BroadcastMarkers(g);
 		player.MessageImportant("Tus marcas limpiadas.");
+	}
+
+	// Borra las marcas con mas de MARK_TTL_MS (10 min) de antiguedad y re-broadcastea
+	// al grupo que haya cambiado. Llamado periodicamente desde Tick.
+	void SweepExpiredMarkers(int nowMs)
+	{
+		array<ref ExorGroup> groups = ExorGroupManager.Get().m_Groups;
+		int gi;
+		for (gi = 0; gi < groups.Count(); gi++)
+		{
+			ExorGroup g = groups.Get(gi);
+			ExorMarkersDTO m;
+			if (!m_MarkersByGroup.Find(g.id, m))
+				continue;
+			bool changed = false;
+			int i;
+			for (i = m.markers.Count() - 1; i >= 0; i--)
+			{
+				if (nowMs - m.markers.Get(i).placed_ms > MARK_TTL_MS)
+				{
+					m.markers.Remove(i);
+					changed = true;
+				}
+			}
+			if (changed)
+				BroadcastMarkers(g);
+		}
 	}
 
 	void BroadcastMarkers(ExorGroup g)

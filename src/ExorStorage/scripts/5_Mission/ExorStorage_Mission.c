@@ -21,9 +21,18 @@ modded class MissionServer
 
 		// OJO: este compilador no acepta expresiones partidas en varias lineas (ni ternarios)
 		Print(string.Format("%1 %2 v%3 inicializado", ExorStorageConstants.LOG, ExorStorageConstants.MOD_NAME, ExorStorageConstants.MOD_VERSION));
-		Print(string.Format("%1 virtualizar_minutos=%2 auto_cerrar_minutos=%3 multiplicador_comida=%4", ExorStorageConstants.LOG, cfg.storage.virtualizar_minutos, cfg.storage.auto_cerrar_minutos, cfg.storage.multiplicador_comida));
+		Print(string.Format("%1 virtualizar_segundos=%2 auto_cerrar_segundos=%3 multiplicador_comida=%4", ExorStorageConstants.LOG, cfg.storage.virtualizar_segundos, cfg.storage.auto_cerrar_segundos, cfg.storage.multiplicador_comida));
 		Print(string.Format("%1 vehiculos_dormir=%2 dormir_minutos=%3 despertar_metros=%4", ExorStorageConstants.LOG, cfg.vehiculos.vehiculos_dormir, cfg.vehiculos.vehiculos_dormir_minutos, cfg.vehiculos.vehiculos_despertar_metros));
 		Print(string.Format("%1 auto_stack=%2 spawn_municion=%3 tipos registrados", ExorStorageConstants.LOG, cfg.municion.auto_stack, cfg.municion.spawn_municion.Count()));
+	}
+
+	// Al APAGAR el server: virtualizar todos los barriles/bodybags con contenido, asi
+	// su loot anidado pasa al JSON antes del guardado de persistencia y NO se cae al
+	// piso al reiniciar (limitacion vanilla con anidado profundo bag-in-barril).
+	override void OnMissionFinish()
+	{
+		ExorVO_Manager.VirtualizeAll();
+		super.OnMissionFinish();
 	}
 
 	// Al estar el cliente listo: sincronizar su roster de party + tocar last_seen

@@ -350,12 +350,8 @@ modded class TerritoryFlag
 			ItemBase ib = ItemBase.Cast(objects.Get(i));
 			if (!ib)
 				continue;
-			Print("[3xorVO] item cerca de la bandera: " + ib.GetType());
 			if (ExorIsMastKit(ib))
-			{
-				Print("[3xorVO]   -> borrando " + ib.GetType());
 				GetGame().ObjectDelete(ib);
-			}
 		}
 	}
 

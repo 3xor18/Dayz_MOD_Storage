@@ -34,6 +34,10 @@ class ExorStorageConstants
 	// Stats persistentes para el Score del panel de server info
 	static const string STATS_FILE = "$profile:3xorVanillaOptimization\\stats.json";
 
+	// Marcas personales del mapa (PIN) — guardadas en el CLIENTE ($profile del cliente),
+	// privadas de cada jugador, no van al server. Las maneja ExorMapPins (5_Mission).
+	static const string MAP_PINS_FILE = "$profile:3xorVanillaOptimization\\my_map_pins.json";
+
 	// Estado persistente de VIP (fecha de ingreso + usos de equipamiento por ciclo)
 	static const string VIP_STATE_FILE = "$profile:3xorVanillaOptimization\\vip_state.json";
 
@@ -50,8 +54,15 @@ class ExorStorageConstants
 	static const float PACK_SECONDS = 3;
 	static const float DEPLOY_SECONDS = 3;
 
-	// Cada cuanto corre el chequeo de virtualizacion/auto-cierre/dormir (ms)
+	// Cada cuanto corre el chequeo de DORMIR vehiculos (ms). Lento porque hace
+	// chequeos de distancia a jugadores (mas caro).
 	static const int TICK_MS = 30000;
 	// Cada cuanto se chequea si hay que despertar vehiculos (ms)
 	static const int WAKE_TICK_MS = 5000;
+	// Tick RAPIDO solo para barriles/bodybags (auto-cierre 10s, virtualizar 30s). Es
+	// barato (solo compara timestamps), por eso puede correr seguido.
+	static const int BARREL_TICK_MS = 5000;
+	// Maximo de barriles que se virtualizan por tick (anti-pico: si muchos quedan
+	// idle a la vez, ej. tras un raid, se reparten en varios ticks).
+	static const int MAX_VIRT_PER_TICK = 15;
 }

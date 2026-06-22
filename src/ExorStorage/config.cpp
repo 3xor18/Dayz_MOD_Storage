@@ -55,30 +55,33 @@ class CfgVehicles
 	class Inventory_Base;	// externa (DZ_Data)
 
 	// ------------------------------------------------------------------
-	//  Ghillies VANILLA al slot de la BANDA DEL BRAZO (Armband).
-	//  Truco: Armband es un slot VANILLA (ya tiene proxy en el modelo -> renderiza)
-	//  y casi nadie lo usa. Al mover el ghillie del slot Back -> Armband, el slot
-	//  Back queda libre -> podes llevar bolso y ghillie a la vez.
-	//  Se moddean las VARIANTES vanilla directamente (solo inventorySlot, NO el
-	//  model) para no romper el modelo del suit. Costo: no usas banda de brazo real.
+	//  Ghillies VANILLA re-slotteados (replica de @ghilliefix, el mod que el server
+	//  del amigo usaba antes). Se cambia SOLO inventorySlot (NO el model) en cada
+	//  variante vanilla, para no romper el modelo.
+	//   - Cuerpo entero (GhillieSuit) y la capa/espalda (GhillieBushrag) -> BRAZALETE
+	//     (Armband): slot vanilla con proxy (renderiza) y casi sin uso; deja el slot
+	//     Back libre -> podes llevar bolso + ghillie a la vez.
+	//   - Capucha de la cabeza (GhillieHood) -> CADERA/CINTURON (Hips).
+	//  CLAVE: usar los MISMOS slots que @ghilliefix hace que los ghillies ya guardados
+	//  de los players ENCAJEN al cambiar de mod -> NO se caen al piso al loguear.
 	// ------------------------------------------------------------------
 	class GhillieSuit_ColorBase;	// base externa (DZ_Characters_Backpacks)
-	class GhillieSuit_Mossy: GhillieSuit_ColorBase
-	{
-		inventorySlot[] = {"Armband"};
-	};
-	class GhillieSuit_Woodland: GhillieSuit_ColorBase
-	{
-		inventorySlot[] = {"Armband"};
-	};
-	class GhillieSuit_Winter: GhillieSuit_ColorBase
-	{
-		inventorySlot[] = {"Armband"};
-	};
-	class GhillieSuit_Tan: GhillieSuit_ColorBase
-	{
-		inventorySlot[] = {"Armband"};
-	};
+	class GhillieSuit_Mossy: GhillieSuit_ColorBase { inventorySlot[] = {"Armband"}; };
+	class GhillieSuit_Woodland: GhillieSuit_ColorBase { inventorySlot[] = {"Armband"}; };
+	class GhillieSuit_Winter: GhillieSuit_ColorBase { inventorySlot[] = {"Armband"}; };
+	class GhillieSuit_Tan: GhillieSuit_ColorBase { inventorySlot[] = {"Armband"}; };
+
+	class GhillieBushrag_ColorBase;	// la "capa" / solo espalda
+	class GhillieBushrag_Mossy: GhillieBushrag_ColorBase { inventorySlot[] = {"Armband"}; };
+	class GhillieBushrag_Woodland: GhillieBushrag_ColorBase { inventorySlot[] = {"Armband"}; };
+	class GhillieBushrag_Winter: GhillieBushrag_ColorBase { inventorySlot[] = {"Armband"}; };
+	class GhillieBushrag_Tan: GhillieBushrag_ColorBase { inventorySlot[] = {"Armband"}; };
+
+	class GhillieHood_ColorBase;	// la capucha de la cabeza -> cintura (Hips)
+	class GhillieHood_Mossy: GhillieHood_ColorBase { inventorySlot[] = {"Hips"}; };
+	class GhillieHood_Woodland: GhillieHood_ColorBase { inventorySlot[] = {"Hips"}; };
+	class GhillieHood_Winter: GhillieHood_ColorBase { inventorySlot[] = {"Hips"}; };
+	class GhillieHood_Tan: GhillieHood_ColorBase { inventorySlot[] = {"Hips"}; };
 
 	// ------------------------------------------------------------------
 	// Barril 3xor desplegado (funcional)
@@ -152,7 +155,10 @@ class CfgVehicles
 		attachments[] = {"Headgear", "Mask", "Eyewear", "Gloves", "Armband", "Vest", "Body", "Hips", "Back", "Legs", "Feet", "Shoulder", "Melee"};
 		class Cargo
 		{
-			itemsCargoSize[] = {7, 5};	// chico: arma caida / items sueltos
+			// Grande (300) para que SIEMPRE entre todo el loot del muerto + el sobrante
+			// que la red de seguridad reubica aca en vez de tirarlo al piso (ExorVO_Serializer).
+			// Antes {7,5}=35 -> con un jugador full equipado se desbordaba y caia loot.
+			itemsCargoSize[] = {10, 30};	// 300 slots
 			openable = 0;
 		};
 	};

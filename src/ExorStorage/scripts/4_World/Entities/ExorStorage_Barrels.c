@@ -129,30 +129,64 @@ class Exor_Barrel_Base : Barrel_ColorBase
 
 	// ------------------------- virtualizacion (Fase 2) -------------------------
 	// Llamado por el manager cada tick
-	void ExorTick(int now, ExorCfgStorage settings)
+	// Devuelve true si virtualizo en este tick (el manager usa eso para el throttle).
+	// allowVirtualize=false -> el barril igual se auto-cierra pero NO virtualiza este tick.
+	bool ExorTick(int now, ExorCfgStorage settings, bool allowVirtualize)
 	{
-		// Auto-cierre de barril dejado abierto
+		// Umbrales en ms (config en SEGUNDOS). Recomendado: cerrar 10s, virtualizar 30s.
+		int cerrarMs = settings.auto_cerrar_segundos * 1000;
+		int virtMs = settings.virtualizar_segundos * 1000;
+
+		// Auto-cierre por CERCANIA del jugador: mientras haya alguien a menos de
+		// cerrar_distancia_metros, el barril sigue ABIERTO (lo esta usando, aunque solo
+		// ordene su inventario sin mover items del barril). Se cierra recien cerrarMs
+		// DESPUES de que el ultimo jugador se aleja. (EECargoIn/Out tambien resetean.)
 		if (IsOpen())
 		{
-			if (settings.auto_cerrar_minutos > 0 && now - m_ExorLastInteractMs > settings.auto_cerrar_minutos * 60000)
+			if (ExorVO_Manager.IsAlivePlayerNear(GetPosition(), settings.cerrar_distancia_metros))
+				m_ExorLastInteractMs = now;
+			if (cerrarMs > 0 && now - m_ExorLastInteractMs > cerrarMs)
 			{
 				Close();
-				Print(string.Format("%1 Barril %2 auto-cerrado por inactividad", ExorStorageConstants.LOG, ExorGetID()));
+				Print(string.Format("%1 Barril %2 auto-cerrado (nadie cerca)", ExorStorageConstants.LOG, ExorGetID()));
 			}
-			return;
+			return false;
 		}
 
-		// Virtualizacion: cerrado, con contenido, sin interaccion por X min
-		if (settings.virtualizar_minutos <= 0)
-			return;
+		if (!allowVirtualize)	// THROTTLE: sin cupo este tick -> virtualiza en el proximo
+			return false;
+
+		// Virtualizacion: cerrado, con contenido, sin interaccion por el umbral. Al
+		// virtualizar se escribe el JSON (respaldo) y se sacan los items del mundo ->
+		// el barril queda crash-safe (cualquier reinicio restaura del JSON) y aliviana el server.
+		if (virtMs <= 0)
+			return false;
 		if (ExorIsVirtualized())
-			return;
-		if (now - m_ExorLastInteractMs < settings.virtualizar_minutos * 60000)
-			return;
+			return false;
+		if (now - m_ExorLastInteractMs < virtMs)
+			return false;
 		if (ExorCargoCount() == 0)
-			return;
+			return false;
 
 		ExorVirtualize();
+		return true;
+	}
+
+	// reinicia el timer de inactividad cada vez que entra/sale un item del barril (asi el
+	// auto-cierre de 10s mide actividad REAL, no el tiempo desde que se abrio).
+	// (Nombres vanilla correctos: EECargoIn/EECargoOut, 1 solo parametro.)
+	override void EECargoIn(EntityAI item)
+	{
+		super.EECargoIn(item);
+		if (GetGame() && GetGame().IsServer())
+			m_ExorLastInteractMs = GetGame().GetTime();
+	}
+
+	override void EECargoOut(EntityAI item)
+	{
+		super.EECargoOut(item);
+		if (GetGame() && GetGame().IsServer())
+			m_ExorLastInteractMs = GetGame().GetTime();
 	}
 
 	int ExorCargoCount()
@@ -205,17 +239,61 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		if (!FileExist(path))
 			return;
 
+		// ANTI-DUPE CRITICO: si existe el JSON, el barril esta virtualizado y el JSON
+		// es la UNICA verdad. Tras un crash/reinicio (este server reinicia muy seguido)
+		// el engine puede restaurar en el cargo una COPIA VIEJA de los items (snapshot
+		// previo al borrado de la virtualizacion). Si restauramos el JSON ENCIMA, se
+		// DUPLICAN y, al pasar de los 500 slots, el sobrante CAE AL PISO ("no entro,
+		// lleno"). Por eso vaciamos primero el cargo actual (items stale del engine).
+		// Un barril virtualizado+cerrado no puede tener items legitimos en el cargo
+		// (la virtualizacion los borro), asi que esto nunca borra loot real.
+		CargoBase cargo = null;
+		if (GetInventory())
+			cargo = GetInventory().GetCargo();
+		int staleN = 0;
+		if (cargo)
+		{
+			array<EntityAI> stale = new array<EntityAI>;
+			int s;
+			for (s = 0; s < cargo.GetItemCount(); s++)
+			{
+				EntityAI se = cargo.GetItem(s);
+				if (se)
+					stale.Insert(se);
+			}
+			staleN = stale.Count();
+			for (s = 0; s < staleN; s++)
+				GetGame().ObjectDelete(stale.Get(s));
+		}
+
+		if (staleN > 0)
+		{
+			// habia copias viejas: ObjectDelete no libera los slots del cargo en el
+			// acto, asi que diferimos la restauracion 1 tick para no recrear sobre un
+			// cargo que el engine todavia ve "lleno" (volveria a tirar loot al piso)
+			Print(string.Format("%1 Barril %2: %3 items stale del engine borrados antes de restaurar (anti-dupe)", ExorStorageConstants.LOG, ExorGetID(), staleN));
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorDoRestore, 250, false);
+			return;
+		}
+
+		ExorDoRestore();
+	}
+
+	void ExorDoRestore()
+	{
+		string path = ExorGetStoragePath();
+		if (!FileExist(path))
+			return;	// idempotente: si ya se restauro (doble Open), el archivo no esta
+
 		ExorVO_ContainerFile f = new ExorVO_ContainerFile();
 		JsonFileLoader<ExorVO_ContainerFile>.JsonLoadFile(path, f);
 
-		int restored = 0;
-		int i;
-		for (i = 0; i < f.items.Count(); i++)
-		{
-			EntityAI e = ExorVO_Serializer.RestoreItem(f.items.Get(i), this, GetPosition());
-			if (e)
-				restored++;
-		}
+		// restaurar GRANDES PRIMERO (evita que un rifle quede afuera por fragmentacion
+		// cuando el barril esta casi lleno -> todo entra en el mismo espacio). Se arma BAJO
+		// TIERRA (1000m abajo) para que no se vea el parpadeo de items en el piso.
+		vector hidden = GetPosition();
+		hidden[1] = hidden[1] - 1000.0;
+		ExorVO_Serializer.RestoreItemsBigFirst(f.items, this, hidden);
 
 		// ANTI-DUPE: el JSON se elimina tras restaurar (una caja dupeada
 		// encontraria el archivo ya consumido -> barril vacio)
@@ -224,7 +302,7 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		m_ExorVirtualizedSync = false;
 		SetSynchDirty();
 
-		Print(string.Format("%1 Barril %2 restaurado: %3/%4 items", ExorStorageConstants.LOG, ExorGetID(), restored, f.items.Count()));
+		Print(string.Format("%1 Barril %2 restaurado: %3 items", ExorStorageConstants.LOG, ExorGetID(), f.items.Count()));
 	}
 
 	// ------------------------- reglas de guardado (Fase 3) -------------------------
