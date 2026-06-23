@@ -22,6 +22,15 @@ modded class PlayerBase
 	protected bool m_ExorAutoRun;       // auto-run activo
 	protected bool m_ExorArKeyPrev;     // estado previo de la tecla (deteccion de flanco)
 	protected bool m_ExorArApplied;     // el override esta puesto (para soltarlo 1 sola vez al apagar)
+	protected bool m_ExorArTired;       // sin stamina -> baja a trote sin sprint hasta recuperar (histeresis)
+
+	void PlayerBase()
+	{
+		// El SERVER decide el cansancio del auto-run (tiene la stamina real) y lo SINCRONIZA
+		// al cliente con esta variable -> ambos lados aplican el MISMO speed -> sin rubber-band
+		// (glisheo atras-adelante). Ver ExorAutoRunTick.
+		RegisterNetSyncVariableBool("m_ExorArTired");
+	}
 
 	// Auto-run: se corre DENTRO del command handler (timing correcto, no en el update de
 	// la mision) para que el override de movimiento sea fluido, como los mods de auto-run.
@@ -82,12 +91,53 @@ modded class PlayerBase
 		if (m_ExorAutoRun && canRun)
 		{
 			// ENABLED = se mantiene hasta pasar DISABLED. velocidad 1=caminar/2=trotar/3=sprint.
-			hic.OverrideMovementSpeed(HumanInputControllerOverrideType.ENABLED, cfg.velocidad);
+			float speed = cfg.velocidad;
+			// Si pide SPRINT (3) y se queda SIN stamina, forzar sprint traba/para al personaje
+			// -> bajar a TROTE/sin-sprint (2), el movimiento natural sin stamina (como los mods
+			// de auto-run), asi sigue avanzando fluido. Vuelve a sprint cuando recupera.
+			// Histeresis (m_ExorArTired): se cansa a ~0 y recien re-sprinta al recuperar ~40.
+			// SOLO el SERVER decide (tiene la stamina real) y lo SINCRONIZA -> cliente y server
+			// aplican el MISMO speed -> sin glisheo. Cliente solo LEE.
+			if (speed >= 3)
+			{
+				if (GetGame().IsServer())
+				{
+					PlayerStat<float> stStam = GetStatStamina();
+					if (stStam)
+					{
+						float stam = stStam.Get();
+						bool tired = m_ExorArTired;
+						if (tired)
+						{
+							if (stam >= 40)
+								tired = false;
+						}
+						else if (stam <= 1)
+						{
+							tired = true;
+						}
+						if (tired != m_ExorArTired)
+						{
+							m_ExorArTired = tired;
+							SetSynchDirty();
+						}
+					}
+				}
+				if (m_ExorArTired)
+					speed = 2;	// trote sin sprint (movimiento natural sin stamina) mientras recupera
+			}
+			hic.OverrideMovementSpeed(HumanInputControllerOverrideType.ENABLED, speed);
 			hic.OverrideMovementAngle(HumanInputControllerOverrideType.ENABLED, 0);
 			m_ExorArApplied = true;
 		}
 		else
 		{
+			if (m_ExorArTired)	// reset al apagar el auto-run (server sincroniza)
+			{
+				m_ExorArTired = false;
+				if (GetGame().IsServer())
+					SetSynchDirty();
+			}
 			if (m_ExorAutoRun && !canRun)
 				m_ExorAutoRun = false;	// server: limpiar si el jugador ya no puede correr
 			ExorAutoRunRelease(hic);
