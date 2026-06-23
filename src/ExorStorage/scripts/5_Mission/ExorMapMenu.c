@@ -14,6 +14,7 @@ class ExorMapMenu extends UIScriptedMenu
 	protected bool m_MReleased;	// la M que abrio el mapa todavia esta apretada: esperar a soltarla
 	protected bool m_EscReleased;	// igual para ESC: tras cancelar el input con ESC, re-pedir soltar antes de cerrar el mapa
 	protected bool m_Centered;	// ya se centro el mapa en el jugador (1ra vez en Update)
+	protected float m_RefreshAcc;	// acumulador para refrescar marcas (posicion viva) cada X seg
 
 	// marcas personales (PIN)
 	protected ref ExorMapClickHandler m_ClickHandler;
@@ -294,6 +295,17 @@ class ExorMapMenu extends UIScriptedMenu
 				m_Map.SetMapPos(me.GetPosition());
 				m_Centered = true;
 			}
+		}
+
+		// POSICION VIVA: refrescar las marcas cada ~0.25s mientras el mapa esta abierto, asi
+		// tu marca "Vos" (y la del party) se mueven en tiempo real, sobre todo manejando un
+		// auto (antes solo se dibujaban al abrir -> tu posicion quedaba congelada). NO re-centra
+		// (eso es 1 sola vez), asi el paneo/zoom del usuario no se traba.
+		m_RefreshAcc += timeslice;
+		if (m_RefreshAcc >= 0.25)
+		{
+			m_RefreshAcc = 0;
+			RefreshMarks();
 		}
 
 		// Mientras se escribe el nombre, NO cerrar el mapa con M/ESC (la M es texto;

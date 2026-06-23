@@ -24,6 +24,10 @@ modded class PlayerBase
 	protected bool m_ExorArApplied;     // el override esta puesto (para soltarlo 1 sola vez al apagar)
 	protected bool m_ExorArTired;       // sin stamina -> baja a trote sin sprint hasta recuperar (histeresis)
 
+	// --- Camara en vehiculo (cliente): el conductor elige 1ra/3ra con V ---
+	protected bool m_ExorVeh1pp;        // el conductor eligio 1ra persona (default false = 3ra)
+	protected bool m_ExorVehVPrev;      // estado previo de la tecla V (deteccion de flanco)
+
 	void PlayerBase()
 	{
 		// El SERVER decide el cansancio del auto-run (tiene la stamina real) y lo SINCRONIZA
@@ -179,9 +183,9 @@ modded class PlayerBase
 	// DESPUES segun el asiento + config:
 	//   - Pasajeros con pasajeros_1ra_persona=on  -> 1ra forzada (siempre, anti-peek).
 	//   - Conductor con conductor_3ra_persona=off  -> 1ra forzada.
-	//   - Conductor con conductor_3ra_persona=on   -> 3ra. En server 1pp el engine la
-	//     resetea a 1ra cada frame, asi que la RE-forzamos a 3ra (como @vehicle3pp).
-	//     En server 3pp no forzamos: el conductor puede togglear V libremente.
+	//   - Conductor con conductor_3ra_persona=on   -> ELIGE 1ra/3ra con la tecla V (default
+	//     3ra). En server 1pp el engine resetea a 1ra cada frame y bloquea el toggle nativo,
+	//     asi que detectamos la V nosotros y forzamos la vista ELEGIDA cada frame.
 	//   - Idem pasajeros si pasajeros_1ra_persona=off (3ra permitida).
 	override void HandleView()
 	{
@@ -200,9 +204,23 @@ modded class PlayerBase
 		if (isDriver)
 		{
 			if (!cam.conductor_3ra_persona)
-				SetIsInThirdPerson(false);	// conductor forzado a 1ra
-			else if (server1pp)
-				SetIsInThirdPerson(true);	// server 1pp: re-forzar 3ra al conductor cada frame
+			{
+				SetIsInThirdPerson(false);	// 3ra NO permitida para el conductor -> 1ra forzada
+			}
+			else
+			{
+				// 3ra permitida: el conductor ELIGE con V (default 3ra). Detectamos el flanco
+				// de la tecla (no togglear mientras un menu/inventario esta abierto) y forzamos
+				// la vista elegida cada frame (en server 1pp el engine la resetearia si no).
+				bool vBlocked = GetGame().IsInventoryOpen();
+				if (GetGame().GetUIManager() && GetGame().GetUIManager().GetMenu())
+					vBlocked = true;
+				bool vDown = KeyState(KeyCode.KC_V) > 0;
+				if (vDown && !m_ExorVehVPrev && !vBlocked)
+					m_ExorVeh1pp = !m_ExorVeh1pp;
+				m_ExorVehVPrev = vDown;
+				SetIsInThirdPerson(!m_ExorVeh1pp);	// false=3ra (default), true=1ra
+			}
 		}
 		else
 		{
