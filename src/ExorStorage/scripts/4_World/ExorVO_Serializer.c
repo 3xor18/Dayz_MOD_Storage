@@ -126,6 +126,25 @@ class ExorVO_Serializer
 	// asAttachment = true si este item iba ATADO al parent (cargador en arma, mira,
 	// ropa en slot) en vez de en su CARGO. Los attachments se enganchan distinto
 	// (TakeEntityAsAttachment) que los items de cargo (posicion exacta / hueco).
+	// Junta TODOS los classnames del arbol (item + attachments + cargo, recursivo) en
+	// 'out'. Lo usa la limpieza del piso del barril (saber que tipos le pertenecen).
+	static void CollectTypes(array<ref ExorVO_ItemData> items, TStringArray dest)
+	{
+		if (!items)
+			return;
+		int i;
+		for (i = 0; i < items.Count(); i++)
+		{
+			ExorVO_ItemData d = items.Get(i);
+			if (!d)
+				continue;
+			if (dest.Find(d.type) < 0)
+				dest.Insert(d.type);
+			CollectTypes(d.attachments, dest);
+			CollectTypes(d.cargo, dest);
+		}
+	}
+
 	static EntityAI RestoreItem(ExorVO_ItemData data, EntityAI parent, vector groundPos, EntityAI root = null, bool asAttachment = false)
 	{
 		if (!root)
@@ -142,56 +161,17 @@ class ExorVO_Serializer
 			return null;
 		}
 
-		e.SetHealth01("", "", data.health);
+		ApplyScalars(e, data);
 
-		ItemBase ib = ItemBase.Cast(e);
-		if (ib && data.quantity >= 0)
-		{
-			ib.SetQuantity(data.quantity);
-		}
-
-		Magazine mag = Magazine.Cast(e);
-		if (mag && data.ammoCount >= 0)
-		{
-			mag.ServerSetAmmoCount(data.ammoCount);
-		}
-
-		if (data.foodStage > 0)
-		{
-			Edible_Base ed = Edible_Base.Cast(e);
-			if (ed)
-			{
-				ed.ChangeFoodStage(data.foodStage);
-			}
-		}
-
-		// Llenar 'e' MIENTRAS esta en el piso (objeto del mundo, acepta cargo).
+		// 1) ATTACHMENTS mientras 'e' esta SUELTO (cargador/mira/ropa solo enganchan suelto).
 		int i;
 		for (i = 0; i < data.attachments.Count(); i++)
-		{
-			RestoreItem(data.attachments.Get(i), e, groundPos, root, true);	// ATTACHMENT (cargador/mira/ropa)
-		}
-		// CARGO anidado (lo que esta DENTRO de 'e', ej. una mochila): los items SIMPLES
-		// van a su CASILLA EXACTA del cargo de 'e' (CreateEntityInCargoEx), igual que en el
-		// barril -> vuelven a su slot tal cual estaban. Los complejos (con hijos) se arman y
-		// se mueven con la red de seguridad (root).
-		for (i = 0; i < data.cargo.Count(); i++)
-		{
-			ExorVO_ItemData cd = data.cargo.Get(i);
-			bool csimple = (cd.attachments.Count() == 0 && cd.cargo.Count() == 0);
-			if (csimple && cd.cargo_row >= 0 && cd.cargo_col >= 0 && e.GetInventory())
-			{
-				EntityAI cex = e.GetInventory().CreateEntityInCargoEx(cd.type, cd.cargo_idx, cd.cargo_row, cd.cargo_col, cd.cargo_flip);
-				if (cex)
-				{
-					ApplyScalars(cex, cd);
-					continue;
-				}
-			}
-			RestoreItem(cd, e, groundPos, root, false);	// complejo o fallo -> camino normal
-		}
+			RestoreItem(data.attachments.Get(i), e, groundPos, root, true);
 
-		// Mover 'e' (ya lleno) adentro del parent.
+		// 2) Mover 'e' adentro del parent SIN su cargo todavia. CLAVE anti-dupe: mover un
+		// contenedor VACIO no duplica; mover uno LLENO duplica el contenido (el engine hace
+		// LocationSyncMoveEntity+SendServerMove y el contenido se replica al piso) -> por eso
+		// el cargo se llena DESPUES (paso 3), ya con 'e' en su lugar.
 		if (parent)
 		{
 			bool moved = false;
@@ -224,14 +204,24 @@ class ExorVO_Serializer
 			}
 			else
 			{
-				// CARGO: al primer hueco. (Se probo la POSICION EXACTA con
-				// InventoryLocation + LocationAddEntity, pero NO mueve de forma confiable
-				// una entidad ya creada en el piso -> dejaba items en el SUELO aunque
-				// dijera que si. TakeEntityToInventory SI los mueve; el orden se mantiene
-				// razonable porque se restauran en el MISMO orden en que se guardaron.
-				// ANY -no solo CARGO- para que el bodybag meta la ropa del muerto en sus
-				// slots de prenda; un item suelto del barril igual termina en cargo.)
-				moved = parent.GetInventory().TakeEntityToInventory(InventoryMode.SERVER, FindInventoryLocationType.ANY, e);
+				// CARGO: mover el item (ya armado/lleno, suelto) a su CASILLA EXACTA con su
+				// ROTACION (flip). TakeEntityToCargoEx no lleva flip -> usamos TakeToDst con un
+				// InventoryLocation.SetCargo(parent,e,idx,row,col,FLIP). Asi la mochila vuelve a
+				// su bloque Y orientada igual (acostada/parada) que como la guardo el player ->
+				// no fragmenta ni choca con vecinos. Si la casilla esta ocupada/invalida o es
+				// legacy (sin posicion), cae al primer hueco (ANY).
+				if (data.cargo_row >= 0 && data.cargo_col >= 0)
+				{
+					InventoryLocation src = new InventoryLocation();
+					if (e.GetInventory() && e.GetInventory().GetCurrentInventoryLocation(src))
+					{
+						InventoryLocation dst = new InventoryLocation();
+						dst.SetCargo(parent, e, data.cargo_idx, data.cargo_row, data.cargo_col, data.cargo_flip);
+						moved = parent.GetInventory().TakeToDst(InventoryMode.SERVER, src, dst);
+					}
+				}
+				if (!moved)
+					moved = parent.GetInventory().TakeEntityToInventory(InventoryMode.SERVER, FindInventoryLocationType.ANY, e);
 			}
 
 			// 3) RED DE SEGURIDAD: no entro en su parent anidado (cargador->arma, arma->
@@ -253,28 +243,60 @@ class ExorVO_Serializer
 			}
 		}
 
+		// 3) CARGO: llenar 'e' AHORA en su lugar. Se MUEVEN los items adentro (no se crean):
+		// 'e' puede estar nested y crear dentro de un contenedor-en-cargo no anda, pero MOVER
+		// si. Recursivo: un bolso-en-bolso tambien se mueve VACIO y se llena en su lugar.
+		for (i = 0; i < data.cargo.Count(); i++)
+			RestoreItem(data.cargo.Get(i), e, groundPos, root, false);
+
 		return e;
 	}
 
-	// Restaura una lista de items de nivel TOP en un contenedor (barril/bodybag)
-	// GRANDES PRIMERO: arma cada item en el piso (sin meterlo al contenedor todavia),
-	// los ordena por footprint (ancho*alto en la grilla) descendente y recien ahi los
-	// mete. Asi los items grandes (rifles) agarran su bloque CONTIGUO en la grilla
-	// vacia y los chicos rellenan los huecos -> entra todo en el MISMO espacio que uso
-	// el player, sin que un item grande quede afuera por fragmentacion.
+	// Llena un item YA CREADO (e) con sus attachments + cargo anidado, en POSICION EXACTA
+	// y recursivo (mochila dentro de mochila vuelve a su casilla). Los attachments van por
+	// el camino de RestoreItem (cargador->arma con SpawnAttachedMagazine, etc.).
+	static void FillItem(EntityAI e, ExorVO_ItemData data, vector groundPos, EntityAI root)
+	{
+		int i;
+		for (i = 0; i < data.attachments.Count(); i++)
+			RestoreItem(data.attachments.Get(i), e, groundPos, root, true);
+
+		for (i = 0; i < data.cargo.Count(); i++)
+		{
+			ExorVO_ItemData cd = data.cargo.Get(i);
+			// 'e' esta SUELTO (recien creado, todavia no movido a su parent), asi que SI se
+			// puede crear adentro. POSICION EXACTA solo para items realmente sueltos (sin cargo
+			// ni attachments). Un bolso-en-bolso o un arma se arma aparte (RestoreItem) y se
+			// mueve LLENO adentro de 'e' -> porque crear DENTRO de un contenedor que ya esta en
+			// cargo no funciona, y los attachments no enganchan estando en cargo.
+			if (cd.attachments.Count() == 0 && cd.cargo.Count() == 0 && cd.cargo_row >= 0 && cd.cargo_col >= 0 && e.GetInventory())
+			{
+				EntityAI cex = e.GetInventory().CreateEntityInCargoEx(cd.type, cd.cargo_idx, cd.cargo_row, cd.cargo_col, cd.cargo_flip);
+				if (cex)
+				{
+					ApplyScalars(cex, cd);
+					continue;
+				}
+			}
+			// bolso/arma anidado, sin posicion (legacy) o fallo -> armar suelto + mover lleno
+			RestoreItem(cd, e, groundPos, root, false);
+		}
+	}
+
+	// Restaura una lista de items de nivel TOP en un contenedor (barril/bodybag). Cada cosa
+	// vuelve a su CASILLA EXACTA (no hay fragmentacion):
+	//  - item suelto (sin cargo ni attachments) -> CreateEntityInCargoEx directo en su casilla.
+	//  - mochila/arma -> se arma SUELTA y llena (RestoreItem) y se mueve a su casilla exacta
+	//    con TakeEntityToCargoEx. Asi una mochila grande vuelve a su bloque, no a "el 1er hueco".
 	static void RestoreItemsBigFirst(array<ref ExorVO_ItemData> items, EntityAI container, vector groundPos)
 	{
-		array<EntityAI> complex = new array<EntityAI>;	// contenedores/con hijos -> best-effort
 		int i;
 		for (i = 0; i < items.Count(); i++)
 		{
 			ExorVO_ItemData d = items.Get(i);
 
-			// SIMPLE (sin attachments ni cargo) con posicion guardada -> crear en su CASILLA
-			// EXACTA del barril (CreateEntityInCargoEx respeta row/col/flip). Asi logs/ruedas/
-			// latas/cargadores-sueltos vuelven a su lugar y no se rebalsa por fragmentacion.
-			bool simple = (d.attachments.Count() == 0 && d.cargo.Count() == 0);
-			if (simple && d.cargo_row >= 0 && d.cargo_col >= 0)
+			// item REALMENTE SUELTO (sin cargo NI attachments) -> directo a su casilla
+			if (d.attachments.Count() == 0 && d.cargo.Count() == 0 && d.cargo_row >= 0 && d.cargo_col >= 0 && container.GetInventory())
 			{
 				EntityAI ex = container.GetInventory().CreateEntityInCargoEx(d.type, d.cargo_idx, d.cargo_row, d.cargo_col, d.cargo_flip);
 				if (ex)
@@ -282,40 +304,12 @@ class ExorVO_Serializer
 					ApplyScalars(ex, d);
 					continue;
 				}
-				// fallo (casilla ocupada/invalida) -> al camino normal de abajo
+				// fallo (casilla ocupada/invalida) -> al camino de abajo
 			}
 
-			// contenedor / con hijos / fallo del exacto: armar BAJO TIERRA, mover despues
-			EntityAI ge = RestoreItem(d, null, groundPos, container);
-			if (ge)
-				complex.Insert(ge);
-		}
-
-		// ordenar los complejos por footprint DESC (grandes primero) y meterlos best-effort
-		int n = complex.Count();
-		int a, b;
-		for (a = 0; a < n - 1; a++)
-		{
-			for (b = 0; b < n - 1 - a; b++)
-			{
-				if (ItemFootprint(complex.Get(b + 1)) > ItemFootprint(complex.Get(b)))
-				{
-					EntityAI tmp = complex.Get(b);
-					complex.Set(b, complex.Get(b + 1));
-					complex.Set(b + 1, tmp);
-				}
-			}
-		}
-
-		for (i = 0; i < complex.Count(); i++)
-		{
-			EntityAI it = complex.Get(i);
-			if (!container.GetInventory().TakeEntityToInventory(InventoryMode.SERVER, FindInventoryLocationType.ANY, it))
-			{
-				// caso raro: subirlo a la SUPERFICIE del contenedor (visible/recuperable)
-				it.SetPosition(container.GetPosition());
-				Print(string.Format("%1 AVISO: '%2' no entro en '%3' (lleno) -> queda en el piso", ExorStorageConstants.LOG, it.GetType(), container.GetType()));
-			}
+			// mochila/arma (o sin posicion / fallo): armar SUELTO y lleno, y moverlo a su
+			// casilla exacta (RestoreItem hace el TakeEntityToCargoEx adentro).
+			RestoreItem(d, container, groundPos, container);
 		}
 	}
 

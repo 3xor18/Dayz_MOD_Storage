@@ -15,10 +15,34 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	// Sincronizado al cliente: el barril tiene contenido virtualizado en disco
 	// (el cliente no puede chequear el archivo; sin esto mostraria "Empaquetar")
 	protected bool m_ExorVirtualizedSync;
+	// NUEVO MODELO (idea del user): el JSON es la VERDAD permanente del contenido,
+	// se actualiza en VIVO en cada cambio de cargo (throttle por tick) y se borra solo
+	// al levantar el barril. Estado runtime:
+	protected bool m_ExorVirt;        // los items reales estan SACADOS del mundo (estan en el JSON)
+	protected bool m_ExorSnapDirty;   // hubo cambios de cargo sin volcar todavia al JSON
+	protected bool m_ExorLoadDone;    // ya se reconcilio JSON vs persistencia tras cargar
+	protected bool m_ExorRestoring;   // estamos recreando items DESDE el JSON (no marcar dirty)
+	protected bool m_ExorFloorCleaned;// ya se limpio el piso (drops de DayZ) tras este arranque
 
 	void Exor_Barrel_Base()
 	{
 		RegisterNetSyncVariableBool("m_ExorVirtualizedSync");
+	}
+
+	// ------------------------- DEBUG temporal (sacar al terminar) -------------------------
+	// Loguea el evento + el estado completo del barril. NO genera ID (usa m_ExorID crudo)
+	// para no asignar un ID random antes de que OnStoreLoad lea el guardado.
+	void ExorDbg(string ev)
+	{
+		if (!ExorStorageConstants.DEBUG_BARRELS)
+			return;
+		bool jsonExists = false;
+		if (m_ExorID != "")
+			jsonExists = FileExist(string.Format("%1\\%2.json", ExorStorageConstants.STORAGE_DIR, m_ExorID));
+		// string.Format en Enforce acepta MAX 9 params -> armar el estado en sub-formats.
+		string st1 = string.Format("cargo=%1 open=%2 virt=%3 json=%4", ExorCargoCount(), IsOpen(), m_ExorVirt, jsonExists);
+		string st2 = string.Format("loadDone=%1 floorCleaned=%2 dirty=%3", m_ExorLoadDone, m_ExorFloorCleaned, m_ExorSnapDirty);
+		Print(string.Format("%1[DBG] %2 | id=%3 pos=%4 %5 %6", ExorStorageConstants.LOG, ev, m_ExorID, GetPosition(), st1, st2));
 	}
 
 	// ------------------------- init / persistencia -------------------------
@@ -31,6 +55,7 @@ class Exor_Barrel_Base : Barrel_ColorBase
 			m_ExorLastInteractMs = GetGame().GetTime();
 			m_ExorLastCloseMs = 0;
 			ExorVO_Manager.RegisterBarrel(this);
+			ExorDbg("EEInit (barril creado/spawneado en el mundo)");
 		}
 	}
 
@@ -38,6 +63,7 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	{
 		if (GetGame().IsServer())
 		{
+			ExorDbg("EEDelete (barril sacado del mundo: levantado, borrado o descargado)");
 			ExorVO_Manager.UnregisterBarrel(this);
 		}
 		super.EEDelete(parent);
@@ -47,6 +73,10 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	{
 		super.OnStoreSave(ctx);
 		ctx.Write(m_ExorID);
+		// CLAVE para el dupe: muestra el estado del cargo JUSTO cuando la persistencia
+		// guarda. Si cargo>0 aca = el barril se guarda con items reales -> al cargar DayZ
+		// los anidados caen al piso. Si virt=true/cargo=0 = guardado limpio (sin drop).
+		ExorDbg("OnStoreSave (persistencia guardando este barril)");
 	}
 
 	override bool OnStoreLoad(ParamsReadContext ctx, int version)
@@ -57,17 +87,20 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		if (!ctx.Read(id))
 			return false;
 		m_ExorID = id;
+		ExorDbg("OnStoreLoad (persistencia cargando este barril; ID leido del disco)");
 		return true;
 	}
 
 	override void AfterStoreLoad()
 	{
 		super.AfterStoreLoad();
-		// Tras reinicio, avisar al cliente si este barril esta virtualizado
+		// Tras reinicio, avisar al cliente si este barril tiene contenido guardado (JSON).
+		// El estado fino (virtualizado real) lo fija ExorReconcileOnLoad en el 1er tick.
 		if (GetGame().IsServer())
 		{
-			m_ExorVirtualizedSync = ExorIsVirtualized();
+			m_ExorVirtualizedSync = ExorHasContent();
 			SetSynchDirty();
+			ExorDbg("AfterStoreLoad (barril ya cargado; cargo=lo que trajo el engine)");
 		}
 	}
 
@@ -85,9 +118,52 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		return string.Format("%1\\%2.json", ExorStorageConstants.STORAGE_DIR, ExorGetID());
 	}
 
+	// virtualizado = items reales sacados del mundo (estan en el JSON). Estado runtime.
 	bool ExorIsVirtualized()
 	{
+		return m_ExorVirt;
+	}
+
+	// el barril tiene contenido guardado (JSON en disco), este virtualizado o no
+	bool ExorHasContent()
+	{
 		return FileExist(ExorGetStoragePath());
+	}
+
+	// Vuelca el cargo ACTUAL del barril al JSON (los items SIGUEN en el mundo). Es el
+	// "guardado en vivo": el JSON queda siempre al dia con item+posicion+anidado.
+	void ExorWriteSnapshot()
+	{
+		GameInventory inv = GetInventory();
+		if (!inv)
+			return;
+		CargoBase cargo = inv.GetCargo();
+		if (!cargo)
+			return;
+
+		ExorVO_ContainerFile f = new ExorVO_ContainerFile();
+		f.id = ExorGetID();
+		f.owner_type = GetType();
+		int i;
+		for (i = 0; i < cargo.GetItemCount(); i++)
+		{
+			EntityAI it = cargo.GetItem(i);
+			if (it)
+				f.items.Insert(ExorVO_Serializer.CaptureItem(it));
+		}
+		// si quedo vacio, borrar el JSON (barril sin contenido = no hay nada que guardar)
+		if (f.items.Count() == 0)
+		{
+			if (FileExist(ExorGetStoragePath()))
+				DeleteFile(ExorGetStoragePath());
+			ExorDbg("ExorWriteSnapshot: cargo VACIO -> JSON borrado");
+		}
+		else
+		{
+			JsonFileLoader<ExorVO_ContainerFile>.JsonSaveFile(ExorGetStoragePath(), f);
+			ExorDbg(string.Format("ExorWriteSnapshot: JSON actualizado en vivo con %1 items top-level", f.items.Count()));
+		}
+		m_ExorSnapDirty = false;
 	}
 
 	// ------------------------- abrir / cerrar -------------------------
@@ -101,8 +177,10 @@ class Exor_Barrel_Base : Barrel_ColorBase
 			if (cdMs > 0 && m_ExorLastCloseMs > 0 && now - m_ExorLastCloseMs < cdMs)
 			{
 				// Anti-dupe: cooldown de reapertura activo
+				ExorDbg("Open BLOQUEADO (cooldown de reapertura anti-dupe)");
 				return;
 			}
+			ExorDbg("Open (player abriendo la tapa; va a restaurar si esta virtualizado)");
 		}
 
 		// IMPORTANTE: abrir ANTES de restaurar — un barril cerrado rechaza
@@ -124,6 +202,7 @@ class Exor_Barrel_Base : Barrel_ColorBase
 			int now = GetGame().GetTime();
 			m_ExorLastInteractMs = now;
 			m_ExorLastCloseMs = now;
+			ExorDbg("Close (tapa cerrada; auto-cierre o manual)");
 		}
 	}
 
@@ -131,8 +210,33 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	// Llamado por el manager cada tick
 	// Devuelve true si virtualizo en este tick (el manager usa eso para el throttle).
 	// allowVirtualize=false -> el barril igual se auto-cierra pero NO virtualiza este tick.
+	// El barril todavia no reconcilio su estado tras la carga del mundo. El manager usa
+	// esto para repartir los reconciles caros (scan del piso) en varios ticks (anti-pico).
+	bool ExorNeedsReconcile()
+	{
+		return !m_ExorLoadDone;
+	}
+
+	// Reconciliar AL CARGAR (1ra vez): el JSON es la VERDAD. Si DayZ cargo items reales
+	// (barril no-virtualizado al guardar) o tiro anidados al piso, se limpia todo y el
+	// barril queda virtualizado -> se restaura del JSON al abrir. Lo llama el manager
+	// (con throttle) o ExorRestoreIfNeeded si un player abre antes de su turno.
+	void ExorReconcileNow()
+	{
+		if (m_ExorLoadDone)
+			return;
+		ExorDbg("ExorReconcileNow (1ra reconciliacion tras cargar; JSON manda)");
+		m_ExorLoadDone = true;
+		ExorReconcileOnLoad();
+	}
+
 	bool ExorTick(int now, ExorCfgStorage settings, bool allowVirtualize)
 	{
+		// El reconcile lo dispara el manager (con presupuesto por tick) o la apertura.
+		// Si todavia no reconcilio, no hacer nada este tick (espera su turno).
+		if (!m_ExorLoadDone)
+			return false;
+
 		// Umbrales en ms (config en SEGUNDOS). Recomendado: cerrar 10s, virtualizar 30s.
 		int cerrarMs = settings.auto_cerrar_segundos * 1000;
 		int virtMs = settings.virtualizar_segundos * 1000;
@@ -145,13 +249,25 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		{
 			if (ExorVO_Manager.IsAlivePlayerNear(GetPosition(), settings.cerrar_distancia_metros))
 				m_ExorLastInteractMs = now;
+			// GUARDADO EN VIVO (throttle = este tick de 5s): si hubo cambios de cargo,
+			// volcar el contenido actual al JSON. Asi el JSON queda siempre al dia.
+			// SOLO si NO esta virtualizado (con items reales): un barril virtualizado tiene
+			// el cargo vacio a proposito y su JSON es la verdad -> jamas pisarlo con un vacio.
+			if (m_ExorSnapDirty && !m_ExorVirt)
+				ExorWriteSnapshot();
 			if (cerrarMs > 0 && now - m_ExorLastInteractMs > cerrarMs)
 			{
+				ExorDbg("ExorTick -> auto-cierre (nadie cerca por el umbral)");
 				Close();
 				Print(string.Format("%1 Barril %2 auto-cerrado (nadie cerca)", ExorStorageConstants.LOG, ExorGetID()));
 			}
 			return false;
 		}
+
+		// cerrado: si quedo algo sin volcar, volcarlo ya (antes de virtualizar). Solo si
+		// tiene items reales (no virtualizado) -> nunca pisar el JSON con un cargo vacio.
+		if (m_ExorSnapDirty && !m_ExorVirt)
+			ExorWriteSnapshot();
 
 		if (!allowVirtualize)	// THROTTLE: sin cupo este tick -> virtualiza en el proximo
 			return false;
@@ -179,14 +295,38 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	{
 		super.EECargoIn(item);
 		if (GetGame() && GetGame().IsServer())
-			m_ExorLastInteractMs = GetGame().GetTime();
+		{
+			string it = "?";
+			if (item)
+				it = item.GetType();
+			if (m_ExorRestoring)
+				ExorDbg("EECargoIn (RESTAURANDO, no marca dirty) item=" + it);
+			else
+			{
+				m_ExorLastInteractMs = GetGame().GetTime();
+				m_ExorSnapDirty = true;	// cambio REAL del player -> volcar al JSON (throttle en el tick)
+				ExorDbg("EECargoIn (player METIO item) item=" + it);
+			}
+		}
 	}
 
 	override void EECargoOut(EntityAI item)
 	{
 		super.EECargoOut(item);
 		if (GetGame() && GetGame().IsServer())
-			m_ExorLastInteractMs = GetGame().GetTime();
+		{
+			string it = "?";
+			if (item)
+				it = item.GetType();
+			if (m_ExorRestoring)
+				ExorDbg("EECargoOut (RESTAURANDO/virtualizando, no marca dirty) item=" + it);
+			else
+			{
+				m_ExorLastInteractMs = GetGame().GetTime();
+				m_ExorSnapDirty = true;
+				ExorDbg("EECargoOut (player SACO item) item=" + it);
+			}
+		}
 	}
 
 	int ExorCargoCount()
@@ -200,109 +340,264 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		return cargo.GetItemCount();
 	}
 
+	// Saca los items reales del mundo. El JSON ya esta al dia (guardado en vivo), pero
+	// lo reescribimos por las dudas antes de borrar (crash-safe). El JSON NO se borra:
+	// es la verdad permanente del barril hasta que lo levanten.
 	void ExorVirtualize()
 	{
-		ExorVO_ContainerFile f = new ExorVO_ContainerFile();
-		f.id = ExorGetID();
-		f.owner_type = GetType();
+		GameInventory inv = GetInventory();
+		if (!inv)
+			return;
+		CargoBase cargo = inv.GetCargo();
+		if (!cargo)
+			return;
 
-		CargoBase cargo = GetInventory().GetCargo();
 		array<EntityAI> toDelete = new array<EntityAI>;
 		int i;
 		for (i = 0; i < cargo.GetItemCount(); i++)
 		{
 			EntityAI it = cargo.GetItem(i);
 			if (it)
-			{
-				f.items.Insert(ExorVO_Serializer.CaptureItem(it));
 				toDelete.Insert(it);
-			}
 		}
 
-		// ANTI-DUPE: escribir el JSON ANTES de borrar los items (crash-safe)
-		JsonFileLoader<ExorVO_ContainerFile>.JsonSaveFile(ExorGetStoragePath(), f);
+		// SOLO reescribir el JSON si el PLAYER cambio algo (dirty). Si no cambio nada (recien
+		// restaurado), el JSON YA es la verdad -> NO reescribir. ASI un restore donde un item
+		// no entro (cayo afuera) NUNCA achica el JSON -> el loot nunca se pierde, se reintenta.
+		if (m_ExorSnapDirty)
+			ExorWriteSnapshot();
 
+		if (toDelete.Count() == 0)
+			return;
+
+		ExorDbg(string.Format("ExorVirtualize INICIO: sacando %1 items del mundo al JSON", toDelete.Count()));
+		// guard: los EECargoOut del borrado NO son cambios del player -> no marcar dirty.
+		m_ExorRestoring = true;
 		for (i = 0; i < toDelete.Count(); i++)
-		{
 			GetGame().ObjectDelete(toDelete.Get(i));
-		}
+		m_ExorRestoring = false;
 
+		m_ExorVirt = true;
 		m_ExorVirtualizedSync = true;
 		SetSynchDirty();
-
-		Print(string.Format("%1 Barril %2 virtualizado: %3 items a disco", ExorStorageConstants.LOG, ExorGetID(), f.items.Count()));
+		Print(string.Format("%1 Barril %2 virtualizado: %3 items sacados del mundo", ExorStorageConstants.LOG, ExorGetID(), toDelete.Count()));
+		ExorDbg("ExorVirtualize FIN (barril virtualizado, cargo vacio en el mundo)");
 	}
 
+	// Se llama al ABRIR. Recrea los items reales desde el JSON, o migra un barril viejo.
 	void ExorRestoreIfNeeded()
 	{
-		string path = ExorGetStoragePath();
-		if (!FileExist(path))
-			return;
+		// si abren ANTES de su turno de reconcile (throttle del manager), forzar la
+		// reconciliacion ahora (si no, m_ExorVirt seguiria false y el barril se veria
+		// vacio aunque el JSON tenga el loot).
+		ExorReconcileNow();
 
-		// ANTI-DUPE CRITICO: si existe el JSON, el barril esta virtualizado y el JSON
-		// es la UNICA verdad. Tras un crash/reinicio (este server reinicia muy seguido)
-		// el engine puede restaurar en el cargo una COPIA VIEJA de los items (snapshot
-		// previo al borrado de la virtualizacion). Si restauramos el JSON ENCIMA, se
-		// DUPLICAN y, al pasar de los 500 slots, el sobrante CAE AL PISO ("no entro,
-		// lleno"). Por eso vaciamos primero el cargo actual (items stale del engine).
-		// Un barril virtualizado+cerrado no puede tener items legitimos en el cargo
-		// (la virtualizacion los borro), asi que esto nunca borra loot real.
-		CargoBase cargo = null;
-		if (GetInventory())
-			cargo = GetInventory().GetCargo();
-		int staleN = 0;
-		if (cargo)
+		// virtualizado -> recrear los items desde el JSON (que QUEDA en disco)
+		if (m_ExorVirt)
 		{
-			array<EntityAI> stale = new array<EntityAI>;
-			int s;
-			for (s = 0; s < cargo.GetItemCount(); s++)
-			{
-				EntityAI se = cargo.GetItem(s);
-				if (se)
-					stale.Insert(se);
-			}
-			staleN = stale.Count();
-			for (s = 0; s < staleN; s++)
-				GetGame().ObjectDelete(stale.Get(s));
-		}
-
-		if (staleN > 0)
-		{
-			// habia copias viejas: ObjectDelete no libera los slots del cargo en el
-			// acto, asi que diferimos la restauracion 1 tick para no recrear sobre un
-			// cargo que el engine todavia ve "lleno" (volveria a tirar loot al piso)
-			Print(string.Format("%1 Barril %2: %3 items stale del engine borrados antes de restaurar (anti-dupe)", ExorStorageConstants.LOG, ExorGetID(), staleN));
-			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorDoRestore, 250, false);
+			ExorDbg("ExorRestoreIfNeeded: esta virtualizado -> restaurar del JSON");
+			ExorDoRestore();
 			return;
 		}
 
-		ExorDoRestore();
+		// LEGACY: barril desplegado ANTES de esta feature -> tiene items reales y NO json.
+		// Al abrirlo, crear el JSON con su contenido actual (lo migra al nuevo modelo).
+		if (!ExorHasContent() && ExorCargoCount() > 0)
+		{
+			ExorWriteSnapshot();
+			Print(string.Format("%1 Barril %2: migrado al abrir (JSON creado con %3 items)", ExorStorageConstants.LOG, ExorGetID(), ExorCargoCount()));
+			ExorDbg("ExorRestoreIfNeeded: barril LEGACY migrado a JSON al abrir");
+		}
+		else
+			ExorDbg("ExorRestoreIfNeeded: nada que hacer (no virt, sin contenido o ya con items reales)");
 	}
 
 	void ExorDoRestore()
 	{
 		string path = ExorGetStoragePath();
 		if (!FileExist(path))
-			return;	// idempotente: si ya se restauro (doble Open), el archivo no esta
+		{
+			m_ExorVirt = false;
+			return;
+		}
 
 		ExorVO_ContainerFile f = new ExorVO_ContainerFile();
 		JsonFileLoader<ExorVO_ContainerFile>.JsonLoadFile(path, f);
 
-		// restaurar GRANDES PRIMERO (evita que un rifle quede afuera por fragmentacion
-		// cuando el barril esta casi lleno -> todo entra en el mismo espacio). Se arma BAJO
-		// TIERRA (1000m abajo) para que no se vea el parpadeo de items en el piso.
+		// ANTI-DUPE: SOLO en la 1ra apertura tras el arranque, limpiar lo que DayZ tiro al piso
+		// por "invalid location" al cargar (contenido de mochilas anidadas). En el reconcile del
+		// 1er tick esos items todavia "colgaban" de la mochila (no sueltos) y la limpieza los
+		// erraba; al abrir ya estan asentados -> aca SI se borran, antes de recrearlos del JSON.
+		// Se hace UNA sola vez (flag): los drops son un fenomeno del CARGADO, no de cada apertura
+		// -> asi nunca borramos un bolso/loot que el player deje tirado al lado a proposito.
+		if (!m_ExorFloorCleaned)
+		{
+			m_ExorFloorCleaned = true;
+			int dropped = ExorCleanDroppedNearby();
+			if (dropped > 0)
+				Print(string.Format("%1 Barril %2: %3 items del piso (invalid location de DayZ) borrados antes de restaurar", ExorStorageConstants.LOG, ExorGetID(), dropped));
+		}
+
+		// armar BAJO TIERRA (1000m) para que no se vea el parpadeo; cada item a su casilla.
 		vector hidden = GetPosition();
 		hidden[1] = hidden[1] - 1000.0;
+		// m_ExorRestoring: los EECargoIn de la restauracion NO marcan dirty -> el JSON no se
+		// reescribe por el restore (solo por cambios REALES del player despues).
+		ExorDbg(string.Format("ExorDoRestore INICIO: recreando %1 items del JSON al barril", f.items.Count()));
+		m_ExorRestoring = true;
 		ExorVO_Serializer.RestoreItemsBigFirst(f.items, this, hidden);
+		m_ExorRestoring = false;
 
-		// ANTI-DUPE: el JSON se elimina tras restaurar (una caja dupeada
-		// encontraria el archivo ya consumido -> barril vacio)
-		DeleteFile(path);
-
+		// el JSON NO se borra (es la verdad permanente). m_ExorVirt=false evita re-restaurar.
+		m_ExorVirt = false;
 		m_ExorVirtualizedSync = false;
 		SetSynchDirty();
-
 		Print(string.Format("%1 Barril %2 restaurado: %3 items", ExorStorageConstants.LOG, ExorGetID(), f.items.Count()));
+		ExorDbg(string.Format("ExorDoRestore FIN: cargo real ahora = %1 (esperado %2)", ExorCargoCount(), f.items.Count()));
+	}
+
+	// RECONCILIAR AL CARGAR: el JSON manda. Si DayZ cargo items reales (barril no
+	// virtualizado al guardar) y/o tiro anidados al piso, se limpia TODO y el barril
+	// queda virtualizado -> se restaura del JSON (intacto, posiciones exactas) al abrir.
+	void ExorReconcileOnLoad()
+	{
+		if (!ExorHasContent())	// sin JSON -> barril viejo/vacio, no hay nada que reconciliar
+		{
+			ExorDbg("ExorReconcileOnLoad: SIN JSON (barril vacio/legacy) -> no reconcilia");
+			return;
+		}
+		ExorDbg("ExorReconcileOnLoad INICIO (tiene JSON; el cargo del engine se considera stale)");
+
+		// 1) borrar lo que DayZ haya cargado en el cargo (stale; el JSON es la verdad)
+		int cleared = 0;
+		GameInventory inv = GetInventory();
+		if (inv)
+		{
+			CargoBase cargo = inv.GetCargo();
+			if (cargo)
+			{
+				array<EntityAI> stale = new array<EntityAI>;
+				int s;
+				for (s = 0; s < cargo.GetItemCount(); s++)
+				{
+					EntityAI se = cargo.GetItem(s);
+					if (se)
+						stale.Insert(se);
+				}
+				cleared = stale.Count();
+				for (s = 0; s < cleared; s++)
+					GetGame().ObjectDelete(stale.Get(s));
+			}
+		}
+
+		// 2) limpiar los items que el engine tiro al PISO (anidados que no pudo recolocar)
+		//    pegados al barril y cuyo tipo esta en el JSON -> si no, al restaurar dupearian.
+		//    Solo si habia items reales (barril no-virtualizado al guardar); un barril
+		//    virtualizado limpio cargo vacio y nunca tira nada al piso -> no hace falta escanear.
+		int dropped = 0;
+		if (cleared > 0)
+		{
+			dropped = ExorCleanDroppedNearby();
+			// reintento diferido: algunos drops tardan en asentarse tras la carga del mundo.
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanDroppedRetry, 8000, false);
+		}
+
+		m_ExorVirt = true;	// queda virtualizado; se restaura al abrir
+		m_ExorSnapDirty = false;	// el borrado de stale marco "sucio" de forma espuria -> limpiar
+		m_ExorVirtualizedSync = true;
+		SetSynchDirty();
+		if (cleared > 0 || dropped > 0)
+			Print(string.Format("%1 Barril %2: reconciliado al cargar (cargo stale=%3, piso=%4 borrados; el JSON manda)", ExorStorageConstants.LOG, ExorGetID(), cleared, dropped));
+	}
+
+	// Reintento DIFERIDO de la limpieza del piso. DayZ tira los anidados al piso DURANTE
+	// la carga del mundo; a veces tardan en "asentarse" como objetos sueltos -> se reintenta
+	// unos segundos despues del reconcile para barrer los que el 1er pase no agarro.
+	void ExorCleanDroppedRetry()
+	{
+		int dropped = ExorCleanDroppedNearby();
+		if (dropped > 0)
+			Print(string.Format("%1 Barril %2: %3 items del piso borrados (reintento diferido)", ExorStorageConstants.LOG, ExorGetID(), dropped));
+	}
+
+	// Borra items SUELTOS en el piso cerca del barril cuyo tipo esta en el JSON = lo que
+	// DayZ tiro por "invalid location" al cargar (contenido anidado de mochilas). Conservador
+	// para no tocar loot legitimo: solo items sin parent, de un tipo que el barril guarda, y
+	// CERCA en HORIZONTAL. La distancia se mide en el plano XZ (ignora la altura) porque el
+	// barril suele estar ELEVADO sobre un piso de base y los drops caen al terreno varios
+	// metros ABAJO -> con un radio esferico chico (2m) quedaban afuera y no se borraban (bug
+	// del dupe). scanRadius grande para que la esfera ALCANCE el suelo aunque este elevado;
+	// maxHoriz chico para no borrar loot que un player dejo tirado lejos a proposito.
+	// Extrae TODOS los classnames del JSON leyendo el TEXTO crudo (busca cada `"type": "X"`).
+	// Robusto: NO depende de la deserializacion de JsonFileLoader+CollectTypes, que cargaba
+	// solo el 1er tipo (los items anidados quedaban medio rotos en ese load) -> el scan no
+	// matcheaba nada. Asi juntamos cada tipo top-level Y anidado (latas en mochilas, etc.).
+	TStringArray ExorTypesFromJsonText(string path)
+	{
+		TStringArray result = new TStringArray;
+		FileHandle fh = OpenFile(path, FileMode.READ);
+		if (fh == 0)
+			return result;
+		string line;
+		while (FGets(fh, line) >= 0)
+		{
+			int kp = line.IndexOf("\"type\"");
+			if (kp < 0)
+				continue;
+			string rest = line.Substring(kp + 6, line.Length() - (kp + 6));	// despues de "type"
+			int q1 = rest.IndexOf("\"");
+			if (q1 < 0)
+				continue;
+			string rest2 = rest.Substring(q1 + 1, rest.Length() - (q1 + 1));	// despues de la 1ra comilla
+			int q2 = rest2.IndexOf("\"");
+			if (q2 < 0)
+				continue;
+			string val = rest2.Substring(0, q2);
+			if (val != "" && result.Find(val) < 0)
+				result.Insert(val);
+		}
+		CloseFile(fh);
+		return result;
+	}
+
+	int ExorCleanDroppedNearby(float scanRadius = 15.0, float maxHoriz = 10.0)
+	{
+		string path = ExorGetStoragePath();
+		if (!FileExist(path))
+			return 0;
+		// tipos desde el TEXTO crudo del JSON (la deserializacion solo traia el 1er tipo).
+		TStringArray types = ExorTypesFromJsonText(path);
+		if (types.Count() == 0)
+			return 0;
+
+		vector bpos = GetPosition();
+		array<Object> nearby = new array<Object>;
+		array<CargoBase> proxy = new array<CargoBase>;
+		GetGame().GetObjectsAtPosition(bpos, scanRadius, nearby, proxy);
+
+		int removed = 0;
+		int i;
+		for (i = 0; i < nearby.Count(); i++)
+		{
+			EntityAI e = EntityAI.Cast(nearby.Get(i));
+			if (!e || e == this)
+				continue;
+			if (e.GetHierarchyParent())	// solo items SUELTOS (no dentro de un inventario)
+				continue;
+			if (!e.IsInherited(ItemBase))
+				continue;
+			if (types.Find(e.GetType()) < 0)	// solo tipos que este barril guarda
+				continue;
+			// distancia HORIZONTAL (plano XZ): ignora la altura -> agarra los drops aunque
+			// el barril este elevado sobre un piso de base (caen al terreno mas abajo).
+			vector d = e.GetPosition() - bpos;
+			d[1] = 0;
+			if (d.Length() > maxHoriz)
+				continue;
+			GetGame().ObjectDelete(e);
+			removed++;
+		}
+		return removed;
 	}
 
 	// ------------------------- reglas de guardado (Fase 3) -------------------------
@@ -314,6 +609,21 @@ class Exor_Barrel_Base : Barrel_ColorBase
 				return false;
 		}
 		return super.CanReceiveItemIntoCargo(item);
+	}
+
+	// No se puede TOMAR EN LA MANO un barril CON contenido (igual que empaquetar): hay que
+	// vaciarlo primero. Un barril VACIO si se puede tomar/mover/empaquetar normalmente.
+	// Evita robar/mover un barril lleno y los casos raros de mover loot virtualizado.
+	override bool CanPutIntoHands(EntityAI parent)
+	{
+		// m_ExorVirtualizedSync esta sincronizado -> el cliente tambien oculta la accion.
+		if (m_ExorVirtualizedSync)
+			return false;
+		// red de seguridad en server: cualquier contenido guardado (JSON) bloquea, este
+		// virtualizado o no (la ventana breve cerrado-con-items-reales).
+		if (GetGame().IsServer() && ExorHasContent())
+			return false;
+		return super.CanPutIntoHands(parent);
 	}
 
 	// No lockeable: bloquea CodeLock / candados de cualquier mod
@@ -343,7 +653,9 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		// hace que el CLIENTE tampoco muestre la accion
 		if (m_ExorVirtualizedSync)
 			return false;
-		if (GetGame().IsServer() && ExorIsVirtualized())
+		// el server bloquea si hay CUALQUIER contenido guardado (JSON), este virtualizado
+		// o no -> empaquetar perderia ese loot
+		if (GetGame().IsServer() && ExorHasContent())
 			return false;
 		if (GetInventory())
 		{

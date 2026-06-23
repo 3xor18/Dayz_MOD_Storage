@@ -195,6 +195,8 @@ modded class MissionGameplay
 
 		// Teclas T/Y -> marcas del party (lectura cruda de tecla, sin tocar config)
 		ExorMarkerKeys();
+		// (el auto-run se maneja en PlayerBase.ModCommandHandlerBefore, no aca:
+		//  el override de movimiento necesita aplicarse en el tick del command handler)
 	}
 
 	// Detecta flanco de subida de T (poner marca) e Y (limpiar mis marcas).

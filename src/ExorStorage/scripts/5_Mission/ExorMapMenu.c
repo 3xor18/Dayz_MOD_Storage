@@ -218,7 +218,7 @@ class ExorMapMenu extends UIScriptedMenu
 		else if (m_Deleting)
 			m_Hint.SetText("Hacé clic sobre una marca tuya para borrarla   (clic derecho = cancelar)");
 		else
-			m_Hint.SetText("M / ESC cierra  -  rojo: base enemiga · verde: loot · blanco: otro  -  verde: party · amarillo: marcas T");
+			m_Hint.SetText("M / ESC para cerrar  ·  verde: vos/party · amarillo: marcas del equipo");
 	}
 
 	override bool OnClick(Widget w, int x, int y, int button)

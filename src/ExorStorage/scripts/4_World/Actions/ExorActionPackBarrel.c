@@ -56,6 +56,7 @@ class ExorActionPackBarrel : ActionContinuousBase
 		if (packedType == "")
 			return;
 
+		barrel.ExorDbg("PACK (player levantando/empaquetando el barril; debe estar vacio)");
 		vector pos = barrel.GetPosition();
 		vector ori = barrel.GetOrientation();
 		float health = barrel.GetHealth01("", "");

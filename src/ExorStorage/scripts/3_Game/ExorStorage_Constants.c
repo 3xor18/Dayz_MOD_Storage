@@ -4,8 +4,12 @@
 class ExorStorageConstants
 {
 	static const string MOD_NAME = "3xor_Vanilla_Optimization";
-	static const string MOD_VERSION = "2.3.0";
+	static const string MOD_VERSION = "2.4.0";
 	static const string LOG = "[3xorVO]";
+	// DEBUG temporal del ciclo de vida del barril (setear/levantar/abrir/cerrar/item
+	// in-out/virtualizar/restaurar/load/save/shutdown). Poner en false (o borrar las
+	// llamadas ExorDbg) cuando se termine de diagnosticar el dupe del piso.
+	static const bool DEBUG_BARRELS = false;
 
 	// Config en el profile del server (se crea sola con defaults al primer arranque)
 	static const string CONFIG_DIR = "$profile:3xorVanillaOptimization";
@@ -27,6 +31,7 @@ class ExorStorageConstants
 	static const string CFG_CHAT       = "$profile:3xorVanillaOptimization\\chat.json";
 	static const string CFG_REPARACION = "$profile:3xorVanillaOptimization\\reparacion.json";
 	static const string CFG_BODYCADAVER = "$profile:3xorVanillaOptimization\\bodycadaver.json";
+	static const string CFG_AUTORUN   = "$profile:3xorVanillaOptimization\\autorun.json";
 
 	// Datos del sistema party (Fase B+): grupos persistidos
 	static const string GROUPS_DIR = "$profile:3xorVanillaOptimization\\groups";
@@ -65,4 +70,9 @@ class ExorStorageConstants
 	// Maximo de barriles que se virtualizan por tick (anti-pico: si muchos quedan
 	// idle a la vez, ej. tras un raid, se reparten en varios ticks).
 	static const int MAX_VIRT_PER_TICK = 15;
+	// Maximo de barriles que RECONCILIAN (limpian stale + scan del piso) por tick. El
+	// reconcile es lo CARO del arranque tras un crash (GetObjectsAtPosition 12m por barril
+	// que quedo sin virtualizar). Repartirlo evita un hitch al cargar bases con muchos
+	// barriles. Los untouched reconcilian de a poco; el que un player abra reconcilia ya.
+	static const int MAX_RECONCILE_PER_TICK = 5;
 }

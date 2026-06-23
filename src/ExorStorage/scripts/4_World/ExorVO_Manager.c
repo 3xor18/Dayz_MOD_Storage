@@ -116,8 +116,9 @@ class ExorVO_Manager
 		int now = GetGame().GetTime();
 		int i;
 
-		// --- Barriles: auto-cierre (siempre) + virtualizacion (con THROTTLE) ---
+		// --- Barriles: reconcile de arranque (THROTTLE) + auto-cierre + virtualizacion (THROTTLE) ---
 		int budget = ExorStorageConstants.MAX_VIRT_PER_TICK;
+		int reconcileBudget = ExorStorageConstants.MAX_RECONCILE_PER_TICK;
 		for (i = m_Barrels.Count() - 1; i >= 0; i--)
 		{
 			Exor_Barrel_Base barrel = m_Barrels.Get(i);
@@ -125,6 +126,16 @@ class ExorVO_Manager
 			{
 				m_Barrels.Remove(i);
 				continue;
+			}
+			// RECONCILE caro (scan del piso tras crash): repartirlo. Si no hay cupo este
+			// tick, el barril espera al proximo (sigue sin tickear hasta reconciliar). Si
+			// un player lo abre antes, ExorRestoreIfNeeded lo reconcilia en el acto.
+			if (barrel.ExorNeedsReconcile())
+			{
+				if (reconcileBudget <= 0)
+					continue;
+				barrel.ExorReconcileNow();
+				reconcileBudget--;
 			}
 			// allowVirtualize=budget>0: si se acabo el cupo de este tick, el barril igual
 			// se auto-cierra pero NO virtualiza (lo hara en el proximo tick) -> sin pico.

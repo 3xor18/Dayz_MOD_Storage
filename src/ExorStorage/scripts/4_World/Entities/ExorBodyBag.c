@@ -199,6 +199,22 @@ class Exor_BodyBag extends Container_Base
 		if (!FileExist(path))
 			return;
 
+		// ANTI-DUPE: si la bolsa YA tiene items reales en el cargo (la persistencia los
+		// cargo tras un crash/reinicio con un save previo a la virtualizacion), esos son
+		// la verdad -> DESCARTAR el JSON, no restaurar encima (si no, se duplican: cargo
+		// real + lo que el engine tiro al piso por "invalid location").
+		CargoBase rc = null;
+		if (GetInventory())
+			rc = GetInventory().GetCargo();
+		if (rc && rc.GetItemCount() > 0)
+		{
+			DeleteFile(path);
+			m_ExorVirtualizedSync = false;
+			SetSynchDirty();
+			Print(string.Format("%1 BodyBag %2: tenia %3 items reales -> JSON descartado (anti-dupe)", ExorStorageConstants.LOG, ExorGetID(), rc.GetItemCount()));
+			return;
+		}
+
 		ExorVO_ContainerFile f = new ExorVO_ContainerFile();
 		JsonFileLoader<ExorVO_ContainerFile>.JsonLoadFile(path, f);
 		// armar el loot BAJO TIERRA (no se ve el parpadeo) y moverlo a la bolsa

@@ -503,6 +503,7 @@ class ExorClientCfgDTO
 	// serverinfo va por SU PROPIO RPC (SERVERINFO_SYNC), no en este bundle: el texto
 	// largo del panel hacia el JSON demasiado grande y el sync entero fallaba.
 	ref ExorCfgReparacion reparacion;	// reparar-a-pristine + lista de kits combinables (el cliente la usa para ofrecer la accion)
+	ref ExorCfgAutorun autorun;	// auto-run (correr-solo): el cliente lo aplica al jugador local
 	bool permitir_construir_cerca;	// toggle de anti-construccion (el cliente lo usa en CanPlaceClient/holograma)
 
 	void ExorClientCfgDTO()
@@ -513,6 +514,7 @@ class ExorClientCfgDTO
 		veh_camara = new ExorCfgVehCamara;
 		veh_inventario = new ExorCfgVehInventario;
 		reparacion = new ExorCfgReparacion;
+		autorun = new ExorCfgAutorun;
 	}
 }
 
@@ -835,6 +837,29 @@ class ExorCfgServerInfo
 	}
 }
 
+// ----------------------------------------------------------------------------
+// autorun.json (correr-solo / auto-run). CLIENT-side: el cliente fuerza el
+// movimiento del jugador local. Se sincroniza para que el admin lo pueda
+// cambiar server-wide.
+// ----------------------------------------------------------------------------
+class ExorCfgAutorun
+{
+	int version = 1;
+	bool habilitado = true;       // permitir el auto-run
+	int tecla = KeyCode.KC_Z;     // tecla para activar/desactivar (default Z). Otros: KC_X, KC_C, KC_V, KC_R...
+	int velocidad = 3;            // 1=caminar  2=trotar  3=sprint (corre fuerte; baja a trote cuando se queda sin stamina)
+	bool parar_con_movimiento = true; // tocar cualquier tecla de movimiento (W/A/S/D) cancela el auto-run
+
+	void SetDefaults()
+	{
+		version = 1;
+		habilitado = true;
+		tecla = KeyCode.KC_Z;
+		velocidad = 3;
+		parar_con_movimiento = true;
+	}
+}
+
 // ============================================================================
 // Manager de configuracion
 // ============================================================================
@@ -853,6 +878,7 @@ class ExorConfig
 	ref ExorCfgChat chat;
 	ref ExorCfgReparacion reparacion;
 	ref ExorCfgBodyCadaver bodycadaver;
+	ref ExorCfgAutorun autorun;
 	bool m_Synced;	// cliente: true cuando ya recibio la config del server
 
 	void ExorConfig()
@@ -870,6 +896,7 @@ class ExorConfig
 		chat = new ExorCfgChat;
 		reparacion = new ExorCfgReparacion;
 		bodycadaver = new ExorCfgBodyCadaver;
+		autorun = new ExorCfgAutorun;
 	}
 
 	// SERVER: serializa la config relevante al cliente a JSON
@@ -882,6 +909,7 @@ class ExorConfig
 		d.veh_camara = vehiculos.camara;
 		d.veh_inventario = vehiculos.inventario;
 		d.reparacion = reparacion;
+		d.autorun = autorun;
 		d.permitir_construir_cerca = party.territorio.permitir_construir_cerca;
 		JsonSerializer js = new JsonSerializer();
 		string data;
@@ -910,6 +938,8 @@ class ExorConfig
 			c.vehiculos.inventario = d.veh_inventario;
 		if (d.reparacion)
 			c.reparacion = d.reparacion;
+		if (d.autorun)
+			c.autorun = d.autorun;
 		c.party.territorio.permitir_construir_cerca = d.permitir_construir_cerca;
 		c.m_Synced = true;
 	}
@@ -959,6 +989,7 @@ class ExorConfig
 		c.LoadChat();
 		c.LoadReparacion();
 		c.LoadBodyCadaver();
+		c.LoadAutorun();
 
 		return c;
 	}
@@ -1016,6 +1047,15 @@ class ExorConfig
 		else
 			mapa.SetDefaults();
 		JsonFileLoader<ExorCfgMapa>.JsonSaveFile(ExorStorageConstants.CFG_MAPA, mapa);
+	}
+
+	void LoadAutorun()
+	{
+		if (FileExist(ExorStorageConstants.CFG_AUTORUN))
+			JsonFileLoader<ExorCfgAutorun>.JsonLoadFile(ExorStorageConstants.CFG_AUTORUN, autorun);
+		else
+			autorun.SetDefaults();
+		JsonFileLoader<ExorCfgAutorun>.JsonSaveFile(ExorStorageConstants.CFG_AUTORUN, autorun);
 	}
 
 	void LoadItems()

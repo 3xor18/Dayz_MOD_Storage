@@ -18,6 +18,92 @@ modded class PlayerBase
 	protected ref array<ref ExorVO_ItemData> m_ExorDeathLoot;
 	protected ref array<EntityAI> m_ExorDeathWeapons;
 
+	// --- Auto-run (cliente, jugador local) ---
+	protected bool m_ExorAutoRun;       // auto-run activo
+	protected bool m_ExorArKeyPrev;     // estado previo de la tecla (deteccion de flanco)
+	protected bool m_ExorArApplied;     // el override esta puesto (para soltarlo 1 sola vez al apagar)
+
+	// Auto-run: se corre DENTRO del command handler (timing correcto, no en el update de
+	// la mision) para que el override de movimiento sea fluido, como los mods de auto-run.
+	override bool ModCommandHandlerBefore(float pDt, int pCurrentCommandID, bool pCurrentCommandFinished)
+	{
+		ExorAutoRunTick();
+		return super.ModCommandHandlerBefore(pDt, pCurrentCommandID, pCurrentCommandFinished);
+	}
+
+	void ExorAutoRunTick()
+	{
+		HumanInputController hic = GetInputController();
+		if (!hic)
+			return;
+
+		ExorCfgAutorun cfg = GetExorConfig().autorun;
+		if (!cfg || !cfg.habilitado)
+		{
+			ExorAutoRunRelease(hic);
+			return;
+		}
+
+		bool canRun = IsAlive() && !IsUnconscious() && !IsRestrained() && !GetCommand_Vehicle() && !IsSwimming();
+
+		// === CLIENTE (jugador local): detecta la tecla y avisa al server ===
+		// El server NO lee teclado; recibe el estado por RPC AUTORUN_SET y simula igual.
+		if (GetGame().GetPlayer() == this)
+		{
+			bool blocked = GetGame().IsInventoryOpen();
+			if (GetGame().GetUIManager() && GetGame().GetUIManager().GetMenu())
+				blocked = true;
+
+			bool want = m_ExorAutoRun;
+			bool keyDown = KeyState(cfg.tecla) > 0;
+			if (keyDown && !m_ExorArKeyPrev && !blocked && canRun)
+				want = !m_ExorAutoRun;
+			m_ExorArKeyPrev = keyDown;
+
+			// tocar CUALQUIER tecla de movimiento (W/A/S/D) cancela (el jugador retoma el control)
+			if (want && cfg.parar_con_movimiento)
+			{
+				bool movKey = KeyState(KeyCode.KC_W) > 0 || KeyState(KeyCode.KC_A) > 0 || KeyState(KeyCode.KC_S) > 0 || KeyState(KeyCode.KC_D) > 0;
+				if (movKey)
+					want = false;
+			}
+			if (!canRun)
+				want = false;
+
+			if (want != m_ExorAutoRun)
+			{
+				m_ExorAutoRun = want;
+				// avisar al server para que simule el mismo movimiento (anti rubber-band)
+				RPCSingleParam(ExorRPC.AUTORUN_SET, new Param1<bool>(m_ExorAutoRun), true, null);
+			}
+		}
+
+		// === AMBOS LADOS: aplicar/soltar el override de movimiento ===
+		if (m_ExorAutoRun && canRun)
+		{
+			// ENABLED = se mantiene hasta pasar DISABLED. velocidad 1=caminar/2=trotar/3=sprint.
+			hic.OverrideMovementSpeed(HumanInputControllerOverrideType.ENABLED, cfg.velocidad);
+			hic.OverrideMovementAngle(HumanInputControllerOverrideType.ENABLED, 0);
+			m_ExorArApplied = true;
+		}
+		else
+		{
+			if (m_ExorAutoRun && !canRun)
+				m_ExorAutoRun = false;	// server: limpiar si el jugador ya no puede correr
+			ExorAutoRunRelease(hic);
+		}
+	}
+
+	// suelta el override 1 sola vez (si estaba puesto), si no seguiria corriendo
+	void ExorAutoRunRelease(HumanInputController hic)
+	{
+		if (!m_ExorArApplied || !hic)
+			return;
+		hic.OverrideMovementSpeed(HumanInputControllerOverrideType.DISABLED, 0);
+		hic.OverrideMovementAngle(HumanInputControllerOverrideType.DISABLED, 0);
+		m_ExorArApplied = false;
+	}
+
 	// ------------------------- acciones -------------------------
 	override void SetActions(out TInputActionMap InputActionMap)
 	{
@@ -384,6 +470,14 @@ modded class PlayerBase
 					ExorVipClient.s_IsVip = vp.param1;
 				break;
 			}
+			case ExorRPC.AUTORUN_SET:
+				if (GetGame().IsServer())
+				{
+					Param1<bool> ap = new Param1<bool>(false);
+					if (ctx.Read(ap))
+						m_ExorAutoRun = ap.param1;	// el server simula el mismo movimiento (anti rubber-band)
+				}
+				break;
 			case ExorRPC.KILLFEED:
 				ExorOnKillfeed(ctx);
 				break;

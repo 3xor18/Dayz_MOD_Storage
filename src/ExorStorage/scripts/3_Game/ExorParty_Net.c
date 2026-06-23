@@ -34,6 +34,7 @@ class ExorRPC
 	static const int CHAT_MSG       = 49235;	// S -> C: mensaje de chat para mostrar (JSON)
 	static const int VIP_STATUS     = 49236;	// S -> C: si el jugador local es VIP (para features VIP del cliente, ej. distancia en marcas)
 	static const int SERVERINFO_SYNC = 49237;	// S -> C: texto del panel Server Info (RPC propio: el bundle CONFIG_SYNC se pasaba de tamaño)
+	static const int AUTORUN_SET    = 49238;	// C -> S: estado del auto-run del jugador (para que el server tambien simule y no haya rubber-band)
 }
 
 // Estado VIP del jugador LOCAL en el cliente (lo setea el server por RPC VIP_STATUS).

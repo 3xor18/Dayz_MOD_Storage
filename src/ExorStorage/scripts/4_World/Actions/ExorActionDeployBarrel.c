@@ -79,5 +79,8 @@ class ExorActionDeployBarrel : ActionContinuousBase
 
 		packed.Delete();
 		Print("[3xorStorage] Barril desplegado -> " + deployedType + " en " + pos.ToString());
+		Exor_Barrel_Base eb = Exor_Barrel_Base.Cast(barrel);
+		if (eb)
+			eb.ExorDbg("DEPLOY (player desplego/seteo el barril desde la caja)");
 	}
 }
