@@ -438,9 +438,12 @@ class Exor_Barrel_Base : Barrel_ColorBase
 				Print(string.Format("%1 Barril %2: %3 items del piso (invalid location de DayZ) borrados antes de restaurar", ExorStorageConstants.LOG, ExorGetID(), dropped));
 		}
 
-		// armar BAJO TIERRA (1000m) para que no se vea el parpadeo; cada item a su casilla.
+		// armar EN LA POSICION DEL BARRIL (NO bajo tierra). Crear los items a -1000m hacia
+		// que el motor los limpie por "out-of-bounds" ANTES de que entren al cargo -> se perdia
+		// la mayoria del loot (quedaba ~1 item). Se arman en el barril y se mueven al cargo en
+		// el mismo frame (igual que la version que funcionaba). Puede haber un parpadeo minimo;
+		// es preferible a perder el contenido.
 		vector hidden = GetPosition();
-		hidden[1] = hidden[1] - 1000.0;
 		// m_ExorRestoring: los EECargoIn de la restauracion NO marcan dirty -> el JSON no se
 		// reescribe por el restore (solo por cambios REALES del player despues).
 		ExorDbg(string.Format("ExorDoRestore INICIO: recreando %1 items del JSON al barril", f.items.Count()));
@@ -452,7 +455,7 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		m_ExorVirt = false;
 		m_ExorVirtualizedSync = false;
 		SetSynchDirty();
-		Print(string.Format("%1 Barril %2 restaurado: %3 items", ExorStorageConstants.LOG, ExorGetID(), f.items.Count()));
+		Print(string.Format("%1 Barril %2 restaurado: %3/%4 items (real/esperado)", ExorStorageConstants.LOG, ExorGetID(), ExorCargoCount(), f.items.Count()));
 		ExorDbg(string.Format("ExorDoRestore FIN: cargo real ahora = %1 (esperado %2)", ExorCargoCount(), f.items.Count()));
 	}
 

@@ -217,9 +217,9 @@ class Exor_BodyBag extends Container_Base
 
 		ExorVO_ContainerFile f = new ExorVO_ContainerFile();
 		JsonFileLoader<ExorVO_ContainerFile>.JsonLoadFile(path, f);
-		// armar el loot BAJO TIERRA (no se ve el parpadeo) y moverlo a la bolsa
+		// armar el loot EN LA POSICION de la bolsa (NO bajo tierra: a -1000m el motor lo limpia
+		// por out-of-bounds antes de que entre al cargo -> se perdia el loot) y moverlo a la bolsa
 		vector hidden = GetPosition();
-		hidden[1] = hidden[1] - 1000.0;
 		int i;
 		for (i = 0; i < f.items.Count(); i++)
 			ExorVO_Serializer.RestoreItem(f.items.Get(i), this, hidden);
@@ -277,9 +277,9 @@ class Exor_BodyBag extends Container_Base
 		bag.SetOrientation("0 0 0");
 		bag.SetPosition(pos);
 
-		// el loot se ARMA bajo tierra (no se ve el parpadeo) y se mueve a la bolsa
+		// el loot se ARMA en la posicion de la bolsa (NO bajo tierra: a -1000m el motor lo limpia
+		// por out-of-bounds antes de que entre al cargo) y se mueve a la bolsa
 		vector hidden = pos;
-		hidden[1] = hidden[1] - 1000.0;
 
 		int captured = 0;
 		int restored = 0;
