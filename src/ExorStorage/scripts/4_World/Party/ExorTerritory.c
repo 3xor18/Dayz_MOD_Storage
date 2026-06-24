@@ -192,25 +192,73 @@ class ExorTerritoryManager
 			myGroupId = g.id;
 
 		float radius = ExorTerritoryRules.Radius();
-		ExorTerritoryCacheDTO dto = new ExorTerritoryCacheDTO();
+		vector ppos = p.GetPosition();
+
+		// SOLO los mastiles CERCA del jugador. El cliente usa este cache para el preview de
+		// construccion (estas en territorio de alguien?), NO necesita todos los del mapa.
+		// Ademas el cache viaja en UN string de RPC y DayZ tiene un tope (~2KB): mandar TODOS
+		// los mastiles corrompia el string ("String CORRUPTED - FIX OnStoreLoad()") y el sync
+		// no llegaba. Filtrar por cercania (mas correcto) + tope de bytes mantiene el RPC sano.
+		float SYNC_RANGE = 1500.0;	// alcance horizontal (sobra para el preview)
+		int   MAX_BYTES  = 1700;	// margen seguro bajo el ~2KB del RPC
+
+		// candidatos en rango, ordenados por distancia (los mas cercanos primero -> si por
+		// densidad hay que recortar por tamaño, se dropean los LEJANOS, no los de al lado).
+		array<TerritoryFlag> near = new array<TerritoryFlag>;
 		int i;
 		for (i = 0; i < m_Masts.Count(); i++)
 		{
 			TerritoryFlag m = m_Masts.Get(i);
 			if (!m)
 				continue;
+			vector dd = m.GetPosition() - ppos;
+			dd[1] = 0;
+			if (dd.Length() <= SYNC_RANGE)
+				near.Insert(m);
+		}
+		// bubble sort por distancia ascendente (listas chicas)
+		int nn = near.Count();
+		int j;
+		for (i = 0; i < nn - 1; i++)
+		{
+			for (j = 0; j < nn - 1 - i; j++)
+			{
+				vector da = near.Get(j).GetPosition() - ppos;      da[1] = 0;
+				vector db = near.Get(j + 1).GetPosition() - ppos;  db[1] = 0;
+				if (db.Length() < da.Length())
+				{
+					TerritoryFlag tmp = near.Get(j);
+					near.Set(j, near.Get(j + 1));
+					near.Set(j + 1, tmp);
+				}
+			}
+		}
+
+		ExorTerritoryCacheDTO dto = new ExorTerritoryCacheDTO();
+		JsonSerializer js = new JsonSerializer();
+		string data = "";
+		for (i = 0; i < near.Count(); i++)
+		{
+			TerritoryFlag m2 = near.Get(i);
 			ExorTerritoryZone z = new ExorTerritoryZone();
-			vector mp = m.GetPosition();
+			vector mp = m2.GetPosition();
 			z.x = mp[0];
 			z.z = mp[2];
 			z.radius = radius;
-			z.mine = (myGroupId != "" && m.ExorGetGroupId() == myGroupId);
+			z.mine = (myGroupId != "" && m2.ExorGetGroupId() == myGroupId);
 			dto.zones.Insert(z);
+			// tope de tamaño: si esta zona paso el limite del RPC, sacarla y cortar
+			string probe;
+			js.WriteToString(dto, false, probe);
+			if (probe.Length() > MAX_BYTES)
+			{
+				dto.zones.Remove(dto.zones.Count() - 1);
+				break;
+			}
+			data = probe;
 		}
-
-		JsonSerializer js = new JsonSerializer();
-		string data;
-		js.WriteToString(dto, false, data);
+		if (data == "")	// ninguna zona cerca -> cache vacio valido
+			js.WriteToString(dto, false, data);
 		p.RPCSingleParam(ExorRPC.TERRITORY_SYNC, new Param1<string>(data), true, p.GetIdentity());
 	}
 }

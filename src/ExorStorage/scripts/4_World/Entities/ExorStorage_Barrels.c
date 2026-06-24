@@ -390,11 +390,25 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		// si abren ANTES de su turno de reconcile (throttle del manager), forzar la
 		// reconciliacion ahora (si no, m_ExorVirt seguiria false y el barril se veria
 		// vacio aunque el JSON tenga el loot).
+		bool justReconciled = !m_ExorLoadDone;	// capturar ANTES (ExorReconcileNow lo pone true)
 		ExorReconcileNow();
 
 		// virtualizado -> recrear los items desde el JSON (que QUEDA en disco)
 		if (m_ExorVirt)
 		{
+			// BUG "se ve 1/N item + se lagea" (bases grandes): si el player abre ANTES del
+			// tick de reconcile, ExorReconcileNow ACABA de borrar el cargo stale del engine
+			// con GetGame().ObjectDelete() -> que en DayZ es DIFERIDO (corre al fin del frame).
+			// El cargo TODAVIA tiene esos items ocupando las casillas, asi que restaurar en el
+			// MISMO frame falla: los items del JSON no entran (casilla ocupada) y queda ~1/N.
+			// -> diferir el restore un instante para que el motor libere los slots primero.
+			// (El restore por un tick ya-reconciliado entra aca con el cargo vacio y va directo.)
+			if (justReconciled && ExorCargoCount() > 0)
+			{
+				ExorDbg("ExorRestoreIfNeeded: cargo stale pendiente de borrar (delete diferido) -> restore DIFERIDO 300ms");
+				GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorDoRestore, 300, false);
+				return;
+			}
 			ExorDbg("ExorRestoreIfNeeded: esta virtualizado -> restaurar del JSON");
 			ExorDoRestore();
 			return;
