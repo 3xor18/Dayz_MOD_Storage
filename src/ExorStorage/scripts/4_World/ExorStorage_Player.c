@@ -241,6 +241,10 @@ modded class PlayerBase
 			return;
 		m_ExorKfSource = source;
 
+		// anti-cheat: god mode (recibe impactos reales seguidos sin perder vida). Solo
+		// actua si el vigilado esta en la watchlist -> sale al toque para el resto.
+		ExorAnticheat.OnWatchedHit(this, source);
+
 		// Combat-log (modelo de ZONA): si el daño viene de OTRO jugador, registrar una
 		// zona de combate en AMBOS extremos (victima y atacante) -> cubre PvP corto y largo.
 		// La deteccion al desloguearse es por PRESENCIA en la zona, no por intercambio de daño.
@@ -335,6 +339,20 @@ modded class PlayerBase
 		return "puños";
 	}
 
+	// Classname del arma usada (server). Para el umbral de distancia por arma del anti-cheat.
+	string ExorKfWeaponClass(PlayerBase killer)
+	{
+		if (m_ExorKfSource)
+			return m_ExorKfSource.GetType();
+		if (killer && killer.GetHumanInventory())
+		{
+			EntityAI inHands = killer.GetHumanInventory().GetEntityInHands();
+			if (inHands)
+				return inHands.GetType();
+		}
+		return "";
+	}
+
 	void ExorBuildKillfeed(Object killer)
 	{
 		string victimName = "?";
@@ -364,6 +382,9 @@ modded class PlayerBase
 			// stats (siempre, para el Score)
 			ExorStats.Get().AddKill(killerSid, killerName, dist, weapon);
 			ExorStats.Get().AddDeath(victimSid, victimName);
+
+			// anti-cheat: evaluar el kill (LOS/angulo/distancia) -> log si hay indicios
+			ExorAnticheat.OnKill(kp, this, dist, weapon, ExorKfWeaponClass(kp));
 
 			// killfeed (si esta activo)
 			if (cfg.habilitado)

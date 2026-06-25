@@ -860,6 +860,144 @@ class ExorCfgAutorun
 	}
 }
 
+// ----------------------------------------------------------------------------
+// anticheat.json (SOLO server, heuristico). Mide GEOMETRIA y RESULTADOS con los
+// eventos del motor; NO lee memoria/inputs del cliente (eso es BattlEye). Da
+// INDICIOS contados (BAJO/MEDIO/ALTO) para que el admin revise a mano, NUNCA un
+// baneo automatico (hay falsos positivos por lag/desync/peeker's advantage).
+// Todo va al log de auditoria (ServerAuditLog\audit_YYYY-MM-DD.txt) en vivo.
+//
+//   Feature 1 (detector_kill): se evalua en CADA kill PvP, sobre TODOS (menos
+//     exentos). Por kill chequea: linea-de-vision bloqueada (wallhack), angulo
+//     del arma vs la victima (mato sin apuntar = aimbot / "mirando al cielo"),
+//     y distancia sospechosa por arma. Cuenta cuantas senales saltan -> nivel.
+//
+//   Feature 2 (watchlist): muestreo ~1 Hz SOLO sobre los SteamIDs vigilados
+//     (pocos). Por cada vigilado vs los demas: si apunta DIRECTO (arma en alto)
+//     a un jugador OCULTO tras pared = ESP/prefire; si corre DERECHO hacia un
+//     oculto = ESP. El raycast (caro) solo se lanza si el angulo barato ya salto.
+//
+//   exentos[]: a estos NO se les aplica NADA de anti-cheat (admins/confianza).
+//     El Score/stats se les sigue sumando igual (eso no es anti-cheat).
+// ----------------------------------------------------------------------------
+class ExorCfgAnticheat
+{
+	int version = 1;
+	bool habilitado = true;                 // master on/off de TODO el anti-cheat
+	bool solo_watchlist = true;             // true = SOLO se evalua a los SteamIDs de watchlist[] (kill incluido); false = el detector por kill corre sobre TODOS
+
+	// ---- Feature 1: detector por kill (sobre todos menos exentos) ----
+	bool detector_kill = true;
+	bool kill_check_los = true;             // linea-de-vision bloqueada al matar (wallhack)
+	bool kill_check_angulo = true;          // arma apuntando lejos de la victima al matar (aimbot/snap)
+	bool kill_check_distancia = true;       // kill a distancia sospechosa para el arma usada
+	float kill_angulo_grados = 30;          // si el angulo arma->victima supera esto = "mato sin apuntar"
+	int kill_min_senales = 1;               // minimo de senales coincidentes para loguear (1 = cualquier indicio)
+	float dist_sospechosa_default = 400;    // umbral (m) generico por arma (0 = no chequear distancia)
+	ref map<string, float> dist_sospechosa_por_arma; // classname de arma -> umbral propio (ej pistolas mas bajo)
+
+	// ---- Feature 2: watchlist (seguimiento dirigido de sospechosos) ----
+	bool watchlist_activa = true;
+	bool watch_check_mira = true;           // apunta (arma en alto) a un jugador oculto = ESP/prefire
+	bool watch_check_aproximacion = true;   // corre derecho hacia un jugador oculto = ESP
+	bool watch_check_velocidad = true;      // velocidad imposible / salto de posicion = speedhack/teleport
+	bool watch_check_bajo_tierra = true;    // jugador por DEBAJO del terreno = noclip/glitch bajo mapa
+	bool watch_check_godmode = true;        // recibe impactos reales seguidos y la vida no baja = god mode
+	bool watch_check_spinbot = true;        // el arma/mira gira muchisimo entre ticks de forma sostenida = spinbot
+	bool watch_check_seguimiento = true;    // SIGUE con la mira a un jugador que NO deberia ver (lejos u oculto) varios ticks = ESP
+	float watch_angulo_grados = 8;          // tolerancia de "apunta/corre/sigue DIRECTO" al objetivo
+	float watch_dist_min = 25;              // ignorar objetivos a menos de esto (ruido a corta)
+	float watch_velocidad_max = 12;         // m/s por encima de lo cual = sospechoso (sprint normal ~6-7; a pie. Vehiculos se saltean)
+	float watch_bajo_tierra_metros = 2.5;   // metros por debajo de la superficie para marcar noclip
+	int godmode_hits = 4;                   // impactos reales SEGUIDOS sin que baje la vida para marcar god mode (mas alto = menos falsos)
+	float spinbot_grados = 120;             // giro de la mira por tick por encima de lo cual cuenta como "giro imposible"
+	int spinbot_ticks = 3;                  // ticks SEGUIDOS de giro imposible para marcar spinbot
+	float watch_track_dist_max = 1500;      // alcance maximo del seguimiento (m). A 1500m el cliente ni renderiza al otro
+	float watch_lejos_metros = 800;         // con LOS clara, mas alla de esto = no deberia verlo a simple vista (cuenta para el seguimiento)
+	int watch_track_ticks = 4;              // ticks SEGUIDOS rastreando al mismo objetivo oculto/lejano para marcar ESP
+	int watch_log_cooldown_seg = 15;        // no repetir el mismo aviso del vigilado antes de esto
+	ref TStringArray watchlist;             // SteamIDs a vigilar (el admin los agrega; pocos)
+
+	// ---- exentos: NO se les aplica anti-cheat (stats SI) ----
+	ref TStringArray exentos;
+
+	void ExorCfgAnticheat()
+	{
+		dist_sospechosa_por_arma = new map<string, float>;
+		watchlist = new TStringArray;
+		exentos = new TStringArray;
+	}
+
+	void SetDefaults()
+	{
+		version = 1;
+		habilitado = true;
+		solo_watchlist = true;
+
+		detector_kill = true;
+		kill_check_los = true;
+		kill_check_angulo = true;
+		kill_check_distancia = true;
+		kill_angulo_grados = 30;
+		kill_min_senales = 1;
+		dist_sospechosa_default = 400;
+		dist_sospechosa_por_arma.Clear();
+		// Ejemplos (editar/ampliar en anticheat.json). Umbral bajo = un kill mas
+		// lejos que esto con esa arma se marca como sospechoso.
+		dist_sospechosa_por_arma.Set("FNX45", 90);
+		dist_sospechosa_por_arma.Set("Mlock-91", 90);
+		dist_sospechosa_por_arma.Set("Deagle", 110);
+		dist_sospechosa_por_arma.Set("MP5k", 150);
+		dist_sospechosa_por_arma.Set("Saiga", 90);
+
+		watchlist_activa = true;
+		watch_check_mira = true;
+		watch_check_aproximacion = true;
+		watch_check_velocidad = true;
+		watch_check_bajo_tierra = true;
+		watch_check_godmode = true;
+		watch_check_spinbot = true;
+		watch_check_seguimiento = true;
+		watch_angulo_grados = 8;
+		watch_dist_min = 25;
+		watch_velocidad_max = 12;
+		watch_bajo_tierra_metros = 2.5;
+		godmode_hits = 4;
+		spinbot_grados = 120;
+		spinbot_ticks = 3;
+		watch_track_dist_max = 1500;
+		watch_lejos_metros = 800;
+		watch_track_ticks = 4;
+		watch_log_cooldown_seg = 15;
+		watchlist.Clear();   // vacia: el admin agrega los SteamIDs a vigilar
+
+		exentos.Clear();     // vacia: agregar admins/confianza para saltearles el anti-cheat
+	}
+
+	// Umbral de distancia para un arma: el propio del classname, o el default.
+	// Devuelve 0 si no hay que chequear (default 0).
+	float DistThreshold(string cls)
+	{
+		if (dist_sospechosa_por_arma && cls != "" && dist_sospechosa_por_arma.Contains(cls))
+			return dist_sospechosa_por_arma.Get(cls);
+		return dist_sospechosa_default;
+	}
+
+	bool EsExento(string sid)
+	{
+		if (!exentos || sid == "")
+			return false;
+		return exentos.Find(sid) != -1;
+	}
+
+	bool EsVigilado(string sid)
+	{
+		if (!watchlist || sid == "")
+			return false;
+		return watchlist.Find(sid) != -1;
+	}
+}
+
 // ============================================================================
 // Manager de configuracion
 // ============================================================================
@@ -879,6 +1017,7 @@ class ExorConfig
 	ref ExorCfgReparacion reparacion;
 	ref ExorCfgBodyCadaver bodycadaver;
 	ref ExorCfgAutorun autorun;
+	ref ExorCfgAnticheat anticheat;
 	bool m_Synced;	// cliente: true cuando ya recibio la config del server
 
 	void ExorConfig()
@@ -897,6 +1036,7 @@ class ExorConfig
 		reparacion = new ExorCfgReparacion;
 		bodycadaver = new ExorCfgBodyCadaver;
 		autorun = new ExorCfgAutorun;
+		anticheat = new ExorCfgAnticheat;
 	}
 
 	// SERVER: serializa la config relevante al cliente a JSON
@@ -990,6 +1130,7 @@ class ExorConfig
 		c.LoadReparacion();
 		c.LoadBodyCadaver();
 		c.LoadAutorun();
+		c.LoadAnticheat();
 
 		return c;
 	}
@@ -1056,6 +1197,15 @@ class ExorConfig
 		else
 			autorun.SetDefaults();
 		JsonFileLoader<ExorCfgAutorun>.JsonSaveFile(ExorStorageConstants.CFG_AUTORUN, autorun);
+	}
+
+	void LoadAnticheat()
+	{
+		if (FileExist(ExorStorageConstants.CFG_ANTICHEAT))
+			JsonFileLoader<ExorCfgAnticheat>.JsonLoadFile(ExorStorageConstants.CFG_ANTICHEAT, anticheat);
+		else
+			anticheat.SetDefaults();
+		JsonFileLoader<ExorCfgAnticheat>.JsonSaveFile(ExorStorageConstants.CFG_ANTICHEAT, anticheat);
 	}
 
 	void LoadItems()

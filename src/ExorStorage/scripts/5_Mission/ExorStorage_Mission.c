@@ -18,6 +18,7 @@ modded class MissionServer
 		ExorPartyLive.Start();
 		ExorRaidLog.Init();	// crea raidlog\ y purga archivos mas viejos que log_dias_retener
 		ExorGroupManager.Get().ScanInactiveClans();	// avisa al raidlog de clanes sin conexion hace 'inactividad_dias'
+		ExorAnticheat.Start();	// anti-cheat heuristico: tick de watchlist (~1 Hz) + detector por kill
 
 		// OJO: este compilador no acepta expresiones partidas en varias lineas (ni ternarios)
 		Print(string.Format("%1 %2 v%3 inicializado", ExorStorageConstants.LOG, ExorStorageConstants.MOD_NAME, ExorStorageConstants.MOD_VERSION));

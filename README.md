@@ -28,8 +28,14 @@ No depende de Expansion, CF (Community Framework) ni ningún framework externo. 
 ### Anti-raid (gateado por el radio del mástil ajeno)
 - **No desmantelar** estructuras (muros, puertas, ventanas, torres, etc.) en territorio ajeno si no sos del party — cubre construcciones **vanilla y BaseBuildingPlus (BBP)** (la cobertura BBP se activa sola si BBP está cargado; en un server vanilla no afecta nada).
 - **No construir** (deployables, kits, **campos de plantación**) en territorio ajeno — bloqueado en cliente y reforzado server-side.
-- **Logs forenses** (`raidlog/raid_AAAA-MM-DD.txt`, auto-purga): robo de items, **apertura de barriles 3xor**, deslogueo y expulsión en base ajena, con steamid + nombre + pos + hora.
+- **Logs forenses** (`ServerAuditLog/audit_AAAA-MM-DD.txt`, auto-purga): robo de items, **apertura de barriles 3xor**, deslogueo y expulsión en base ajena, con steamid + nombre + pos + hora.
 - **Anti-combat-log**: al reconectar dentro de territorio ajeno, te teletransporta al borde.
+
+### Anti-cheat (heurístico, server-side)
+Mide geometría y resultados con los eventos del motor para dar **indicios** (NUNCA banea solo: hay falsos positivos por lag/desync). Por defecto **solo evalúa a los SteamIDs de `watchlist`** (`solo_watchlist`). Todo se escribe en vivo al mismo log de auditoría (`ServerAuditLog/audit_*.txt`).
+- **Por kill** (`SOSPECHA_KILL`): mató a través de pared (línea de visión bloqueada), apuntando lejos de la víctima (aimbot / "mirando al cielo"), o a distancia imposible para el arma. Cuenta señales → nivel BAJO/MEDIO/ALTO.
+- **Watchlist** (solo los vigilados, muestreo ~1 Hz): apunta a un oculto con arma en alto = ESP/prefire (`WATCH_MIRA`); corre derecho hacia un oculto (`WATCH_APROX`); **sigue con la mira a alguien que no debería ver** (lejos hasta 1500 m u oculto) varios ticks = ESP (`WATCH_SEGUIMIENTO`); velocidad imposible/teleport (`WATCH_VELOCIDAD`); por debajo del terreno/noclip (`WATCH_BAJO_TIERRA`); recibe impactos reales seguidos sin perder vida = god mode (`WATCH_GODMODE`); giro de mira imposible sostenido = spinbot (`WATCH_SPINBOT`).
+- **`exentos`**: SteamIDs a los que NO se les aplica nada de anti-cheat (admins/confianza); el ranking/stats se les suma igual.
 
 ### Spawns
 - Pantalla de selección al morir / primer login, con puntos configurables + "Mi base".
@@ -263,17 +269,45 @@ Todo se configura por JSON en `<profile>/3xorVanillaOptimization/`. Cada archivo
 | `alejar_metros` | `10` | Radio para considerar "hay alguien cerca" |
 | `virtualizar_minutos` | `5` | Tras N min sin nadie a ≤`alejar_metros` → virtualiza (saca el loot del mundo) |
 
+### `anticheat.json`
+Todo server-side. Por defecto solo evalúa a los SteamIDs de `watchlist`; los de `exentos` se saltean por completo.
+| Parámetro | Default | Qué hace |
+|---|---|---|
+| `habilitado` | `true` | Master on/off de todo el anti-cheat |
+| `solo_watchlist` | `true` | `true` = solo evalúa a los de `watchlist` (kill incluido); `false` = el detector por kill corre sobre todos |
+| `detector_kill` | `true` | Activa el análisis en cada kill PvP |
+| `kill_check_los` / `kill_check_angulo` / `kill_check_distancia` | `true` | Señales del kill: LOS bloqueada / ángulo arma→víctima / distancia por arma |
+| `kill_angulo_grados` | `30` | Ángulo arma→víctima por encima del cual = "mató sin apuntar" |
+| `kill_min_senales` | `1` | Mínimo de señales coincidentes para loguear el kill |
+| `dist_sospechosa_default` | `400` | Umbral genérico de distancia por arma (m); `0` = no chequear |
+| `dist_sospechosa_por_arma` | (ejemplos) | `classname → metros` (ej. pistolas más bajo) |
+| `watchlist_activa` | `true` | Activa el muestreo ~1 Hz de la watchlist |
+| `watch_check_mira` / `_aproximacion` / `_seguimiento` | `true` | ESP: apunta a oculto / corre a oculto / sigue a lejano-u-oculto |
+| `watch_check_velocidad` / `_bajo_tierra` / `_godmode` / `_spinbot` | `true` | speedhack-teleport / noclip / god mode / spinbot |
+| `watch_angulo_grados` | `8` | Tolerancia de "apunta/corre/sigue directo" al objetivo |
+| `watch_dist_min` | `25` | Ignorar objetivos a menos de esto (ruido a corta) |
+| `watch_velocidad_max` | `12` | m/s a pie por encima de lo cual = sospechoso (vehículos exentos) |
+| `watch_bajo_tierra_metros` | `2.5` | Metros bajo la superficie para marcar noclip |
+| `godmode_hits` | `4` | Impactos reales seguidos sin perder vida para marcar god mode |
+| `spinbot_grados` / `spinbot_ticks` | `120` / `3` | Giro de mira por tick y ticks seguidos para marcar spinbot |
+| `watch_track_dist_max` | `1500` | Alcance máximo del seguimiento (m) |
+| `watch_lejos_metros` | `800` | Con LOS clara, más allá de esto = no debería verlo (cuenta para el seguimiento) |
+| `watch_track_ticks` | `4` | Ticks seguidos rastreando a un oculto/lejano para marcar ESP |
+| `watch_log_cooldown_seg` | `15` | No repetir el mismo aviso del vigilado antes de esto |
+| `watchlist` | `[]` | SteamIDs a vigilar (vacío = no evalúa a nadie) |
+| `exentos` | `[]` | SteamIDs a los que NO se les aplica anti-cheat (stats sí) |
+
 ---
 
 ## Archivos que crea el mod (en `<profile>/3xorVanillaOptimization/`)
 
-**Config (editables):** `storage.json` · `vehiculos.json` · `municion.json` · `party.json` · `spawns.json` · `mapa.json` · `items.json` · `vip.json` · `killfeed.json` · `serverinfo.json` · `chat.json` · `reparacion.json` · `bodycadaver.json`
+**Config (editables):** `storage.json` · `vehiculos.json` · `municion.json` · `party.json` · `spawns.json` · `mapa.json` · `items.json` · `vip.json` · `killfeed.json` · `serverinfo.json` · `chat.json` · `reparacion.json` · `bodycadaver.json` · `anticheat.json`
 
 **Datos (los maneja el server, no editar a mano salvo que sepas):**
 - `groups/<id>.json` — grupos/party persistidos
 - `storage/<id>.json` — contenido virtualizado de barriles
 - `bodybags/<id>.json` — contenido virtualizado de bolsas de cadáver
-- `raidlog/raid_AAAA-MM-DD.txt` — logs forenses anti-raid (auto-purga)
+- `ServerAuditLog/audit_AAAA-MM-DD.txt` — logs forenses anti-raid + anti-cheat (auto-purga)
 - `stats.json` — ranking (kills/deaths/suicidios)
 - `vip_state.json` — usos de equipamiento por VIP
 
