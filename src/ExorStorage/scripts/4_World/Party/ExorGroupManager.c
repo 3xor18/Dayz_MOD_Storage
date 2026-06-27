@@ -169,7 +169,7 @@ class ExorGroupManager
 		JsonSerializer js = new JsonSerializer();
 		string data;
 		js.WriteToString(dto, false, data);
-		p.RPCSingleParam(ExorRPC.ROSTER_SYNC, new Param1<string>(data), true, p.GetIdentity());
+		ExorNetChunk.Send(p, p.GetIdentity(), ExorRPC.ROSTER_SYNC, data);
 	}
 
 	void SyncGroup(ExorGroup g)

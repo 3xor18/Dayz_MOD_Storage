@@ -95,17 +95,15 @@ class ExorStats
 		JsonFileLoader<ExorStatsFile>.JsonSaveFile(ExorStorageConstants.STATS_FILE, f);
 	}
 
-	// El leaderboard se manda como UN string en un solo RPC (SCORE_DATA). DayZ tiene un
-	// LIMITE DURO (~2 KB) para leer un string de un RPC: si se pasa, el cliente tira
-	// "String CORRUPTED - FIX OnStoreLoad()" en ExorOnScoreData y la tab Score sale VACIA.
-	// (El "Top 30" viejo daba ~3752 chars y se pasaba.) Por eso NO recortamos por un numero
-	// fijo de filas, sino por TAMAÑO: agregamos filas (Top por kills) mientras el JSON
-	// serializado quede por debajo de SCORE_MAX_BYTES. Asi nunca se corrompe y mostramos
-	// tantos del top como entren (~12-14). El cliente reordena esas filas por columna.
-	static const int SCORE_MAX_BYTES = 1700;	// margen seguro bajo el ~2KB del RPC
-	static const int SCORE_MAX_ROWS  = 30;		// tope duro adicional de filas
+	// El leaderboard se manda por SCORE_DATA. DayZ revienta la VM del cliente
+	// ("String CORRUPTED - FIX OnStoreLoad()") al LEER un string de RPC > ~2KB. ANTES se
+	// recortaba por TAMAÑO (se perdian filas: el Top 30 daba ~3752 chars y solo entraban
+	// ~12-14). AHORA el envio va en TROZOS (ExorNetChunk) y el cliente reensambla -> se
+	// manda el Top completo sin perder filas. Queda solo el tope DURO de filas (decision de
+	// producto: un leaderboard "Top N", no los 188 jugadores).
+	static const int SCORE_MAX_ROWS  = 30;		// Top N del leaderboard
 
-	// JSON del leaderboard: Top por kills, recortado por TAMAÑO (no por cantidad fija)
+	// JSON del leaderboard: Top por kills (hasta SCORE_MAX_ROWS filas), completo.
 	string BuildJson()
 	{
 		EnsureLoaded();
@@ -135,26 +133,13 @@ class ExorStats
 		if (hardLim > SCORE_MAX_ROWS)
 			hardLim = SCORE_MAX_ROWS;
 
-		// agregar fila por fila mientras el JSON quepa bajo el limite del RPC
 		ExorStatsFile f = new ExorStatsFile();
+		for (i = 0; i < hardLim; i++)
+			f.rows.Insert(all.Get(i));
+
 		JsonSerializer js = new JsonSerializer();
 		string data = "";
-		for (i = 0; i < hardLim; i++)
-		{
-			f.rows.Insert(all.Get(i));
-			string probe;
-			js.WriteToString(f, false, probe);
-			if (probe.Length() > SCORE_MAX_BYTES)
-			{
-				// esta fila lo paso del limite -> sacarla y cortar
-				f.rows.Remove(f.rows.Count() - 1);
-				break;
-			}
-			data = probe;
-		}
-		// si NINGUNA fila entro (raro) igual serializar el vacio valido
-		if (data == "")
-			js.WriteToString(f, false, data);
+		js.WriteToString(f, false, data);
 		return data;
 	}
 }

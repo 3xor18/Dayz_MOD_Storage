@@ -37,6 +37,96 @@ class ExorRPC
 	static const int AUTORUN_SET    = 49238;	// C -> S: estado del auto-run del jugador (para que el server tambien simule y no haya rubber-band)
 }
 
+// ============================================================================
+// Transferencia de strings GRANDES server -> cliente en TROZOS (chunking).
+// DayZ revienta la VM del cliente ("String CORRUPTED - FIX OnStoreLoad()") al LEER
+// un string de RPC que pasa ~2KB. El panel Server Info (reglas/territorio/etc.) y
+// otros JSON largos lo pasaban -> excepcion que rompe el HUD (incl. la grilla de
+// storage de los barriles si salta con el inventario abierto). Solucion: partir el
+// string en trozos chicos (Param3<idx,total,data>) y reensamblar en el cliente.
+// Sin perder texto (a diferencia del recorte por bytes de Score/Territorio).
+// ============================================================================
+class ExorNetChunk
+{
+	// Tamano de cada trozo en CHARS. Conservador: el texto en español tiene tildes
+	// (2 bytes c/u en UTF-8), asi que 800 chars ~ 1600 bytes peor caso, bajo el ~2KB.
+	static const int CHUNK_SIZE = 800;
+
+	// SERVER: parte 'data' y lo manda por 'rpcType' como Param3<int idx, int total, string trozo>.
+	// 'target' es el objeto sobre el que se llama RPCSingleParam (el player). Envio GARANTIZADO
+	// (ordenado) para que los trozos lleguen completos y en orden al reensamblar.
+	static void Send(Object target, PlayerIdentity id, int rpcType, string data)
+	{
+		if (!target)
+			return;
+		int len = data.Length();
+		int total = len / CHUNK_SIZE;
+		if (len % CHUNK_SIZE != 0)
+			total = total + 1;
+		if (total == 0)
+			total = 1;	// string vacio -> 1 trozo vacio (el cliente igual lo aplica)
+		int i;
+		for (i = 0; i < total; i++)
+		{
+			int start = i * CHUNK_SIZE;
+			int n = CHUNK_SIZE;
+			if (start + n > len)
+				n = len - start;
+			string piece = "";
+			if (n > 0)
+				piece = data.Substring(start, n);
+			target.RPCSingleParam(rpcType, new Param3<int, int, string>(i, total, piece), true, id);
+		}
+	}
+}
+
+// CLIENTE: reensambla los trozos por tipo de RPC. Asume entrega ordenada (RPC
+// garantizado): el trozo idx==0 reinicia el buffer; al juntar 'total' trozos
+// devuelve el string completo (si no, devuelve "" = aun incompleto).
+class ExorBigStringRx
+{
+	static ref map<int, string> s_Buf;   // rpcType -> texto acumulado
+	static ref map<int, int>    s_Need;  // rpcType -> trozos esperados
+	static ref map<int, int>    s_Have;  // rpcType -> trozos recibidos
+
+	static string Feed(int rpcType, ParamsReadContext ctx)
+	{
+		Param3<int, int, string> p = new Param3<int, int, string>(0, 0, "");
+		if (!ctx.Read(p))
+			return "";
+		if (!s_Buf)
+		{
+			s_Buf = new map<int, string>;
+			s_Need = new map<int, int>;
+			s_Have = new map<int, int>;
+		}
+		int idx = p.param1;
+		int total = p.param2;
+		string piece = p.param3;
+		if (total <= 0)
+			return "";
+		if (idx == 0)
+		{
+			s_Buf.Set(rpcType, "");
+			s_Need.Set(rpcType, total);
+			s_Have.Set(rpcType, 0);
+		}
+		string cur = "";
+		s_Buf.Find(rpcType, cur);
+		cur = cur + piece;
+		s_Buf.Set(rpcType, cur);
+		int have = 0;
+		s_Have.Find(rpcType, have);
+		have = have + 1;
+		s_Have.Set(rpcType, have);
+		int need = 0;
+		s_Need.Find(rpcType, need);
+		if (need > 0 && have >= need)
+			return cur;	// completo
+		return "";
+	}
+}
+
 // Estado VIP del jugador LOCAL en el cliente (lo setea el server por RPC VIP_STATUS).
 // Lo usan features VIP client-side (ej. mostrar la distancia en las marcas del party).
 class ExorVipClient

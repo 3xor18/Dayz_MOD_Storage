@@ -191,6 +191,12 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		{
 			ExorRestoreIfNeeded();
 			m_ExorLastInteractMs = GetGame().GetTime();
+			if (ExorStorageConstants.DEBUG_BARRELS)
+			{
+				int totalCargo;
+				int openNow = ExorVO_Manager.CountOpenBarrels(totalCargo);
+				Print(string.Format("%1[DBG] Open FIN | id=%2 | barriles ABIERTOS ahora=%3 | items reales totales en abiertos=%4", ExorStorageConstants.LOG, m_ExorID, openNow, totalCargo));
+			}
 		}
 	}
 
@@ -230,8 +236,14 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		ExorReconcileOnLoad();
 	}
 
-	bool ExorTick(int now, ExorCfgStorage settings, bool allowVirtualize)
+	// allowSnapshot/didSnapshot: el guardado en vivo del JSON escribe a DISCO de forma
+	// SINCRONA en el hilo del juego. Para no encadenar muchas escrituras en un mismo tick
+	// (hitch en raids con muchos barriles activos a la vez), el manager reparte un cupo de
+	// snapshots por tick (MAX_SNAPSHOT_PER_TICK); el barril que no entra escribe el proximo
+	// tick (el flag dirty persiste). didSnapshot avisa al manager para descontar el cupo.
+	bool ExorTick(int now, ExorCfgStorage settings, bool allowVirtualize, bool allowSnapshot, out bool didSnapshot)
 	{
+		didSnapshot = false;
 		// El reconcile lo dispara el manager (con presupuesto por tick) o la apertura.
 		// Si todavia no reconcilio, no hacer nada este tick (espera su turno).
 		if (!m_ExorLoadDone)
@@ -249,12 +261,14 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		{
 			if (ExorVO_Manager.IsAlivePlayerNear(GetPosition(), settings.cerrar_distancia_metros))
 				m_ExorLastInteractMs = now;
-			// GUARDADO EN VIVO (throttle = este tick de 5s): si hubo cambios de cargo,
-			// volcar el contenido actual al JSON. Asi el JSON queda siempre al dia.
-			// SOLO si NO esta virtualizado (con items reales): un barril virtualizado tiene
-			// el cargo vacio a proposito y su JSON es la verdad -> jamas pisarlo con un vacio.
-			if (m_ExorSnapDirty && !m_ExorVirt)
+			// GUARDADO EN VIVO (con cupo del manager): si hubo cambios de cargo, volcar el
+			// contenido al JSON. SOLO si NO esta virtualizado (un virtualizado tiene cargo
+			// vacio a proposito y su JSON es la verdad -> jamas pisarlo con un vacio).
+			if (m_ExorSnapDirty && !m_ExorVirt && allowSnapshot)
+			{
 				ExorWriteSnapshot();
+				didSnapshot = true;
+			}
 			if (cerrarMs > 0 && now - m_ExorLastInteractMs > cerrarMs)
 			{
 				ExorDbg("ExorTick -> auto-cierre (nadie cerca por el umbral)");
@@ -264,10 +278,13 @@ class Exor_Barrel_Base : Barrel_ColorBase
 			return false;
 		}
 
-		// cerrado: si quedo algo sin volcar, volcarlo ya (antes de virtualizar). Solo si
+		// cerrado: si quedo algo sin volcar, volcarlo (con cupo) antes de virtualizar. Solo si
 		// tiene items reales (no virtualizado) -> nunca pisar el JSON con un cargo vacio.
-		if (m_ExorSnapDirty && !m_ExorVirt)
+		if (m_ExorSnapDirty && !m_ExorVirt && allowSnapshot)
+		{
 			ExorWriteSnapshot();
+			didSnapshot = true;
+		}
 
 		if (!allowVirtualize)	// THROTTLE: sin cupo este tick -> virtualiza en el proximo
 			return false;

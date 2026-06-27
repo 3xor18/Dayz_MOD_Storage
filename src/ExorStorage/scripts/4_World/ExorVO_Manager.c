@@ -57,6 +57,26 @@ class ExorVO_Manager
 		}
 	}
 
+	// DEBUG: cuantos barriles estan ABIERTOS ahora mismo (para diagnosticar el bug de
+	// "abro varios y se rompe la grilla"). Tambien suma el total de items reales en todos.
+	static int CountOpenBarrels(out int totalCargo)
+	{
+		ExorVO_Manager m = Get();
+		int n = 0;
+		totalCargo = 0;
+		int i;
+		for (i = 0; i < m.m_Barrels.Count(); i++)
+		{
+			Exor_Barrel_Base b = m.m_Barrels.Get(i);
+			if (b && b.IsOpen())
+			{
+				n++;
+				totalCargo += b.ExorCargoCount();
+			}
+		}
+		return n;
+	}
+
 	static void RegisterVehicle(CarScript car)
 	{
 		if (Get().m_Vehicles.Find(car) == -1)
@@ -116,9 +136,10 @@ class ExorVO_Manager
 		int now = GetGame().GetTime();
 		int i;
 
-		// --- Barriles: reconcile de arranque (THROTTLE) + auto-cierre + virtualizacion (THROTTLE) ---
+		// --- Barriles: reconcile de arranque (THROTTLE) + auto-cierre + virtualizacion (THROTTLE) + snapshot (THROTTLE) ---
 		int budget = ExorStorageConstants.MAX_VIRT_PER_TICK;
 		int reconcileBudget = ExorStorageConstants.MAX_RECONCILE_PER_TICK;
+		int snapBudget = ExorStorageConstants.MAX_SNAPSHOT_PER_TICK;
 		for (i = m_Barrels.Count() - 1; i >= 0; i--)
 		{
 			Exor_Barrel_Base barrel = m_Barrels.Get(i);
@@ -137,10 +158,14 @@ class ExorVO_Manager
 				barrel.ExorReconcileNow();
 				reconcileBudget--;
 			}
-			// allowVirtualize=budget>0: si se acabo el cupo de este tick, el barril igual
-			// se auto-cierra pero NO virtualiza (lo hara en el proximo tick) -> sin pico.
-			if (barrel.ExorTick(now, cfg.storage, budget > 0))
+			// allowVirtualize=budget>0 y allowSnapshot=snapBudget>0: si se acabo el cupo de
+			// este tick, el barril se auto-cierra igual pero difiere virtualizar/snapshot al
+			// proximo tick -> sin pico de CPU (virtualizar) ni de I/O a disco (snapshot).
+			bool didSnap;
+			if (barrel.ExorTick(now, cfg.storage, budget > 0, snapBudget > 0, didSnap))
 				budget--;
+			if (didSnap)
+				snapBudget--;
 		}
 
 		// --- Bolsas de cadaver: TTL + virtualizar por lejania ---

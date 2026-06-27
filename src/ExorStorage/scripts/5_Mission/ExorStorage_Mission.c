@@ -68,13 +68,16 @@ modded class MissionServer
 		// que respete los JSON del admin aunque no los tenga en su perfil local.
 		if (identity)
 		{
+			// CONFIG_SYNC en TROZOS: el bundle (toggles party/mapa/items/veh/reparacion/autorun)
+			// puede crecer (ej. items.rareza_tabla grande) y pasarse de ~2KB -> "String CORRUPTED".
 			string cfgJson = GetExorConfig().BuildClientJson();
-			player.RPCSingleParam(ExorRPC.CONFIG_SYNC, new Param1<string>(cfgJson), true, identity);
+			ExorNetChunk.Send(player, identity, ExorRPC.CONFIG_SYNC, cfgJson);
 
-			// serverinfo (texto del panel) en su PROPIO RPC: el texto puede ser largo y
-			// metido en el bundle de arriba lo hacia fallar entero por tamaño.
+			// serverinfo (texto del panel): el texto puede ser largo (reglas/territorio/etc.)
+			// y un solo string de RPC > ~2KB revienta la VM del cliente ("String CORRUPTED")
+			// -> se manda en TROZOS y el cliente lo reensambla (ver ExorNetChunk/ExorBigStringRx).
 			string siJson = GetExorConfig().BuildServerInfoJson();
-			player.RPCSingleParam(ExorRPC.SERVERINFO_SYNC, new Param1<string>(siJson), true, identity);
+			ExorNetChunk.Send(player, identity, ExorRPC.SERVERINFO_SYNC, siJson);
 
 			// avisar al cliente si es VIP (para features VIP client-side, ej. distancia en marcas)
 			bool isVip = GetExorConfig().vip.IsVip(identity.GetPlainId());

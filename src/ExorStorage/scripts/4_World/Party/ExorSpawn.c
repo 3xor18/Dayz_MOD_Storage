@@ -274,7 +274,7 @@ class ExorSpawn
 		JsonSerializer js = new JsonSerializer();
 		string data;
 		js.WriteToString(dto, false, data);
-		player.RPCSingleParam(ExorRPC.SPAWN_OPEN, new Param1<string>(data), true, player.GetIdentity());
+		ExorNetChunk.Send(player, player.GetIdentity(), ExorRPC.SPAWN_OPEN, data);
 	}
 
 	// El jugador eligio (index >=0 = punto; -1 = base). Teleporta si corresponde.

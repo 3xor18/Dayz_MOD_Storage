@@ -547,9 +547,11 @@ modded class PlayerBase
 				break;
 			case ExorRPC.SERVERINFO_SYNC:
 			{
-				Param1<string> sip = new Param1<string>("");
-				if (ctx.Read(sip))
-					ExorConfig.ApplyServerInfoJson(sip.param1);
+				// Llega en TROZOS (ExorNetChunk): reensamblar; aplicar SOLO cuando esta completo.
+				// Asi nunca se lee un string > ~2KB (que reventaba la VM: "String CORRUPTED").
+				string siFull = ExorBigStringRx.Feed(ExorRPC.SERVERINFO_SYNC, ctx);
+				if (siFull != "")
+					ExorConfig.ApplyServerInfoJson(siFull);
 				break;
 			}
 			case ExorRPC.VIP_STATUS:
@@ -574,8 +576,8 @@ modded class PlayerBase
 				if (GetGame().IsServer())
 				{
 					string sj = ExorStats.Get().BuildJson();
-					Print(string.Format("%1 SCORE_REQ recibido -> enviando %2 chars de leaderboard", ExorStorageConstants.LOG, sj.Length()));
-					RPCSingleParam(ExorRPC.SCORE_DATA, new Param1<string>(sj), true, GetIdentity());
+					Print(string.Format("%1 SCORE_REQ recibido -> enviando %2 chars de leaderboard (en trozos)", ExorStorageConstants.LOG, sj.Length()));
+					ExorNetChunk.Send(this, GetIdentity(), ExorRPC.SCORE_DATA, sj);
 				}
 				break;
 			case ExorRPC.SCORE_DATA:
@@ -660,13 +662,13 @@ modded class PlayerBase
 	// Leaderboard recibido (cliente): lo cachea para que lo lea el menu.
 	void ExorOnScoreData(ParamsReadContext ctx)
 	{
-		Param1<string> p = new Param1<string>("");
-		if (!ctx.Read(p))
-			return;
+		string full = ExorBigStringRx.Feed(ExorRPC.SCORE_DATA, ctx);
+		if (full == "")
+			return;	// aun faltan trozos
 		ExorStatsFile f = new ExorStatsFile();
 		JsonSerializer js = new JsonSerializer();
 		string err;
-		if (!js.ReadFromString(f, p.param1, err))
+		if (!js.ReadFromString(f, full, err))
 		{
 			Print(string.Format("%1 cliente SCORE_DATA parse FALLO: %2", ExorStorageConstants.LOG, err));
 			return;
@@ -698,14 +700,14 @@ modded class PlayerBase
 
 	void ExorOnRosterSync(ParamsReadContext ctx)
 	{
-		Param1<string> p = new Param1<string>("");
-		if (!ctx.Read(p))
-			return;
+		string full = ExorBigStringRx.Feed(ExorRPC.ROSTER_SYNC, ctx);
+		if (full == "")
+			return;	// aun faltan trozos
 
 		ExorRosterDTO dto = new ExorRosterDTO();
 		JsonSerializer js = new JsonSerializer();
 		string err;
-		if (js.ReadFromString(dto, p.param1, err))
+		if (js.ReadFromString(dto, full, err))
 		{
 			m_ExorRoster = dto;
 			if (dto.group_id != "")
@@ -728,14 +730,14 @@ modded class PlayerBase
 
 	void ExorOnTerritorySync(ParamsReadContext ctx)
 	{
-		Param1<string> p = new Param1<string>("");
-		if (!ctx.Read(p))
-			return;
+		string full = ExorBigStringRx.Feed(ExorRPC.TERRITORY_SYNC, ctx);
+		if (full == "")
+			return;	// aun faltan trozos
 
 		ExorTerritoryCacheDTO dto = new ExorTerritoryCacheDTO();
 		JsonSerializer js = new JsonSerializer();
 		string err;
-		if (js.ReadFromString(dto, p.param1, err))
+		if (js.ReadFromString(dto, full, err))
 		{
 			ExorTerritoryClient.SetCache(dto);
 		}
@@ -755,35 +757,35 @@ modded class PlayerBase
 
 	void ExorOnMarkerSync(ParamsReadContext ctx)
 	{
-		Param1<string> p = new Param1<string>("");
-		if (!ctx.Read(p))
-			return;
+		string full = ExorBigStringRx.Feed(ExorRPC.MARKER_SYNC, ctx);
+		if (full == "")
+			return;	// aun faltan trozos
 		ExorMarkersDTO dto = new ExorMarkersDTO();
 		JsonSerializer js = new JsonSerializer();
 		string err;
-		if (js.ReadFromString(dto, p.param1, err))
+		if (js.ReadFromString(dto, full, err))
 			ExorPartyClient.SetMarkers(dto);
 	}
 
-	// Cliente: recibe la config del server y la aplica sobre el singleton local.
+	// Cliente: recibe la config del server (en trozos) y la aplica sobre el singleton local.
 	void ExorOnConfigSync(ParamsReadContext ctx)
 	{
-		Param1<string> p = new Param1<string>("");
-		if (!ctx.Read(p))
-			return;
-		ExorConfig.ApplyClientJson(p.param1);
+		string full = ExorBigStringRx.Feed(ExorRPC.CONFIG_SYNC, ctx);
+		if (full == "")
+			return;	// aun faltan trozos
+		ExorConfig.ApplyClientJson(full);
 	}
 
 	// Cliente: recibe la lista y abre la pantalla de seleccion de spawn.
 	void ExorOnSpawnOpen(ParamsReadContext ctx)
 	{
-		Param1<string> p = new Param1<string>("");
-		if (!ctx.Read(p))
-			return;
+		string full = ExorBigStringRx.Feed(ExorRPC.SPAWN_OPEN, ctx);
+		if (full == "")
+			return;	// aun faltan trozos
 		ExorSpawnMenuDTO dto = new ExorSpawnMenuDTO();
 		JsonSerializer js = new JsonSerializer();
 		string err;
-		if (js.ReadFromString(dto, p.param1, err))
+		if (js.ReadFromString(dto, full, err))
 		{
 			ExorSpawnClient.Set(dto);
 			Print("[3xorVO] cliente: SPAWN_OPEN recibido, abriendo menu");

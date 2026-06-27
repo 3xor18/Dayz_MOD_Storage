@@ -4,7 +4,7 @@
 class ExorStorageConstants
 {
 	static const string MOD_NAME = "3xor_Vanilla_Optimization";
-	static const string MOD_VERSION = "2.5.0";
+	static const string MOD_VERSION = "2.5.1";
 	static const string LOG = "[3xorVO]";
 	// DEBUG temporal del ciclo de vida del barril (setear/levantar/abrir/cerrar/item
 	// in-out/virtualizar/restaurar/load/save/shutdown). Poner en false (o borrar las
@@ -71,6 +71,11 @@ class ExorStorageConstants
 	// Maximo de barriles que se virtualizan por tick (anti-pico: si muchos quedan
 	// idle a la vez, ej. tras un raid, se reparten en varios ticks).
 	static const int MAX_VIRT_PER_TICK = 15;
+	// Maximo de snapshots EN VIVO (escritura del JSON a disco) por tick. El guardado
+	// es I/O sincrona en el hilo del juego; si muchos barriles activos cambian a la vez
+	// (raid), encadenar las escrituras genera hitch -> se reparten en varios ticks. El
+	// que no entra escribe el proximo tick (el flag dirty persiste, no se pierde nada).
+	static const int MAX_SNAPSHOT_PER_TICK = 12;
 	// Maximo de barriles que RECONCILIAN (limpian stale + scan del piso) por tick. El
 	// reconcile es lo CARO del arranque tras un crash (GetObjectsAtPosition 12m por barril
 	// que quedo sin virtualizar). Repartirlo evita un hitch al cargar bases con muchos

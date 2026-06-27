@@ -168,7 +168,7 @@ class ExorPartyLive
 		ExorMarkersDTO emptyMk = new ExorMarkersDTO();
 		string d2;
 		js.WriteToString(emptyMk, false, d2);
-		p.RPCSingleParam(ExorRPC.MARKER_SYNC, new Param1<string>(d2), true, p.GetIdentity());
+		ExorNetChunk.Send(p, p.GetIdentity(), ExorRPC.MARKER_SYNC, d2);
 	}
 
 	// ------------------------- marcas -------------------------
@@ -288,7 +288,7 @@ class ExorPartyLive
 		{
 			PlayerBase rcv = ExorGroupManager.Get().FindOnline(g.members.Get(i).steamid);
 			if (rcv && rcv.GetIdentity())
-				rcv.RPCSingleParam(ExorRPC.MARKER_SYNC, new Param1<string>(data), true, rcv.GetIdentity());
+				ExorNetChunk.Send(rcv, rcv.GetIdentity(), ExorRPC.MARKER_SYNC, data);
 		}
 	}
 }

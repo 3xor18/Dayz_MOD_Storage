@@ -196,14 +196,11 @@ class ExorTerritoryManager
 
 		// SOLO los mastiles CERCA del jugador. El cliente usa este cache para el preview de
 		// construccion (estas en territorio de alguien?), NO necesita todos los del mapa.
-		// Ademas el cache viaja en UN string de RPC y DayZ tiene un tope (~2KB): mandar TODOS
-		// los mastiles corrompia el string ("String CORRUPTED - FIX OnStoreLoad()") y el sync
-		// no llegaba. Filtrar por cercania (mas correcto) + tope de bytes mantiene el RPC sano.
+		// El cache viaja en TROZOS (ExorNetChunk) -> ya no hay tope de bytes; el filtro por
+		// cercania queda igual porque es lo CORRECTO (solo importa el territorio donde estas).
 		float SYNC_RANGE = 1500.0;	// alcance horizontal (sobra para el preview)
-		int   MAX_BYTES  = 1700;	// margen seguro bajo el ~2KB del RPC
 
-		// candidatos en rango, ordenados por distancia (los mas cercanos primero -> si por
-		// densidad hay que recortar por tamaño, se dropean los LEJANOS, no los de al lado).
+		// candidatos en rango, ordenados por distancia (los mas cercanos primero).
 		array<TerritoryFlag> near = new array<TerritoryFlag>;
 		int i;
 		for (i = 0; i < m_Masts.Count(); i++)
@@ -234,6 +231,10 @@ class ExorTerritoryManager
 			}
 		}
 
+		// Se mandan TODAS las zonas cercanas (ya filtradas por SYNC_RANGE y ordenadas por
+		// distancia). Antes habia un tope por bytes (MAX_BYTES) que RECORTABA zonas para no
+		// pasar el limite del RPC; ahora se manda en TROZOS (ExorNetChunk) y el cliente
+		// reensambla -> ya no se pierden zonas por tamaño.
 		ExorTerritoryCacheDTO dto = new ExorTerritoryCacheDTO();
 		JsonSerializer js = new JsonSerializer();
 		string data = "";
@@ -247,19 +248,9 @@ class ExorTerritoryManager
 			z.radius = radius;
 			z.mine = (myGroupId != "" && m2.ExorGetGroupId() == myGroupId);
 			dto.zones.Insert(z);
-			// tope de tamaño: si esta zona paso el limite del RPC, sacarla y cortar
-			string probe;
-			js.WriteToString(dto, false, probe);
-			if (probe.Length() > MAX_BYTES)
-			{
-				dto.zones.Remove(dto.zones.Count() - 1);
-				break;
-			}
-			data = probe;
 		}
-		if (data == "")	// ninguna zona cerca -> cache vacio valido
-			js.WriteToString(dto, false, data);
-		p.RPCSingleParam(ExorRPC.TERRITORY_SYNC, new Param1<string>(data), true, p.GetIdentity());
+		js.WriteToString(dto, false, data);
+		ExorNetChunk.Send(p, p.GetIdentity(), ExorRPC.TERRITORY_SYNC, data);
 	}
 }
 
