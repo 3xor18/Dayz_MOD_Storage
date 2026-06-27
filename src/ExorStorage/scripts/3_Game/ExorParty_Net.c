@@ -35,6 +35,16 @@ class ExorRPC
 	static const int VIP_STATUS     = 49236;	// S -> C: si el jugador local es VIP (para features VIP del cliente, ej. distancia en marcas)
 	static const int SERVERINFO_SYNC = 49237;	// S -> C: texto del panel Server Info (RPC propio: el bundle CONFIG_SYNC se pasaba de tamaño)
 	static const int AUTORUN_SET    = 49238;	// C -> S: estado del auto-run del jugador (para que el server tambien simule y no haya rubber-band)
+	static const int POP_REQ        = 49239;	// C -> S: pedir la cantidad de jugadores conectados (al abrir el mapa, refrescado)
+	static const int POP_COUNT      = 49240;	// S -> C: cantidad de jugadores conectados (para el contador del mapa)
+}
+
+// Cache cliente: cantidad de jugadores conectados (la setea el server por POP_COUNT).
+// El cliente solo conoce a los players de su burbuja de red, asi que el total real lo
+// tiene que mandar el server. Lo lee el contador del mapa.
+class ExorPopClient
+{
+	static int s_Count;
 }
 
 // ============================================================================

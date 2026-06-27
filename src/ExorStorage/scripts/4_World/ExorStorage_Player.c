@@ -583,6 +583,21 @@ modded class PlayerBase
 			case ExorRPC.SCORE_DATA:
 				ExorOnScoreData(ctx);
 				break;
+			case ExorRPC.POP_REQ:
+				if (GetGame().IsServer())
+				{
+					array<Man> pl = new array<Man>;
+					GetGame().GetPlayers(pl);
+					RPCSingleParam(ExorRPC.POP_COUNT, new Param1<int>(pl.Count()), true, GetIdentity());
+				}
+				break;
+			case ExorRPC.POP_COUNT:
+			{
+				Param1<int> pc = new Param1<int>(0);
+				if (ctx.Read(pc))
+					ExorPopClient.s_Count = pc.param1;
+				break;
+			}
 			case ExorRPC.CHAT_SEND:
 				if (GetGame().IsServer())
 				{
@@ -657,6 +672,12 @@ modded class PlayerBase
 	void ExorReqScore()
 	{
 		RPCSingleParam(ExorRPC.SCORE_REQ, new Param1<int>(0), true, null);
+	}
+
+	// Pide al server la cantidad de jugadores conectados (cliente, al abrir/refrescar el mapa).
+	void ExorReqPop()
+	{
+		RPCSingleParam(ExorRPC.POP_REQ, new Param1<int>(0), true, null);
 	}
 
 	// Leaderboard recibido (cliente): lo cachea para que lo lea el menu.

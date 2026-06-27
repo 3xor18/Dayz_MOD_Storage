@@ -11,9 +11,12 @@
 class ExorMapMenu extends UIScriptedMenu
 {
 	protected MapWidget m_Map;
+	protected TextWidget m_PopText;	// header: "Jugadores conectados: N"
+	protected float m_PopAcc;	// acumulador para re-pedir el conteo de conectados
 	protected bool m_MReleased;	// la M que abrio el mapa todavia esta apretada: esperar a soltarla
 	protected bool m_EscReleased;	// igual para ESC: tras cancelar el input con ESC, re-pedir soltar antes de cerrar el mapa
 	protected bool m_Centered;	// ya se centro el mapa en el jugador (1ra vez en Update)
+	protected int m_CenterApplied;	// frames que se re-aplico el centrado (fuerza el redibujado del mapa)
 	protected float m_RefreshAcc;	// acumulador para refrescar marcas (posicion viva) cada X seg
 
 	// marcas personales (PIN)
@@ -39,6 +42,7 @@ class ExorMapMenu extends UIScriptedMenu
 		if (!layoutRoot)
 			return null;
 		m_Map = MapWidget.Cast(layoutRoot.FindAnyWidget("ExorMapWidget"));
+		m_PopText = TextWidget.Cast(layoutRoot.FindAnyWidget("ExorPopText"));
 
 		m_Hint    = TextWidget.Cast(layoutRoot.FindAnyWidget("ExorMapHint"));
 		m_BtnNew  = ButtonWidget.Cast(layoutRoot.FindAnyWidget("btn_new_pin"));
@@ -63,6 +67,11 @@ class ExorMapMenu extends UIScriptedMenu
 		}
 
 		UpdateHint();
+
+		// pedir YA la cantidad de jugadores conectados (el server responde por POP_COUNT)
+		PlayerBase pp = PlayerBase.Cast(GetGame().GetPlayer());
+		if (pp)
+			pp.ExorReqPop();
 
 		// El centrado real se hace en el 1er tick del Update (aca el widget aun no
 		// tiene tamaño, asi que SetMapPos no agarra y el mapa abre descentrado).
@@ -254,6 +263,10 @@ class ExorMapMenu extends UIScriptedMenu
 		super.OnShow();
 		GetGame().GetInput().ChangeGameFocus(1);
 		GetGame().GetUIManager().ShowUICursor(true);
+		// esconder el HUD del juego (quickbar 1-8, stamina, iconos) para que no se dibuje
+		// ENCIMA del mapa. Se restaura en OnHide.
+		if (GetGame().GetMission() && GetGame().GetMission().GetHud())
+			GetGame().GetMission().GetHud().Show(false);
 	}
 
 	override void OnHide()
@@ -261,6 +274,8 @@ class ExorMapMenu extends UIScriptedMenu
 		super.OnHide();
 		GetGame().GetUIManager().ShowUICursor(false);
 		GetGame().GetInput().ChangeGameFocus(-1);
+		if (GetGame().GetMission() && GetGame().GetMission().GetHud())
+			GetGame().GetMission().GetHud().Show(true);
 	}
 
 	override bool OnKeyPress(Widget w, int x, int y, int key)
@@ -285,15 +300,25 @@ class ExorMapMenu extends UIScriptedMenu
 	{
 		super.Update(timeslice);
 
-		// Centrar + zoom en TU posicion la 1ra vez (ya con el mapa dimensionado).
+		// Centrar + zoom en TU posicion al abrir. CLAVE: hacerlo recien cuando el MapWidget
+		// YA tiene tamaño real (GetScreenSize>0); si se hace en el 1er frame (size 0), el
+		// SetMapPos no agarra y queda una FRANJA gris sin redibujar a la derecha hasta panear.
+		// Ademas se re-aplica unos frames para forzar el redibujado completo del mapa.
 		if (!m_Centered && m_Map)
 		{
 			PlayerBase me = PlayerBase.Cast(GetGame().GetPlayer());
 			if (me)
 			{
-				m_Map.SetScale(0.18);
-				m_Map.SetMapPos(me.GetPosition());
-				m_Centered = true;
+				float mw, mh;
+				m_Map.GetScreenSize(mw, mh);
+				if (mw > 1)	// el widget ya esta dimensionado
+				{
+					m_Map.SetScale(0.18);
+					m_Map.SetMapPos(me.GetPosition());
+					m_CenterApplied++;
+					if (m_CenterApplied >= 5)
+						m_Centered = true;
+				}
 			}
 		}
 
@@ -306,6 +331,18 @@ class ExorMapMenu extends UIScriptedMenu
 		{
 			m_RefreshAcc = 0;
 			RefreshMarks();
+		}
+
+		// contador de conectados: mostrar el ultimo valor recibido + re-pedir cada ~2s
+		if (m_PopText)
+			m_PopText.SetText("Jugadores conectados: " + ExorPopClient.s_Count.ToString());
+		m_PopAcc += timeslice;
+		if (m_PopAcc >= 2.0)
+		{
+			m_PopAcc = 0;
+			PlayerBase pp = PlayerBase.Cast(GetGame().GetPlayer());
+			if (pp)
+				pp.ExorReqPop();
 		}
 
 		// Mientras se escribe el nombre, NO cerrar el mapa con M/ESC (la M es texto;
