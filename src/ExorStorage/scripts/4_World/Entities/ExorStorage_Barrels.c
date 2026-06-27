@@ -241,7 +241,7 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	// (hitch en raids con muchos barriles activos a la vez), el manager reparte un cupo de
 	// snapshots por tick (MAX_SNAPSHOT_PER_TICK); el barril que no entra escribe el proximo
 	// tick (el flag dirty persiste). didSnapshot avisa al manager para descontar el cupo.
-	bool ExorTick(int now, ExorCfgStorage settings, bool allowVirtualize, bool allowSnapshot, out bool didSnapshot)
+	bool ExorTick(int now, ExorCfgStorage settings, bool allowVirtualize, bool allowSnapshot, array<Man> players, out bool didSnapshot)
 	{
 		didSnapshot = false;
 		// El reconcile lo dispara el manager (con presupuesto por tick) o la apertura.
@@ -259,7 +259,7 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		// DESPUES de que el ultimo jugador se aleja. (EECargoIn/Out tambien resetean.)
 		if (IsOpen())
 		{
-			if (ExorVO_Manager.IsAlivePlayerNear(GetPosition(), settings.cerrar_distancia_metros))
+			if (ExorVO_Manager.IsAlivePlayerNearList(players, GetPosition(), settings.cerrar_distancia_metros))
 				m_ExorLastInteractMs = now;
 			// GUARDADO EN VIVO (con cupo del manager): si hubo cambios de cargo, volcar el
 			// contenido al JSON. SOLO si NO esta virtualizado (un virtualizado tiene cargo

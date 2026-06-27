@@ -136,6 +136,13 @@ class ExorVO_Manager
 		int now = GetGame().GetTime();
 		int i;
 
+		// lista de players obtenida UNA vez para este tick (la reusan todos los barriles en
+		// vez de llamar GetPlayers() por cada barril abierto). De paso, cachear el conteo de
+		// conectados para POP_REQ (el contador del mapa) sin re-escanear por request.
+		array<Man> players = new array<Man>;
+		GetGame().GetPlayers(players);
+		s_PopCount = players.Count();
+
 		// --- Barriles: reconcile de arranque (THROTTLE) + auto-cierre + virtualizacion (THROTTLE) + snapshot (THROTTLE) ---
 		int budget = ExorStorageConstants.MAX_VIRT_PER_TICK;
 		int reconcileBudget = ExorStorageConstants.MAX_RECONCILE_PER_TICK;
@@ -162,7 +169,7 @@ class ExorVO_Manager
 			// este tick, el barril se auto-cierra igual pero difiere virtualizar/snapshot al
 			// proximo tick -> sin pico de CPU (virtualizar) ni de I/O a disco (snapshot).
 			bool didSnap;
-			if (barrel.ExorTick(now, cfg.storage, budget > 0, snapBudget > 0, didSnap))
+			if (barrel.ExorTick(now, cfg.storage, budget > 0, snapBudget > 0, players, didSnap))
 				budget--;
 			if (didSnap)
 				snapBudget--;
@@ -189,11 +196,18 @@ class ExorVO_Manager
 		int now = GetGame().GetTime();
 		int i;
 
+		// volcar stats pendientes a disco (1 sola escritura cada 30s, no por cada kill)
+		ExorStats.Get().FlushIfDirty();
+
 		// --- Vehiculos: dormir los inactivos ---
 		if (!veh.vehiculos_dormir)
 			return;
 		if (veh.vehiculos_dormir_minutos <= 0)
 			return;
+
+		// players obtenidos UNA vez para todos los chequeos de distancia de este tick
+		array<Man> players = new array<Man>;
+		GetGame().GetPlayers(players);
 
 		int sleepMs = veh.vehiculos_dormir_minutos * 60000;
 		int dormidos = 0;
@@ -222,7 +236,7 @@ class ExorVO_Manager
 				continue;
 			if (veh.vehiculos_excluidos.Find(car.GetType()) != -1)
 				continue;
-			if (IsPlayerNear(car.GetPosition(), veh.vehiculos_despertar_metros))
+			if (IsPlayerNearList(players, car.GetPosition(), veh.vehiculos_despertar_metros))
 				continue;
 
 			car.ExorSleep();
@@ -256,6 +270,10 @@ class ExorVO_Manager
 		if (!veh.vehiculos_dormir)
 			return;
 
+		// players obtenidos UNA vez para todos los chequeos de distancia de este tick
+		array<Man> players = new array<Man>;
+		GetGame().GetPlayers(players);
+
 		int i;
 		for (i = m_Vehicles.Count() - 1; i >= 0; i--)
 		{
@@ -267,17 +285,27 @@ class ExorVO_Manager
 			}
 			if (!car.ExorIsSleeping())
 				continue;
-			if (IsPlayerNear(car.GetPosition(), veh.vehiculos_despertar_metros))
+			if (IsPlayerNearList(players, car.GetPosition(), veh.vehiculos_despertar_metros))
 			{
 				car.ExorWake();
 			}
 		}
 	}
 
+	// Contador de jugadores conectados, CACHEADO (lo refresca BarrelTick reusando la lista
+	// que ya obtiene). POP_REQ responde este valor -> sin GetPlayers() por request.
+	static int s_PopCount;
+
 	static bool IsPlayerNear(vector pos, float radius)
 	{
 		array<Man> players = new array<Man>;
 		GetGame().GetPlayers(players);
+		return IsPlayerNearList(players, pos, radius);
+	}
+
+	// Version que reusa una lista ya obtenida (para no llamar GetPlayers por cada entidad).
+	static bool IsPlayerNearList(array<Man> players, vector pos, float radius)
+	{
 		int i;
 		for (i = 0; i < players.Count(); i++)
 		{
@@ -293,6 +321,11 @@ class ExorVO_Manager
 	{
 		array<Man> players = new array<Man>;
 		GetGame().GetPlayers(players);
+		return IsAlivePlayerNearList(players, pos, radius);
+	}
+
+	static bool IsAlivePlayerNearList(array<Man> players, vector pos, float radius)
+	{
 		int i;
 		for (i = 0; i < players.Count(); i++)
 		{

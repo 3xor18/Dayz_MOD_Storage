@@ -15,6 +15,8 @@ class ExorLiveMember
 	float z;
 	float health;   // 0..1
 	bool is_self;   // si es el propio jugador que recibe (el HUD lo saltea)
+	int nid_low;    // network ID del player (para que el cliente resuelva su ENTIDAD real
+	int nid_high;   // y use su posicion VIVA/interpolada cuando esta en la burbuja = sin lag)
 }
 
 class ExorLiveDTO
@@ -70,11 +72,11 @@ class ExorPartyLive
 	{
 		if (!GetGame().IsServer())
 			return;
-		// 125 ms (8 Hz): a 1 Hz el nombre/HUD del compañero se quedaba quieto y
-		// "saltaba" al moverse; a 4 Hz quedaba casi perfecto, a 8 Hz fluido. Carga
-		// de red despreciable (party chico, MEMBER_SYNC va sin confirmacion). Bajar
-		// mas de 125 ms es rendimiento decreciente (no se nota y gasta al pedo).
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().Tick, 125, true);
+		// 250 ms (4 Hz): la fluidez del nombre del compañero CERCANO ya NO depende de este
+		// rate -> el cliente usa la ENTIDAD real (interpolada por el motor) cuando esta en la
+		// burbuja (ver ExorNameplates + nid). Este sync solo alimenta a los LEJANOS (HUD/
+		// distancia), donde 4 Hz sobra. Antes era 8 Hz (125 ms) para tapar el lag del nombre.
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().Tick, 250, true);
 	}
 
 	void Tick()
@@ -92,24 +94,29 @@ class ExorPartyLive
 		if (!cg.habilitado || !cg.mostrar_posicion_miembros)
 			return;
 
+		// indice online armado UNA vez por tick (antes PushGroup llamaba FindOnline ->
+		// GetPlayers() 2 veces por miembro por grupo = O(grupos*miembros*players) a 4 Hz).
+		map<string, PlayerBase> idx = new map<string, PlayerBase>;
+		ExorGroupManager.Get().BuildOnlineIndex(idx);
+
 		array<ref ExorGroup> groups = ExorGroupManager.Get().m_Groups;
 		int gi;
 		for (gi = 0; gi < groups.Count(); gi++)
 		{
 			ExorGroup g = groups.Get(gi);
-			PushGroup(g);
+			PushGroup(g, idx);
 		}
 	}
 
-	void PushGroup(ExorGroup g)
+	void PushGroup(ExorGroup g, map<string, PlayerBase> idx)
 	{
 		// recolectar miembros online con su pos/vida (ref: si no, se liberan antes de usarlos)
 		array<ref ExorLiveMember> live = new array<ref ExorLiveMember>;
 		int i;
 		for (i = 0; i < g.members.Count(); i++)
 		{
-			PlayerBase pb = ExorGroupManager.Get().FindOnline(g.members.Get(i).steamid);
-			if (!pb)
+			PlayerBase pb;
+			if (!idx.Find(g.members.Get(i).steamid, pb) || !pb)
 				continue;
 			ExorLiveMember lm = new ExorLiveMember();
 			lm.steamid = g.members.Get(i).steamid;
@@ -117,14 +124,20 @@ class ExorPartyLive
 			vector p = pb.GetPosition();
 			lm.x = p[0]; lm.y = p[1]; lm.z = p[2];
 			lm.health = pb.GetHealth01("", "");
+			// network ID del player -> el cliente resuelve su entidad real (si esta en la
+			// burbuja) y usa la pos VIVA/interpolada por el motor = nombre sin lag al correr.
+			int nlo, nhi;
+			pb.GetNetworkID(nlo, nhi);
+			lm.nid_low = nlo;
+			lm.nid_high = nhi;
 			live.Insert(lm);
 		}
 
 		// enviar a cada miembro online (con is_self marcado para ese receptor)
 		for (i = 0; i < g.members.Count(); i++)
 		{
-			PlayerBase rcv = ExorGroupManager.Get().FindOnline(g.members.Get(i).steamid);
-			if (!rcv || !rcv.GetIdentity())
+			PlayerBase rcv;
+			if (!idx.Find(g.members.Get(i).steamid, rcv) || !rcv || !rcv.GetIdentity())
 				continue;
 			string rsid = g.members.Get(i).steamid;
 
@@ -138,6 +151,8 @@ class ExorPartyLive
 				cp.name = src.name;
 				cp.x = src.x; cp.y = src.y; cp.z = src.z;
 				cp.health = src.health;
+				cp.nid_low = src.nid_low;
+				cp.nid_high = src.nid_high;
 				cp.is_self = (src.steamid == rsid);
 				dto.members.Insert(cp);
 			}

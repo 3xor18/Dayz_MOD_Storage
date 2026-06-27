@@ -199,9 +199,12 @@ class ExorTerritoryManager
 		// El cache viaja en TROZOS (ExorNetChunk) -> ya no hay tope de bytes; el filtro por
 		// cercania queda igual porque es lo CORRECTO (solo importa el territorio donde estas).
 		float SYNC_RANGE = 1500.0;	// alcance horizontal (sobra para el preview)
+		float maxD2 = SYNC_RANGE * SYNC_RANGE;
+		int MAX_ZONES = 40;	// tope de zonas a sincronizar (mas que suficiente para el preview cercano)
 
-		// candidatos en rango, ordenados por distancia (los mas cercanos primero).
+		// candidatos en rango con su distancia^2 (sin sqrt en el loop)
 		array<TerritoryFlag> near = new array<TerritoryFlag>;
+		array<float> nearD = new array<float>;
 		int i;
 		for (i = 0; i < m_Masts.Count(); i++)
 		{
@@ -209,36 +212,42 @@ class ExorTerritoryManager
 			if (!m)
 				continue;
 			vector dd = m.GetPosition() - ppos;
-			dd[1] = 0;
-			if (dd.Length() <= SYNC_RANGE)
-				near.Insert(m);
+			float d2 = dd[0] * dd[0] + dd[2] * dd[2];	// horizontal (ignora altura)
+			if (d2 > maxD2)
+				continue;
+			near.Insert(m);
+			nearD.Insert(d2);
 		}
-		// bubble sort por distancia ascendente (listas chicas)
-		int nn = near.Count();
-		int j;
-		for (i = 0; i < nn - 1; i++)
+
+		// SELECCION PARCIAL: dejar ordenados solo los primeros min(MAX_ZONES, count) por
+		// distancia (O(n*N), N=40 acotado) en vez de un bubble sort O(n^2) de todos los
+		// mastiles -> escala con muchas bases. Solo esos top-N se sincronizan.
+		int cnt = near.Count();
+		int lim = cnt;
+		if (lim > MAX_ZONES)
+			lim = MAX_ZONES;
+		int k;
+		for (k = 0; k < lim; k++)
 		{
-			for (j = 0; j < nn - 1 - i; j++)
+			int best = k;
+			int j;
+			for (j = k + 1; j < cnt; j++)
 			{
-				vector da = near.Get(j).GetPosition() - ppos;      da[1] = 0;
-				vector db = near.Get(j + 1).GetPosition() - ppos;  db[1] = 0;
-				if (db.Length() < da.Length())
-				{
-					TerritoryFlag tmp = near.Get(j);
-					near.Set(j, near.Get(j + 1));
-					near.Set(j + 1, tmp);
-				}
+				if (nearD.Get(j) < nearD.Get(best))
+					best = j;
+			}
+			if (best != k)
+			{
+				TerritoryFlag tf = near.Get(k); near.Set(k, near.Get(best)); near.Set(best, tf);
+				float df = nearD.Get(k); nearD.Set(k, nearD.Get(best)); nearD.Set(best, df);
 			}
 		}
 
-		// Se mandan TODAS las zonas cercanas (ya filtradas por SYNC_RANGE y ordenadas por
-		// distancia). Antes habia un tope por bytes (MAX_BYTES) que RECORTABA zonas para no
-		// pasar el limite del RPC; ahora se manda en TROZOS (ExorNetChunk) y el cliente
-		// reensambla -> ya no se pierden zonas por tamaño.
+		// solo se mandan las top-N zonas mas cercanas (en TROZOS via ExorNetChunk).
 		ExorTerritoryCacheDTO dto = new ExorTerritoryCacheDTO();
 		JsonSerializer js = new JsonSerializer();
 		string data = "";
-		for (i = 0; i < near.Count(); i++)
+		for (i = 0; i < lim; i++)
 		{
 			TerritoryFlag m2 = near.Get(i);
 			ExorTerritoryZone z = new ExorTerritoryZone();

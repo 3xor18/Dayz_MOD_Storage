@@ -586,9 +586,8 @@ modded class PlayerBase
 			case ExorRPC.POP_REQ:
 				if (GetGame().IsServer())
 				{
-					array<Man> pl = new array<Man>;
-					GetGame().GetPlayers(pl);
-					RPCSingleParam(ExorRPC.POP_COUNT, new Param1<int>(pl.Count()), true, GetIdentity());
+					// usar el conteo CACHEADO (lo refresca BarrelTick cada 5s) -> sin GetPlayers por request
+					RPCSingleParam(ExorRPC.POP_COUNT, new Param1<int>(ExorVO_Manager.s_PopCount), true, GetIdentity());
 				}
 				break;
 			case ExorRPC.POP_COUNT:

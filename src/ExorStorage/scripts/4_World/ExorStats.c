@@ -10,6 +10,7 @@ class ExorStats
 	private static ref ExorStats s_Inst;
 	protected ref map<string, ref ExorStatRow> m_Rows;
 	protected bool m_Loaded;
+	protected bool m_Dirty;	// hay cambios sin volcar a disco (se flushea por tick, no por evento)
 
 	static ExorStats Get()
 	{
@@ -64,7 +65,7 @@ class ExorStats
 			r.max_dist = dist;
 			r.max_weapon = weapon;
 		}
-		Save();
+		m_Dirty = true;	// se vuelca a disco en el flush periodico, no en cada kill
 	}
 
 	void AddDeath(string sid, string name)
@@ -73,7 +74,7 @@ class ExorStats
 			return;
 		ExorStatRow r = Ensure(sid, name);
 		r.deaths = r.deaths + 1;
-		Save();
+		m_Dirty = true;
 	}
 
 	void AddSuicide(string sid, string name)
@@ -82,6 +83,16 @@ class ExorStats
 			return;
 		ExorStatRow r = Ensure(sid, name);
 		r.suicides = r.suicides + 1;
+		m_Dirty = true;
+	}
+
+	// Vuelca a disco SOLO si hay cambios. El server lo llama periodicamente (tick de 30s)
+	// y al apagar, en vez de escribir el archivo entero en CADA kill/death (I/O sincrona
+	// en el hilo del juego -> hitches en picos de PvP a 50 pop).
+	void FlushIfDirty()
+	{
+		if (!m_Dirty)
+			return;
 		Save();
 	}
 
@@ -93,6 +104,7 @@ class ExorStats
 		foreach (string k, ExorStatRow r : m_Rows)
 			f.rows.Insert(r);
 		JsonFileLoader<ExorStatsFile>.JsonSaveFile(ExorStorageConstants.STATS_FILE, f);
+		m_Dirty = false;
 	}
 
 	// El leaderboard se manda por SCORE_DATA. DayZ revienta la VM del cliente

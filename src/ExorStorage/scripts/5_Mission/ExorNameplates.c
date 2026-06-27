@@ -84,27 +84,44 @@ class ExorNameplates
 				}
 				else
 				{
-					vector target = Vector(m.x, m.y, m.z);
+					// si el compañero esta en TU burbuja, su entidad real ya esta en el
+					// cliente e interpolada por el motor -> usar SU posicion viva = el nombre
+					// sigue al personaje sin lag (no depende del rate de sync). Si NO esta en
+					// la burbuja (lejano), usar la pos sincronizada suavizada.
+					Object ent = null;
+					if (m.nid_low != 0 || m.nid_high != 0)
+						ent = GetGame().GetObjectByNetworkId(m.nid_low, m.nid_high);
+
 					ExorPlateInterp it;
 					if (!m_Interp.Find(m.steamid, it))
 					{
 						it = new ExorPlateInterp();
-						it.pos = target;	// primera vez: arranca en su lugar (sin barrido)
+						it.pos = Vector(m.x, m.y, m.z);
 						m_Interp.Set(m.steamid, it);
 					}
-					else if (vector.Distance(it.pos, target) > SNAP_DIST)
+
+					if (ent)
 					{
-						it.pos = target;	// teleport/respawn: snap, no arrastrar por el mapa
+						mpos = ent.GetPosition();	// pos viva, motor-interpolada
+						it.pos = mpos;	// mantener la interp al dia (sin salto si sale de burbuja)
 					}
 					else
 					{
-						float a = dt / SMOOTH_TAU;	// frame-rate independiente (escala con dt)
-						if (a > 1) a = 1;
-						if (a < 0) a = 0;
-						it.pos = it.pos + (target - it.pos) * a;
+						vector target = Vector(m.x, m.y, m.z);
+						if (vector.Distance(it.pos, target) > SNAP_DIST)
+						{
+							it.pos = target;	// teleport/respawn: snap, no arrastrar por el mapa
+						}
+						else
+						{
+							float a = dt / SMOOTH_TAU;	// frame-rate independiente (escala con dt)
+							if (a > 1) a = 1;
+							if (a < 0) a = 0;
+							it.pos = it.pos + (target - it.pos) * a;
+						}
+						mpos = it.pos;
 					}
 					it.seen = true;
-					mpos = it.pos;
 				}
 
 				vector world = mpos;

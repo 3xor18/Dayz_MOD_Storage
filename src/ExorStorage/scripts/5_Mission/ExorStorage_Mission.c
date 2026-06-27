@@ -33,6 +33,7 @@ modded class MissionServer
 	override void OnMissionFinish()
 	{
 		ExorVO_Manager.VirtualizeAll();
+		ExorStats.Get().FlushIfDirty();	// volcar stats pendientes antes de apagar
 		super.OnMissionFinish();
 	}
 

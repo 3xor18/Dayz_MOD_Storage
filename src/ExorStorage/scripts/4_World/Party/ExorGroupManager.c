@@ -60,6 +60,25 @@ class ExorGroupManager
 		return null;
 	}
 
+	// Indice steamid->PlayerBase de TODOS los online, armado de UNA pasada. Para los
+	// caminos calientes (ej. ExorPartyLive.Tick a 4 Hz) que si no llamarian FindOnline
+	// -> GetPlayers() decenas de veces por tick. Se arma 1 vez y se consulta O(1).
+	void BuildOnlineIndex(map<string, PlayerBase> idx)
+	{
+		if (!idx)
+			return;
+		idx.Clear();
+		array<Man> players = new array<Man>;
+		GetGame().GetPlayers(players);
+		int i;
+		for (i = 0; i < players.Count(); i++)
+		{
+			PlayerBase pb = PlayerBase.Cast(players.Get(i));
+			if (pb && pb.GetIdentity())
+				idx.Set(pb.GetIdentity().GetPlainId(), pb);
+		}
+	}
+
 	// ------------------------- busqueda -------------------------
 	ExorGroup FindByPlayer(string sid)
 	{
