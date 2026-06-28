@@ -13,6 +13,7 @@ modded class PlayerBase
 
 	// --- Killfeed (server): ultimo daño recibido, para saber arma/atacante al morir ---
 	protected EntityAI m_ExorKfSource;           // entidad que causo el ultimo daño (arma/atacante)
+	protected string m_ExorKfAmmo;               // tipo de municion/daño del ultimo golpe (clasifica gas/mina/explosivo)
 
 	// --- Bolsa de cadaver (server): ropa copiada + armas/manos (entidades reales a mover) ---
 	protected ref array<ref ExorVO_ItemData> m_ExorDeathLoot;
@@ -34,6 +35,60 @@ modded class PlayerBase
 		// al cliente con esta variable -> ambos lados aplican el MISMO speed -> sin rubber-band
 		// (glisheo atras-adelante). Ver ExorAutoRunTick.
 		RegisterNetSyncVariableBool("m_ExorArTired");
+	}
+
+	// ------------------------- TEST LOCAL: equipar NPC dummy de VPP -------------------------
+	// Al spawnear "player" con VPP Admin Tools sale un PlayerBase SIN identidad (dummy). Si el
+	// flag spawns.equipar_npc_test esta on (SOLO local), lo equipamos con ropa+mochila+armas
+	// para poder matarlo y probar la bolsa de cadaver con loot real. Un jugador REAL tiene
+	// identidad a los pocos segundos -> el chequeo diferido (4s) lo descarta y nunca lo toca.
+	override void EEInit()
+	{
+		super.EEInit();
+		if (GetGame().IsServer() && GetExorConfig().spawns.equipar_npc_test)
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorEquipDummyIfNpc, 4000, false);
+	}
+
+	void ExorEquipDummyIfNpc()
+	{
+		if (!GetGame() || !GetGame().IsServer())
+			return;
+		if (GetIdentity())
+			return;	// jugador real -> NO tocar
+		if (!IsAlive())
+			return;
+		ExorGiveTestKit();
+		Print(string.Format("%1 TEST: NPC dummy equipado (ropa+mochila+armas) para probar la bolsa", ExorStorageConstants.LOG));
+	}
+
+	void ExorGiveTestKit()
+	{
+		GameInventory inv = GetInventory();
+		if (!inv)
+			return;
+		// ropa + mochila (la bolsa las COPIA en sus slots al morir)
+		inv.CreateInInventory("Mich2001Helmet");
+		inv.CreateInInventory("TacticalShirt_Black");
+		inv.CreateInInventory("Jeans_Blue");
+		inv.CreateInInventory("MilitaryBoots_Black");
+		inv.CreateInInventory("PlateCarrierVest");
+		inv.CreateInInventory("PlateCarrierHolster");
+		inv.CreateInInventory("PlateCarrierPouches");
+		inv.CreateInInventory("AssaultBag_Black");
+		// arma en manos + cargador + mira (la bolsa MUEVE el arma real -> conserva mag/miras)
+		EntityAI rifle = GetHumanInventory().CreateInHands("M4A1");
+		if (rifle && rifle.GetInventory())
+		{
+			rifle.GetInventory().CreateAttachment("Mag_STANAG_30Rnd");
+			rifle.GetInventory().CreateAttachment("ACOGOptic");
+		}
+		// arma a la espalda
+		inv.CreateInInventory("Mosin9130");
+		// items sueltos para que la bolsa tenga loot variado
+		inv.CreateInInventory("Rangefinder");
+		inv.CreateInInventory("FieldShovel");
+		inv.CreateInInventory("CombatKnife");
+		inv.CreateInInventory("BandageDressing");
 	}
 
 	// Auto-run: se corre DENTRO del command handler (timing correcto, no en el update de
@@ -240,6 +295,7 @@ modded class PlayerBase
 		if (!GetGame().IsServer())
 			return;
 		m_ExorKfSource = source;
+		m_ExorKfAmmo = ammo;	// para clasificar muerte por gas/mina/claymore/explosivo improvisado
 
 		// anti-cheat: god mode (recibe impactos reales seguidos sin perder vida). Solo
 		// actua si el vigilado esta en la watchlist -> sale al toque para el resto.
@@ -363,28 +419,102 @@ modded class PlayerBase
 			victimSid = GetIdentity().GetPlainId();
 		}
 
+		ExorCfgKillfeed cfg = GetExorConfig().killfeed;
+
 		// quien mato: el param killer, o la raiz de la fuente de daño registrada
 		PlayerBase kp = PlayerBase.Cast(killer);
 		if (!kp && m_ExorKfSource)
 			kp = PlayerBase.Cast(m_ExorKfSource.GetHierarchyRootPlayer());
 
-		bool isPvp = (kp && kp != this && kp.GetIdentity());
-		bool isSuicide = (!killer || kp == this);
-		ExorCfgKillfeed cfg = GetExorConfig().killfeed;
+		// ---- clasificar la fuente del daño por classname + tipo de municion ----
+		string st = "";
+		if (m_ExorKfSource)
+			st = m_ExorKfSource.GetType();
+		st.ToLower();
+		string am = m_ExorKfAmmo;
+		am.ToLower();
+
+		bool isGas      = st.Contains("contaminat") || st.Contains("toxic") || st.Contains("chemgas") || st.Contains("poison") || am.Contains("contaminat") || am.Contains("toxic") || am.Contains("poison") || am.Contains("chemgas");
+		bool isClaymore = st.Contains("claymore");
+		bool isImprov   = st.Contains("improvis") || am.Contains("improvis");
+		bool isMine     = !isClaymore && st.Contains("mine");
+		bool isGrenade  = (Grenade_Base.Cast(m_ExorKfSource) != null) || am.Contains("grenade") || (am.Contains("40mm") && am.Contains("explo"));
+
+		// ---- muerte AMBIENTAL (sin asesino): "X murio por <cause>" ----
+		// Prioridad: el gas gana a todo (granada toxica de mano o de lanzagranadas = "gas").
+		string cause = "";
+		if (isGas)            cause = "gas";
+		else if (isClaymore)  cause = "un Claymore";
+		else if (isImprov)    cause = "un explosivo improvisado";
+		else if (isMine)      cause = "una mina";
+
+		// caida de altura: el daño llega con ammo "FallDamage" (sin entidad atacante)
+		if (cause == "" && am.Contains("fall"))
+			cause = "una caída";
+
+		// ---- GRANADA de fragmentacion: atribuir al LANZADOR (frag de mano o lanzagranadas) ----
+		string grenWeapon = "";
+		if (cause == "" && isGrenade)
+		{
+			grenWeapon = "una granada";
+			if (am.Contains("40mm"))
+				grenWeapon = "un lanzagranadas";
+			// la granada recuerda a su ultimo portador (ver ExorGrenadeKill.c)
+			if (!kp)
+			{
+				Grenade_Base gren = Grenade_Base.Cast(m_ExorKfSource);
+				if (gren && gren.ExorGetThrowerId() != "")
+					kp = ExorGroupManager.Get().FindOnline(gren.ExorGetThrowerId());
+			}
+			// no se pudo resolver al lanzador (offline / granada sin dueño) -> al menos avisar la muerte
+			if (!kp || kp == this || !kp.GetIdentity())
+				cause = grenWeapon;
+		}
+
+		// DIAGNOSTICO (temporal): en muertes explosivas, loguear el classname+municion REAL
+		// para poder afinar los Contains() de arriba si alguna categoria no matchea. Se puede
+		// sacar una vez confirmado que gas/mina/claymore/improvisado/granada se clasifican bien.
+		if (cause != "" || isGrenade)
+			Print(string.Format("%1 muerte explosiva: source='%2' ammo='%3' -> cause='%4' grenade=%5", ExorStorageConstants.LOG, st, am, cause, isGrenade));
+
+		bool isPvp = (cause == "" && kp && kp != this && kp.GetIdentity());
+		bool isSelfKill = (cause == "" && !isPvp && kp == this);                       // se mato con su propia arma (disparo/cuchillo)
+		bool isGenericDeath = (cause == "" && !isPvp && !isSelfKill && !killer);       // enfermedad / hambre / sed / sangrado sin fuente
+
+		// ---- AMBIENTAL ----
+		if (cause != "")
+		{
+			ExorStats.Get().AddDeath(victimSid, victimName);	// cuenta como muerte propia
+			if (cfg.habilitado)
+			{
+				ExorKfDTO dtoE = new ExorKfDTO();
+				dtoE.dur = cfg.duracion_segundos;
+				dtoE.max = cfg.max_lineas;
+				dtoE.victim = victimName;
+				dtoE.cause = cause;
+				ExorBroadcastKillfeed(dtoE);
+			}
+			return;
+		}
 
 		if (isPvp)
 		{
 			string killerName = kp.GetIdentity().GetName();
 			string killerSid = kp.GetIdentity().GetPlainId();
-			string weapon = ExorKfWeaponName(kp);
+			string weapon = grenWeapon;	// "" salvo granada/lanzagranadas
+			if (weapon == "")
+				weapon = ExorKfWeaponName(kp);
 			int dist = Math.Round(vector.Distance(kp.GetPosition(), GetPosition()));
 
 			// stats (siempre, para el Score)
 			ExorStats.Get().AddKill(killerSid, killerName, dist, weapon);
 			ExorStats.Get().AddDeath(victimSid, victimName);
 
-			// anti-cheat: evaluar el kill (LOS/angulo/distancia) -> log si hay indicios
-			ExorAnticheat.OnKill(kp, this, dist, weapon, ExorKfWeaponClass(kp));
+			// anti-cheat: evaluar el kill (LOS/angulo/distancia) -> log si hay indicios.
+			// Se saltea para granadas/lanzagranadas: el explosivo no necesita LOS ni punteria
+			// (mataria detras de cobertura) -> daria falsos indicios.
+			if (grenWeapon == "")
+				ExorAnticheat.OnKill(kp, this, dist, weapon, ExorKfWeaponClass(kp));
 
 			// killfeed (si esta activo)
 			if (cfg.habilitado)
@@ -400,7 +530,7 @@ modded class PlayerBase
 				ExorBroadcastKillfeed(dto);
 			}
 		}
-		else if (isSuicide)
+		else if (isSelfKill)
 		{
 			// stats (siempre)
 			ExorStats.Get().AddSuicide(victimSid, victimName);
@@ -416,7 +546,21 @@ modded class PlayerBase
 				ExorBroadcastKillfeed(dto2);
 			}
 		}
-		// else: muerte por infectado/animal/entorno -> ni stats ni killfeed
+		else if (isGenericDeath)
+		{
+			// enfermedad / hambre / sed / sangrado: "X murió" (sin causa ni asesino)
+			ExorStats.Get().AddDeath(victimSid, victimName);
+			if (cfg.habilitado)
+			{
+				ExorKfDTO dto3 = new ExorKfDTO();
+				dto3.dur = cfg.duracion_segundos;
+				dto3.max = cfg.max_lineas;
+				dto3.victim = victimName;
+				dto3.generic = true;
+				ExorBroadcastKillfeed(dto3);
+			}
+		}
+		// else: muerte por infectado/animal/otro con atacante no-jugador -> ni stats ni killfeed
 	}
 
 	// Manda el evento a TODOS los clientes (cada uno lo recibe en su propio PlayerBase).

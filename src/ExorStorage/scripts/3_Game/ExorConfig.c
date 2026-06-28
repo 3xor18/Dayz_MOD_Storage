@@ -313,6 +313,7 @@ class ExorCfgSpawns
 	int version = 1;
 	bool habilitado = true;
 	bool dar_cuchillo_al_spawnear = true;   // TEST: dar un cuchillo al personaje nuevo (suicidio facil al testear). Poner false en prod.
+	bool equipar_npc_test = false;          // TEST LOCAL: equipa los NPC dummy que spawnea VPP ("player") con ropa+mochila+armas, para probar la tumba. SIEMPRE false en prod (equiparia AI de otros mods).
 	ref array<ref ExorSpawnPunto> puntos;
 
 	void ExorCfgSpawns()
@@ -325,6 +326,7 @@ class ExorCfgSpawns
 		version = 1;
 		habilitado = true;
 		dar_cuchillo_al_spawnear = true;
+		equipar_npc_test = false;
 		puntos.Clear();
 		// Punto de ejemplo (el admin define los suyos). Editar/reemplazar en spawns.json.
 		ExorSpawnPunto ej = new ExorSpawnPunto();

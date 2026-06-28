@@ -15,6 +15,8 @@ class ExorKfEntry
 	string weapon;
 	int dist;
 	bool suicide;
+	bool generic;   // "X murio" a secas (enfermedad/hambre/sed)
+	string cause;   // muerte ambiental: "X murio por <cause>" (vacio = no aplica)
 	int expireMs;
 }
 
@@ -60,6 +62,8 @@ class ExorKillfeed
 		e.weapon = dto.weapon;
 		e.dist = dto.dist;
 		e.suicide = dto.suicide;
+		e.generic = dto.generic;
+		e.cause = dto.cause;
 		int dur = dto.dur;
 		if (dur <= 0)
 			dur = 6;
@@ -144,7 +148,19 @@ class ExorKillfeed
 
 		TStringArray txt = new TStringArray;
 		array<int> col = new array<int>;
-		if (e.suicide)
+		if (e.generic)
+		{
+			// muerte sin causa conocida: "Victima murió"
+			txt.Insert(e.victim);     col.Insert(cR);
+			txt.Insert(" murió");     col.Insert(cW);
+		}
+		else if (e.cause != "")
+		{
+			// muerte ambiental: "Victima murio por <cause>" (sin asesino)
+			txt.Insert(e.victim);                  col.Insert(cR);
+			txt.Insert(" murió por " + e.cause);   col.Insert(cW);
+		}
+		else if (e.suicide)
 		{
 			txt.Insert(e.victim);              col.Insert(cR);
 			txt.Insert(" se ha suicidado");    col.Insert(cW);

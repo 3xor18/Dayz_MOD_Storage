@@ -192,11 +192,14 @@ class ExorChat
 // Incluye duracion/max para que el cliente no necesite sincronizar config aparte.
 class ExorKfDTO
 {
-	string killer;   // nombre del que mato (vacio si suicidio)
+	string killer;   // nombre del que mato (vacio si suicidio o muerte ambiental)
 	string victim;   // nombre de la victima
 	string weapon;   // nombre del arma
 	int dist;        // distancia en metros
 	bool suicide;    // true = "se ha suicidado"
+	bool generic;    // true = "X murio" a secas (enfermedad/hambre/sed/sangrado sin fuente)
+	string cause;    // muerte AMBIENTAL (mina/claymore/gas/explosivo improvisado/caida): "X murio por <cause>".
+	                 // vacio = no ambiental (usar el flujo PvP/suicidio/generico normal)
 	int dur;         // segundos que dura la linea
 	int max;         // maximo de lineas simultaneas
 }

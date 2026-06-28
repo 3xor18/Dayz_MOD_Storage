@@ -62,6 +62,14 @@ modded class MissionServer
 		ExorGroupManager.Get().OnPlayerConnected(player);
 		ExorTerritoryManager.Get().SyncToPlayer(player);
 
+		// BUGFIX (relog con lag): el roster (lista de miembros / menu P) se mandaba UNA
+		// sola vez aca. En un relog laggy ese envio fragmentado puede llegar antes de que
+		// el cliente este listo y se PIERDE -> el jugador queda sin ver a su party hasta el
+		// proximo relog. Lo re-mandamos a los 3s y 8s (idempotente: si no esta en grupo,
+		// SyncToPlayer manda un roster vacio = correcto).
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorResyncRoster, 3000, false, player);
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorResyncRoster, 8000, false, player);
+
 		// #4b: si reaparece dentro de territorio ajeno, sacarlo al borde (diferido).
 		ExorAntiRaid.KickFromEnemyBaseIfNeeded(player);
 
@@ -129,6 +137,17 @@ modded class MissionServer
 	{
 		if (player)
 			ExorSpawn.SendOpen(player);
+	}
+
+	// Re-envia el roster de party (y el cache de territorio) a un jugador ya conectado.
+	// Diferido tras conectar para tapar la perdida del envio inicial en relogs con lag.
+	void ExorResyncRoster(PlayerBase player)
+	{
+		if (!player || !player.GetIdentity())
+			return;
+		ExorGroup g = ExorGroupManager.Get().FindByPlayer(ExorGroupManager.SteamId(player));
+		ExorGroupManager.Get().SyncToPlayer(player, g);	// g==null -> roster vacio (correcto si no esta en grupo)
+		ExorTerritoryManager.Get().SyncToPlayer(player);
 	}
 
 	void ExorVO_AutoPopulateAmmo(ExorCfgMunicion settings)

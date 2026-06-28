@@ -1,4 +1,4 @@
 name = "3xor_Vanilla_Optimization";
 author = "3xor";
-version = "2.5.3";
+version = "2.5.4";
 description = "Mod todo-en-uno (server+cliente), standalone sin Expansion: party y territorio por mastil con anti-raid (no desmantelar/robar en base ajena, combat-log/deslogueo en PvP, aviso de clan inactivo + registro de ex-miembros, logs forenses de auditoria), anti-cheat heuristico server-side por watchlist (wallhack/aimbot/ESP/prefire/seguimiento de ocultos, speedhack, noclip, god mode, spinbot), spawns con cooldown, HUD/nameplates/mapa con marcas (distancia VIP), killfeed, panel de info del server con ranking, reglas y boton de Discord, sistema VIP (equipamiento + spawn en base, vence a 30 dias), chat con canales (global/zona) y anti-spam, bolsa de cadaver/lapida con loot persistente y optimizado por proximidad, reparar items a pristine + combinar kits gastados, barriles con virtualizacion de contenido, inventario ampliado de vehiculos (600 slots + items anidados), vehiculos inactivos que se duermen y stacks de municion. Menos entidades = menos lag.";

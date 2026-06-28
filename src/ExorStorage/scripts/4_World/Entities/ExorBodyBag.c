@@ -276,6 +276,10 @@ class Exor_BodyBag extends Container_Base
 		// PARAR la lapida vertical (sin esto queda acostada) + anclar al piso
 		bag.SetOrientation("0 0 0");
 		bag.SetPosition(pos);
+		// BUGFIX (no deja coger items): si el cuerpo cayo hundido en el piso/un objeto, la
+		// bolsa quedaba clippeada y la interaccion (mirar/tab) no la detectaba. Asentarla
+		// limpiamente SOBRE la superficie la deja siempre accesible.
+		bag.PlaceOnSurface();
 
 		// el loot se ARMA en la posicion de la bolsa (NO bajo tierra: a -1000m el motor lo limpia
 		// por out-of-bounds antes de que entre al cargo) y se mueve a la bolsa
@@ -311,11 +315,16 @@ class Exor_BodyBag extends Container_Base
 					Print(string.Format("%1 BodyBag: %2 movida a la bolsa (real)", ExorStorageConstants.LOG, it.GetType()));
 					continue;
 				}
-				// fallback: no se pudo mover -> copiar para no perder el arma (el mag
-				// podria quedar suelto en el cargo) y borrar el original.
-				ExorVO_Serializer.RestoreItem(ExorVO_Serializer.CaptureItem(it), bag, hidden);
-				GetGame().ObjectDelete(it);
-				Print(string.Format("%1 AVISO: %2 no se pudo mover -> copiada (fallback)", ExorStorageConstants.LOG, it.GetType()));
+				// fallback: no entro en la bolsa (ej. arma larga sin hueco). NUNCA copiar+borrar
+				// (eso perdia el cargador y, si la copia no se ubicaba, perdia el arma entera).
+				// En su lugar dejamos el ARMA REAL en el piso al lado de la bolsa: conserva
+				// cargador + miras y queda lootable. Nunca se pierde.
+				it.SetPosition(pos);
+				it.SetOrientation("0 0 0");
+				ItemBase itib = ItemBase.Cast(it);
+				if (itib)
+					itib.PlaceOnSurface();
+				Print(string.Format("%1 AVISO: %2 no entro en la bolsa -> dejada en el piso al lado (real, intacta)", ExorStorageConstants.LOG, it.GetType()));
 			}
 		}
 
