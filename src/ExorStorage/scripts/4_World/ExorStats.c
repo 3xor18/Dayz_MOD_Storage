@@ -54,9 +54,15 @@ class ExorStats
 		return r;
 	}
 
+	// SteamIDs excluidos del killboard (admins/owner): no suman ni figuran en el ranking.
+	static bool IsExcluido(string sid)
+	{
+		return GetExorConfig().killfeed.EsExcluido(sid);
+	}
+
 	void AddKill(string sid, string name, int dist, string weapon)
 	{
-		if (sid == "")
+		if (sid == "" || IsExcluido(sid))
 			return;
 		ExorStatRow r = Ensure(sid, name);
 		r.kills = r.kills + 1;
@@ -70,7 +76,7 @@ class ExorStats
 
 	void AddDeath(string sid, string name)
 	{
-		if (sid == "")
+		if (sid == "" || IsExcluido(sid))
 			return;
 		ExorStatRow r = Ensure(sid, name);
 		r.deaths = r.deaths + 1;
@@ -79,7 +85,7 @@ class ExorStats
 
 	void AddSuicide(string sid, string name)
 	{
-		if (sid == "")
+		if (sid == "" || IsExcluido(sid))
 			return;
 		ExorStatRow r = Ensure(sid, name);
 		r.suicides = r.suicides + 1;
@@ -121,9 +127,14 @@ class ExorStats
 		EnsureLoaded();
 
 		// pasar el map a un array para poder ordenarlo y recortarlo
+		// (excluir a los del killboard_excluidos por si ya tenian filas de antes del filtro)
 		array<ref ExorStatRow> all = new array<ref ExorStatRow>;
 		foreach (string k2, ExorStatRow r2 : m_Rows)
+		{
+			if (r2 && IsExcluido(r2.steamid))
+				continue;
 			all.Insert(r2);
+		}
 
 		// orden descendente por kills (listas chicas -> bubble sort)
 		int n = all.Count();

@@ -49,10 +49,42 @@ class ExorRaidLog
 		return string.Format("%1\\audit_%2.txt", ExorStorageConstants.AUDITLOG_DIR, dayStamp);
 	}
 
-	// Escribe una linea de evento. pos se loguea como <X, Z> (convencion del .ADM).
-	static void Write(string evento, string steamid, string nombre, vector pos, string detalle)
+	// ------------------------- buffer en memoria (perf) -------------------------
+	// ANTES: cada Write() abria/escribia/cerraba el archivo. Una noche de PvP daba ~12.000
+	// eventos = 12.000 aperturas (I/O sincrona en el hilo del juego -> hitches). AHORA las
+	// lineas se encolan y se vuelcan TODAS juntas 1x/seg con Flush() (lo llama el tick 1Hz
+	// del anti-cheat). El timestamp se arma al ENCOLAR (momento real del evento), no al volcar.
+	// Eventos criticos (ej. kill) pueden pedir immediate=true para no perderse si el server crashea.
+	static ref array<string> s_Queue;
+
+	static string BuildLine(string evento, string steamid, string nombre, vector pos, string detalle)
+	{
+		int rx = Math.Round(pos[0]);
+		int rz = Math.Round(pos[2]);
+		return string.Format("[%1] %2 | steam=%3 | jugador=%4 | pos=<%5, %6> | %7",
+			TimeStamp(), evento, steamid, nombre, rx, rz, detalle);
+	}
+
+	// Escribe una linea de evento (BUFFERED). pos se loguea como <X, Z> (convencion del .ADM).
+	// immediate=true -> se vuelca al instante (para kills u otros eventos que no se pueden perder).
+	static void Write(string evento, string steamid, string nombre, vector pos, string detalle, bool immediate = false)
 	{
 		if (!GetGame() || !GetGame().IsServer())
+			return;
+		if (!s_Queue)
+			s_Queue = new array<string>;
+		s_Queue.Insert(BuildLine(evento, steamid, nombre, pos, detalle));
+		if (immediate)
+			Flush();
+	}
+
+	// Vuelca todas las lineas pendientes abriendo el archivo UNA sola vez. Lo llama el tick
+	// 1Hz del anti-cheat (y OnMissionFinish al apagar). Barato si la cola esta vacia.
+	static void Flush()
+	{
+		if (!GetGame() || !GetGame().IsServer())
+			return;
+		if (!s_Queue || s_Queue.Count() == 0)
 			return;
 		if (!FileExist(ExorStorageConstants.AUDITLOG_DIR))
 			MakeDirectory(ExorStorageConstants.AUDITLOG_DIR);
@@ -60,14 +92,12 @@ class ExorRaidLog
 		string path = FilePath(DayStamp());
 		FileHandle fh = OpenFile(path, FileMode.APPEND);
 		if (!fh)
-			return;
-
-		int rx = Math.Round(pos[0]);
-		int rz = Math.Round(pos[2]);
-		string line = string.Format("[%1] %2 | steam=%3 | jugador=%4 | pos=<%5, %6> | %7",
-			TimeStamp(), evento, steamid, nombre, rx, rz, detalle);
-		FPrintln(fh, line);
+			return;	// reintenta el proximo flush (no se pierde la cola)
+		int i;
+		for (i = 0; i < s_Queue.Count(); i++)
+			FPrintln(fh, s_Queue.Get(i));
 		CloseFile(fh);
+		s_Queue.Clear();
 	}
 
 	// ------------------------- retencion -------------------------

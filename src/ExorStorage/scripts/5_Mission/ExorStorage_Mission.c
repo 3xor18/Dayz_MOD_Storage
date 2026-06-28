@@ -34,6 +34,7 @@ modded class MissionServer
 	{
 		ExorVO_Manager.VirtualizeAll();
 		ExorStats.Get().FlushIfDirty();	// volcar stats pendientes antes de apagar
+		ExorRaidLog.Flush();			// volcar el log de auditoria bufferizado antes de apagar
 		super.OnMissionFinish();
 	}
 
@@ -59,6 +60,7 @@ modded class MissionServer
 		if (!player)
 			return;
 		PlayerIdentity identity = player.GetIdentity();
+		ExorAnticheat.MarkTeleport(ExorGroupManager.SteamId(player));	// gracia AC: conexion/respawn no son speedhack/godmode
 		ExorGroupManager.Get().OnPlayerConnected(player);
 		ExorTerritoryManager.Get().SyncToPlayer(player);
 
@@ -100,6 +102,8 @@ modded class MissionServer
 	{
 		ExorAntiRaid.OnDisconnectInEnemyTerritory(player, identity);
 		ExorAntiRaid.OnCombatLogout(player, identity);
+		if (identity)
+			ExorAimTrack.OnPlayerGone(player, identity.GetPlainId());	// aim-track: volcar resumen de la vida al desconectar
 		super.OnClientDisconnectedEvent(identity, player, logoutTime, authFailed);
 	}
 

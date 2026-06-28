@@ -768,6 +768,12 @@ class ExorCfgKillfeed
 	int duracion_segundos = 6;         // cuanto dura cada linea en pantalla
 	int max_lineas = 5;                // maximo de lineas simultaneas (la mas vieja se va)
 	bool mostrar_suicidios = true;     // mostrar la linea "se ha suicidado"
+	ref array<string> killboard_excluidos;  // SteamID64 que NO suman ni figuran en el killboard/ranking (admins/owner). Editar en killfeed.json
+
+	void ExorCfgKillfeed()
+	{
+		killboard_excluidos = new array<string>;
+	}
 
 	void SetDefaults()
 	{
@@ -775,6 +781,15 @@ class ExorCfgKillfeed
 		duracion_segundos = 6;
 		max_lineas = 5;
 		mostrar_suicidios = true;
+		killboard_excluidos.Clear();
+		killboard_excluidos.Insert("76561198722396813");   // owner: no figura en el ranking
+	}
+
+	bool EsExcluido(string sid)
+	{
+		if (!killboard_excluidos || sid == "")
+			return false;
+		return killboard_excluidos.Find(sid) != -1;
 	}
 }
 
@@ -890,10 +905,12 @@ class ExorCfgAnticheat
 
 	// ---- Feature 1: detector por kill (sobre todos menos exentos) ----
 	bool detector_kill = true;
-	bool kill_check_los = true;             // linea-de-vision bloqueada al matar (wallhack)
-	bool kill_check_angulo = true;          // arma apuntando lejos de la victima al matar (aimbot/snap)
+	bool kill_check_los = true;             // linea-de-vision bloqueada al matar (wallhack) - FIABLE
+	bool kill_check_angulo = false;         // OFF por defecto: el server NO expone una direccion de apuntado fiable
+	                                        // (el modelo del arma no esta pose-ado al aim real server-side) -> daba falsos
+	                                        // en kills limpios. El aimbot se detecta MEJOR por estadistica (T3 accuracy/HS).
 	bool kill_check_distancia = true;       // kill a distancia sospechosa para el arma usada
-	float kill_angulo_grados = 30;          // si el angulo arma->victima supera esto = "mato sin apuntar"
+	float kill_angulo_grados = 120;         // umbral alto (si se reactiva, solo marca matar a alguien CLARAMENTE no-de-frente)
 	int kill_min_senales = 1;               // minimo de senales coincidentes para loguear (1 = cualquier indicio)
 	float dist_sospechosa_default = 400;    // umbral (m) generico por arma (0 = no chequear distancia)
 	ref map<string, float> dist_sospechosa_por_arma; // classname de arma -> umbral propio (ej pistolas mas bajo)
@@ -907,16 +924,31 @@ class ExorCfgAnticheat
 	bool watch_check_godmode = true;        // recibe impactos reales seguidos y la vida no baja = god mode
 	bool watch_check_spinbot = true;        // el arma/mira gira muchisimo entre ticks de forma sostenida = spinbot
 	bool watch_check_seguimiento = true;    // SIGUE con la mira a un jugador que NO deberia ver (lejos u oculto) varios ticks = ESP
+	// ---- tracking de punteria por engagement (solo watchlist): mide acc/HS/rango por tiroteo ----
+	bool watch_check_punteria = true;       // registrar tiroteos a jugadores (disparos/impactos/zona/dist) para detectar aimbot
+	float aim_track_angulo = 5;             // tolerancia (grados) para decidir a que jugador "apunta" un disparo
+	float aim_track_dist_max = 1000;        // alcance maximo (m) para considerar que apunta a un jugador
+	int aim_engagement_timeout_ms = 4000;   // sin dispararle por este tiempo -> se cierra el engagement
+	int aim_min_shots_log = 3;              // minimo de disparos apuntados para loguear el engagement (o >=1 impacto/kill)
+	int aim_min_shots_resumen = 30;         // disparos apuntados minimos en una vida para evaluar PUNTERIA_SOSPECHOSA
+	float aim_acc_sospechosa = 0.70;        // acc global >= esto en una vida (con muestra) = sospechoso (MEDIO)
+	float aim_acc_alta = 0.90;              // acc global >= esto = casi seguro aimbot (ALTO). Ningun humano pega 90%+ sostenido
+	float aim_acc_lejos_sospechosa = 0.60;  // acc a >150m >= esto = sospechoso
+	float aim_hs_sospechosa = 0.35;         // % de headshots >= esto = corroborante (SECUNDARIO: el aimbot deja elegir la zona del cuerpo, asi que HS es bypasseable; la ACCURACY es la señal que no se puede esconder)
 	float watch_angulo_grados = 8;          // tolerancia de "apunta/corre/sigue DIRECTO" al objetivo
 	float watch_dist_min = 25;              // ignorar objetivos a menos de esto (ruido a corta)
 	float watch_velocidad_max = 12;         // m/s por encima de lo cual = sospechoso (sprint normal ~6-7; a pie. Vehiculos se saltean)
+	float teleport_velocidad_max = 35;      // m/s por encima de lo cual NO es speedhack sino un salto/desync/teleport -> se descarta (no se loguea)
+	int vel_min_streak = 2;                 // ticks SEGUIDOS por encima de watch_velocidad_max para loguear (un pico de 1 tick = lag, se ignora)
+	int grace_ms = 5000;                    // ventana de gracia (ms) tras teleport/respawn/conexion: se saltean los chequeos de velocidad/godmode/bajo-tierra
 	float watch_bajo_tierra_metros = 2.5;   // metros por debajo de la superficie para marcar noclip
 	int godmode_hits = 4;                   // impactos reales SEGUIDOS sin que baje la vida para marcar god mode (mas alto = menos falsos)
 	float spinbot_grados = 120;             // giro de la mira por tick por encima de lo cual cuenta como "giro imposible"
 	int spinbot_ticks = 3;                  // ticks SEGUIDOS de giro imposible para marcar spinbot
 	float watch_track_dist_max = 1500;      // alcance maximo del seguimiento (m). A 1500m el cliente ni renderiza al otro
 	float watch_lejos_metros = 800;         // con LOS clara, mas alla de esto = no deberia verlo a simple vista (cuenta para el seguimiento)
-	int watch_track_ticks = 4;              // ticks SEGUIDOS rastreando al mismo objetivo oculto/lejano para marcar ESP
+	int watch_track_ticks = 4;              // ticks SEGUIDOS rastreando a un objetivo OCULTO cercano (pudo ojearlo) para marcar ESP
+	int watch_track_ticks_lejos = 2;        // ticks SEGUIDOS para un objetivo MUY LEJOS (>watch_lejos_metros, imposible de ver): basta menos, es mas delatante
 	int watch_log_cooldown_seg = 15;        // no repetir el mismo aviso del vigilado antes de esto
 	ref TStringArray watchlist;             // SteamIDs a vigilar (el admin los agrega; pocos)
 
@@ -938,9 +970,9 @@ class ExorCfgAnticheat
 
 		detector_kill = true;
 		kill_check_los = true;
-		kill_check_angulo = true;
+		kill_check_angulo = false;
 		kill_check_distancia = true;
-		kill_angulo_grados = 30;
+		kill_angulo_grados = 120;
 		kill_min_senales = 1;
 		dist_sospechosa_default = 400;
 		dist_sospechosa_por_arma.Clear();
@@ -960,9 +992,22 @@ class ExorCfgAnticheat
 		watch_check_godmode = true;
 		watch_check_spinbot = true;
 		watch_check_seguimiento = true;
+		watch_check_punteria = true;
+		aim_track_angulo = 5;
+		aim_track_dist_max = 1000;
+		aim_engagement_timeout_ms = 4000;
+		aim_min_shots_log = 3;
+		aim_min_shots_resumen = 30;
+		aim_acc_sospechosa = 0.70;
+		aim_acc_alta = 0.90;
+		aim_acc_lejos_sospechosa = 0.60;
+		aim_hs_sospechosa = 0.35;
 		watch_angulo_grados = 8;
 		watch_dist_min = 25;
 		watch_velocidad_max = 12;
+		teleport_velocidad_max = 35;
+		vel_min_streak = 2;
+		grace_ms = 5000;
 		watch_bajo_tierra_metros = 2.5;
 		godmode_hits = 4;
 		spinbot_grados = 120;
@@ -970,6 +1015,7 @@ class ExorCfgAnticheat
 		watch_track_dist_max = 1500;
 		watch_lejos_metros = 800;
 		watch_track_ticks = 4;
+		watch_track_ticks_lejos = 2;
 		watch_log_cooldown_seg = 15;
 		watchlist.Clear();   // vacia: el admin agrega los SteamIDs a vigilar
 

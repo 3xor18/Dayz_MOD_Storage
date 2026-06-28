@@ -23,6 +23,9 @@ class ExorAcWatchState
 {
 	vector last_pos;                 // pos del tick anterior (para el vector de movimiento)
 	bool has_last;
+	int last_ms;                     // uptime ms del tick anterior (para medir dt REAL, no asumir TICK_MS)
+	int vel_streak;                  // ticks SEGUIDOS por encima de watch_velocidad_max (exigir sostenido)
+	int grace_until_ms;              // hasta este uptime ms se saltean vel/godmode/bajo-tierra (teleport/respawn/conexion)
 	ref map<string, int> cooldown;   // clave "tipo:targetsid" -> uptime ms del ultimo log (anti-spam)
 
 	// --- god mode (event-driven en EEHitBy) ---
@@ -49,6 +52,24 @@ class ExorAcWatchState
 		has_aim = false;
 		spin_streak = 0;
 	}
+}
+
+// Snapshot de la geometria del ULTIMO impacto de un player a esta victima (se guarda en la
+// victima, en EEHitBy). El detector por kill lo usa en vez de las posiciones POST-MUERTE
+// (victima en ragdoll = ojos/pos basura -> falsos ANGULO/LOS). Capturado con AMBOS vivos en
+// el momento real del disparo que mato -> menos falsos positivos + mejor deteccion de
+// wallhack (LOS al disparar) y silent-aim (arma server-authoritative no apunta pero pega).
+class ExorKillShot
+{
+	bool valid;
+	string killer_sid;   // de quien fue el impacto (debe coincidir con el killer final)
+	vector killer_eye;
+	vector victim_eye;
+	vector victim_pos;   // pos (pies) de la victima al impactar -> para LOS multi-rayo (cabeza/torso/piernas)
+	vector aim_dir;      // direccion REAL del cañon del atacante al impactar (memory points del modelo)
+	bool has_weapon;     // tenia arma en manos (el check de angulo solo aplica a kills con arma)
+	int dist;
+	int ms;              // uptime ms del impacto (para descartar snapshots viejos)
 }
 
 class ExorAnticheat
@@ -100,6 +121,10 @@ class ExorAnticheat
 	}
 
 	// Direccion del arma EN MANOS (server-authoritative). hasWeapon=false si no hay arma.
+	// Usa la direccion REAL del cañon via los memory points del modelo (chamber "konec hlavne" ->
+	// boca "usti hlavne"): es a donde apunta el arma de verdad, con pitch. NO se usa w.GetDirection()
+	// porque devuelve el eje del MODELO (offset fijo ~117deg) -> inservible para medir angulos.
+	// Fallback (arma sin esos memory points): la direccion del cuerpo (coarse pero fiable).
 	static vector AimDir(PlayerBase p, out bool hasWeapon)
 	{
 		hasWeapon = false;
@@ -109,7 +134,16 @@ class ExorAnticheat
 		if (!w)
 			return vector.Zero;
 		hasWeapon = true;
-		return w.GetDirection();
+
+		vector konec = w.ModelToWorld(w.GetSelectionPositionMS("konec hlavne"));
+		vector usti  = w.ModelToWorld(w.GetSelectionPositionMS("usti hlavne"));
+		vector dir = usti - konec;
+		if (dir.LengthSq() > 0.01)
+		{
+			dir.Normalize();
+			return dir;
+		}
+		return p.GetDirection();   // fallback
 	}
 
 	// Angulo (grados) entre dos vectores. 0 = misma direccion, 180 = opuestas.
@@ -120,6 +154,18 @@ class ExorAnticheat
 		float d = vector.Dot(a, b);
 		d = Math.Clamp(d, -1.0, 1.0);
 		return Math.Acos(d) * Math.RAD2DEG;
+	}
+
+	// Angulo HORIZONTAL (ignora la altura). Para "orientado hacia" un objetivo usando la
+	// direccion del CUERPO (server-authoritative), que no tiene un pitch fiable. Devuelve 180
+	// (= no orientado) si algun vector horizontal es casi nulo.
+	static float AngleHorizDeg(vector a, vector b)
+	{
+		a[1] = 0;
+		b[1] = 0;
+		if (a.LengthSq() < 0.0001 || b.LengthSq() < 0.0001)
+			return 180;
+		return AngleBetweenDeg(a, b);
 	}
 
 	// Lanza un raycast 'from'->'to' y devuelve el primer objeto SOLIDO que bloquea la
@@ -152,6 +198,24 @@ class ExorAnticheat
 		return null;
 	}
 
+	// LOS ROBUSTA: chequea la linea a la CABEZA, el TORSO y las PIERNAS de la victima. Si AL MENOS
+	// una esta despejada, el atacante PODIA verlo (no es wallhack) -> null. Solo si las TRES estan
+	// bloqueadas se considera oculto. Baja falsos por arboles/arbustos/bordes (un solo rayo clipea
+	// un tronco fino pero el cuerpo se ve al costado). head = ojos de la victima, feet = su GetPosition.
+	static Object LosBlockerMulti(vector from, vector head, vector feet, PlayerBase a, PlayerBase b)
+	{
+		Object blk = LosBlocker(from, head, a, b);
+		if (!blk)
+			return null;                        // ve la cabeza
+		vector chest = feet; chest[1] = feet[1] + 1.2;
+		if (!LosBlocker(from, chest, a, b))
+			return null;                        // ve el torso
+		vector legs = feet; legs[1] = feet[1] + 0.4;
+		if (!LosBlocker(from, legs, a, b))
+			return null;                        // ve las piernas
+		return blk;                             // las tres tapadas -> oculto real
+	}
+
 	// ===========================================================================
 	// FEATURE 1 - detector por KILL. Lo llama PlayerBase.ExorBuildKillfeed en cada
 	// kill PvP. killer y victim son players reales; dist en metros; weaponName para
@@ -178,13 +242,37 @@ class ExorAnticheat
 		int signals = 0;
 		string ev = "";
 
-		vector kEye = EyePos(killer);
-		vector vEye = EyePos(victim);
+		// Geometria del KILL: preferir el snapshot del ultimo impacto (ambos vivos, momento real
+		// del disparo). Si no hay snapshot reciente del mismo killer (ej. murio por sangrado tardio),
+		// caer a las posiciones actuales (menos preciso pero es lo que hay).
+		vector kEye, vEye, aimD;
+		bool hasW;
+		int useDist = dist;
+		ExorKillShot shot = victim.ExorGetKillShot();
+		bool useShot = (shot && shot.valid && shot.killer_sid == ksid && (GetGame().GetTime() - shot.ms) <= 3000);
+		if (useShot)
+		{
+			kEye = shot.killer_eye;
+			vEye = shot.victim_eye;
+			aimD = shot.aim_dir;
+			hasW = shot.has_weapon;
+			useDist = shot.dist;
+		}
+		else
+		{
+			kEye = EyePos(killer);
+			vEye = EyePos(victim);
+			aimD = AimDir(killer, hasW);
+		}
 
-		// 1) Linea de vision bloqueada (wallhack)
+		// 1) Linea de vision bloqueada (wallhack) - multi-rayo (cabeza/torso/piernas) en el momento
+		// del disparo si hay snapshot. Solo cuenta si el cuerpo ENTERO estaba tapado (no un arbol al medio).
 		if (ac.kill_check_los)
 		{
-			Object blk = LosBlocker(kEye, vEye, killer, victim);
+			vector vFeet = victim.GetPosition();
+			if (useShot)
+				vFeet = shot.victim_pos;
+			Object blk = LosBlockerMulti(kEye, vEye, vFeet, killer, victim);
 			if (blk)
 			{
 				signals++;
@@ -192,14 +280,16 @@ class ExorAnticheat
 			}
 		}
 
-		// 2) Angulo del arma vs la victima (mato sin apuntar = aimbot / "mira al cielo")
-		if (ac.kill_check_angulo)
+		// 2) Angulo CUERPO->victima en HORIZONTAL (mato a alguien que NO esta adelante = silent-aim/
+		//    spinbot). Se usa la direccion del cuerpo (no el eje del modelo del arma) y se ignora el
+		//    pitch (el server no tiene el cabeceo del arma de forma fiable) -> sin falsos por mirar arriba/abajo.
+		if (ac.kill_check_angulo && hasW)
 		{
-			bool hasW;
-			vector aim = AimDir(killer, hasW);
-			if (hasW)
+			vector bd = aimD;        bd[1] = 0;
+			vector toV = vEye - kEye; toV[1] = 0;
+			if (bd.LengthSq() > 0.001 && toV.LengthSq() > 0.001)
 			{
-				float ang = AngleBetweenDeg(aim, vEye - kEye);
+				float ang = AngleBetweenDeg(bd, toV);
 				if (ang > ac.kill_angulo_grados)
 				{
 					signals++;
@@ -212,10 +302,10 @@ class ExorAnticheat
 		if (ac.kill_check_distancia)
 		{
 			float thr = ac.DistThreshold(weaponCls);
-			if (thr > 0 && dist > thr)
+			if (thr > 0 && useDist > thr)
 			{
 				signals++;
-				ev = ev + string.Format(" | DIST=%1m (umbral %2 para %3)", dist, Math.Round(thr), weaponCls);
+				ev = ev + string.Format(" | DIST=%1m (umbral %2 para %3)", useDist, Math.Round(thr), weaponCls);
 			}
 		}
 
@@ -230,7 +320,38 @@ class ExorAnticheat
 
 		string detalle = string.Format("mato a %1 (steam=%2) con %3 a %4m | nivel=%5 | senales=%6%7",
 			ExorGroupManager.PlayerName(victim), ExorGroupManager.SteamId(victim), weaponName, dist, nivel, signals, ev);
-		ExorRaidLog.Write("SOSPECHA_KILL", ksid, ExorGroupManager.PlayerName(killer), killer.GetPosition(), detalle);
+		ExorRaidLog.Write("SOSPECHA_KILL", ksid, ExorGroupManager.PlayerName(killer), killer.GetPosition(), detalle, true);	// immediate: no perder el kill si crashea
+	}
+
+	// Guarda en la VICTIMA la geometria del impacto (ambos vivos) para que el detector por kill
+	// la use al morir en vez de leer posiciones post-muerte. Lo llama PlayerBase.EEHitBy cuando
+	// el atacante es un player. Barato: solo guarda posiciones/mira (el raycast LOS se hace 1 vez
+	// al morir). Se gatea igual que OnKill (no exento; si solo_watchlist, solo vigilados).
+	static void CaptureKillShot(PlayerBase killer, PlayerBase victim, string dmgZone)
+	{
+		if (!GetGame() || !GetGame().IsServer() || !killer || !victim || !killer.GetIdentity())
+			return;
+		ExorCfgAnticheat ac = GetExorConfig().anticheat;
+		if (!ac.habilitado || !ac.detector_kill)
+			return;
+		string ksid = killer.GetIdentity().GetPlainId();
+		if (IsExento(ksid))
+			return;
+		if (ac.solo_watchlist && !ac.EsVigilado(ksid))
+			return;
+
+		ExorKillShot s = new ExorKillShot();
+		s.valid = true;
+		s.killer_sid = ksid;
+		s.killer_eye = EyePos(killer);
+		s.victim_eye = EyePos(victim);
+		s.victim_pos = victim.GetPosition();
+		bool hasW;
+		s.aim_dir = AimDir(killer, hasW);      // direccion real del cañon en el momento del impacto
+		s.has_weapon = hasW;
+		s.dist = Math.Round(vector.Distance(killer.GetPosition(), victim.GetPosition()));
+		s.ms = GetGame().GetTime();
+		victim.ExorSetKillShot(s);
 	}
 
 	// ===========================================================================
@@ -245,6 +366,26 @@ class ExorAnticheat
 			m_Watch.Set(sid, st);
 		}
 		return st;
+	}
+
+	// Marca un teleport/respawn/conexion: descarta la PROXIMA medicion de delta (pos/mira/vida)
+	// y abre una ventana de gracia (grace_ms) en la que se saltean los chequeos de velocidad,
+	// god mode y bajo-tierra. Asi el salto del menu de spawn / SetPosition / la invulnerabilidad
+	// de respawn NO generan WATCH_VELOCIDAD ni WATCH_GODMODE falsos.
+	// Solo crea estado para VIGILADOS (los unicos que esos chequeos evaluan) -> no infla el map.
+	static void MarkTeleport(string sid)
+	{
+		if (!GetGame() || !GetGame().IsServer() || sid == "")
+			return;
+		if (!GetExorConfig().anticheat.EsVigilado(sid))
+			return;
+		ExorAcWatchState st = Get().EnsureState(sid);
+		st.has_last = false;     // descarta el proximo delta de posicion (salto del teleport)
+		st.has_aim = false;      // y el de spinbot
+		st.hp_init = false;      // y el baseline de god mode
+		st.nodrop_hits = 0;
+		st.vel_streak = 0;
+		st.grace_until_ms = GetGame().GetTime() + GetExorConfig().anticheat.grace_ms;
 	}
 
 	// true si paso el cooldown para este par (y marca el momento). Anti-spam del log.
@@ -289,6 +430,14 @@ class ExorAnticheat
 
 		ExorAcWatchState st = Get().EnsureState(sid);
 		int nowMs = GetGame().GetTime();
+		// ventana de gracia (respawn/teleport): DayZ da invulnerabilidad breve al reaparecer; si lo
+		// balean justo ahi recibe impactos sin perder vida -> NO contar como god mode.
+		if (nowMs < st.grace_until_ms)
+		{
+			st.nodrop_hits = 0;
+			st.hp_init = false;
+			return;
+		}
 		// resetear la racha si paso mucho desde el ultimo impacto (no es una pelea sostenida)
 		if (st.last_hit_ms != 0 && (nowMs - st.last_hit_ms) > 30000)
 		{
@@ -324,6 +473,12 @@ class ExorAnticheat
 	{
 		if (!GetGame() || !GetGame().IsServer())
 			return;
+
+		// Volcar el log de auditoria bufferizado (1x/seg). Va ANTES de los early-returns
+		// para que se vuelque aunque el anti-cheat este desactivado (el log lo usan tambien
+		// party/anti-raid/etc.). El tick siempre corre (Start lo registra incondicional).
+		ExorRaidLog.Flush();
+
 		ExorCfgAnticheat ac = GetExorConfig().anticheat;
 		if (!ac.habilitado || !ac.watchlist_activa)
 			return;
@@ -351,50 +506,75 @@ class ExorAnticheat
 			ExorAcWatchState st = EnsureState(wsid);
 
 			bool hasW;
-			vector aim = AimDir(w, hasW);
+			AimDir(w, hasW);   // solo para saber si tiene arma en manos (el aim del arma no es fiable server-side)
 			bool raised = w.IsRaised();
 			vector wEye = EyePos(w);
 			vector wPos = w.GetPosition();
 
 			// direccion de "donde mira": el arma si la tiene, si no el frente del cuerpo
 			// (ambas server-authoritative). La usan spinbot y seguimiento.
-			vector lookDir;
-			if (hasW)
-				lookDir = aim;
-			else
-				lookDir = w.GetDirection();
+			// Direccion hacia donde MIRA: SIEMPRE el cuerpo (server-authoritative, fiable). NO el
+			// arma (AimDir/GetDirection del modelo da un offset fijo ~117deg server-side = inservible).
+			// El cuerpo sigue el yaw de la camara cuando no hay free-look -> buen proxy horizontal.
+			vector lookDir = w.GetDirection();
 
-			// vector de movimiento desde el tick anterior
+			// vector de movimiento desde el tick anterior + dt REAL entre muestras.
+			// dt real (no asumir TICK_MS fijo): si el tick se atrasa por carga, dividir por el
+			// TICK_MS fijo inflaba la velocidad y daba falsos speedhack. Aca se mide el tiempo real.
 			vector mv = vector.Zero;
 			bool hasMove = false;
+			float dtSec = TICK_MS / 1000.0;
 			if (st.has_last)
 			{
 				mv = wPos - st.last_pos;
 				if (mv.LengthSq() > moveMinSq)
 					hasMove = true;
+				if (st.last_ms != 0)
+				{
+					float d = (nowMs - st.last_ms) / 1000.0;
+					if (d > 0)
+						dtSec = d;
+				}
 			}
 			st.last_pos = wPos;
+			st.last_ms = nowMs;
 			st.has_last = true;
 
 			bool enVehiculo = (w.GetCommand_Vehicle() != null);
 
 			// --- velocidad imposible / salto de posicion = speedhack/teleport ---
-			// Se reusa el vector de movimiento (gratis). A pie el sprint llega a ~6-7 m/s;
-			// por encima de watch_velocidad_max es sospechoso. Un teleport da un salto
-			// enorme de 1 tick. Los vehiculos se saltean (van legitimamente rapido).
-			if (ac.watch_check_velocidad && hasMove && !enVehiculo)
+			// A pie el sprint llega a ~6-7 m/s; por encima de watch_velocidad_max es sospechoso.
+			// PERO: (1) un salto enorme de 1 tick (>= teleport_velocidad_max) es un teleport/desync,
+			// NO un correr rapido -> se descarta y NO se loguea; (2) un pico de lag de 1 tick apenas
+			// arriba del umbral = rubber-band -> se exige que sea SOSTENIDO (vel_min_streak ticks).
+			// En la ventana de gracia (teleport/respawn/conexion) se saltea entero.
+			if (ac.watch_check_velocidad && hasMove && !enVehiculo && nowMs >= st.grace_until_ms)
 			{
-				float speed = mv.Length() / (TICK_MS / 1000.0);
-				if (speed > ac.watch_velocidad_max && CooldownOk(st, "vel", nowMs, ac.watch_log_cooldown_seg))
+				float speed = mv.Length() / dtSec;
+				if (speed >= ac.teleport_velocidad_max)
 				{
-					string detV = string.Format("velocidad anomala a pie: %1 m/s (umbral %2) = speedhack/teleport",
-						Math.Round(speed), Math.Round(ac.watch_velocidad_max));
-					ExorRaidLog.Write("WATCH_VELOCIDAD", wsid, ExorGroupManager.PlayerName(w), wPos, detV);
+					st.has_last = false;	// salto/desync: descartar la muestra, arrancar limpio el proximo tick
+					st.vel_streak = 0;
+				}
+				else if (speed > ac.watch_velocidad_max)
+				{
+					st.vel_streak = st.vel_streak + 1;
+					if (st.vel_streak >= ac.vel_min_streak && CooldownOk(st, "vel", nowMs, ac.watch_log_cooldown_seg))
+					{
+						string detV = string.Format("velocidad anomala a pie SOSTENIDA: %1 m/s (umbral %2) por %3 ticks = speedhack",
+							Math.Round(speed), Math.Round(ac.watch_velocidad_max), st.vel_streak);
+						ExorRaidLog.Write("WATCH_VELOCIDAD", wsid, ExorGroupManager.PlayerName(w), wPos, detV);
+						st.vel_streak = 0;
+					}
+				}
+				else
+				{
+					st.vel_streak = 0;	// velocidad normal: corta la racha
 				}
 			}
 
-			// --- por DEBAJO del terreno = noclip / glitch bajo el mapa ---
-			if (ac.watch_check_bajo_tierra && !enVehiculo)
+			// --- por DEBAJO del terreno = noclip / glitch bajo el mapa (saltear en gracia) ---
+			if (ac.watch_check_bajo_tierra && !enVehiculo && nowMs >= st.grace_until_ms)
 			{
 				float surfaceY = GetGame().SurfaceY(wPos[0], wPos[2]);
 				float dy = wPos[1] - surfaceY;
@@ -411,7 +591,7 @@ class ExorAnticheat
 			{
 				if (st.has_aim)
 				{
-					float spin = AngleBetweenDeg(lookDir, st.last_aim);
+					float spin = AngleHorizDeg(lookDir, st.last_aim);
 					if (spin >= ac.spinbot_grados)
 						st.spin_streak = st.spin_streak + 1;
 					else
@@ -444,13 +624,13 @@ class ExorAnticheat
 					continue;   // demasiado cerca: ruido
 				vector toO = oEye - wEye;
 
-				// --- apunta (arma en alto) a un jugador OCULTO = ESP/prefire ---
+				// --- orientado (arma en alto) a un jugador OCULTO = ESP/prefire ---
 				if (ac.watch_check_mira && hasW && raised)
 				{
-					float ang = AngleBetweenDeg(aim, toO);
+					float ang = AngleHorizDeg(lookDir, toO);
 					if (ang <= ac.watch_angulo_grados)
 					{
-						Object blk = LosBlocker(wEye, oEye, w, o);
+						Object blk = LosBlockerMulti(wEye, oEye, o.GetPosition(), w, o);
 						if (blk && CooldownOk(st, "mira:" + osid, nowMs, ac.watch_log_cooldown_seg))
 						{
 							string det1 = string.Format("apunto (arma en alto) a %1 (steam=%2) OCULTO a %3m | LOS=BLOQUEADA(%4) | ang=%5deg = ESP/prefire",
@@ -463,10 +643,10 @@ class ExorAnticheat
 				// --- corre DERECHO hacia un jugador OCULTO = ESP ---
 				if (ac.watch_check_aproximacion && hasMove)
 				{
-					float angM = AngleBetweenDeg(mv, toO);
+					float angM = AngleHorizDeg(mv, toO);
 					if (angM <= ac.watch_angulo_grados)
 					{
-						Object blk2 = LosBlocker(wEye, oEye, w, o);
+						Object blk2 = LosBlockerMulti(wEye, oEye, o.GetPosition(), w, o);
 						if (blk2 && CooldownOk(st, "aprox:" + osid, nowMs, ac.watch_log_cooldown_seg))
 						{
 							string det2 = string.Format("corrio derecho hacia %1 (steam=%2) OCULTO a %3m | LOS=BLOQUEADA(%4) = ESP",
@@ -483,7 +663,7 @@ class ExorAnticheat
 				// un humano no puede lockear-seguir a un punto que no ve mientras se mueve.
 				if (ac.watch_check_seguimiento && dist <= ac.watch_track_dist_max)
 				{
-					float angT = AngleBetweenDeg(lookDir, toO);
+					float angT = AngleHorizDeg(lookDir, toO);
 					if (angT <= ac.watch_angulo_grados)
 					{
 						bool shouldntSee = false;
@@ -495,19 +675,24 @@ class ExorAnticheat
 						}
 						else
 						{
-							Object blkT = LosBlocker(wEye, oEye, w, o);   // raycast SOLO si esta orientado y dentro de 'lejos'
+							Object blkT = LosBlockerMulti(wEye, oEye, o.GetPosition(), w, o);   // multi-rayo SOLO si esta orientado y dentro de 'lejos'
 							if (blkT)
 							{
 								shouldntSee = true;
 								reason = string.Format("OCULTO a %1m (%2)", Math.Round(dist), blkT.GetType());
 							}
 						}
+						// umbral de ticks: para objetivos MUY lejos (imposible de ver) basta menos
+						// (mas delatante); para ocultos cercanos se exige mas (pudo haberlo ojeado).
+						int reqTicks = ac.watch_track_ticks;
+						if (dist >= ac.watch_lejos_metros)
+							reqTicks = ac.watch_track_ticks_lejos;
 						int streak = st.track_streak.Get(osid);
 						if (shouldntSee)
 						{
 							streak = streak + 1;
 							st.track_streak.Set(osid, streak);
-							if (streak >= ac.watch_track_ticks && CooldownOk(st, "track:" + osid, nowMs, ac.watch_log_cooldown_seg))
+							if (streak >= reqTicks && CooldownOk(st, "track:" + osid, nowMs, ac.watch_log_cooldown_seg))
 							{
 								string detT = string.Format("siguio con la mira a %1 (steam=%2) %3 por %4 ticks seguidos = ESP (rastrea a quien no deberia ver)",
 									ExorGroupManager.PlayerName(o), osid, reason, streak);
