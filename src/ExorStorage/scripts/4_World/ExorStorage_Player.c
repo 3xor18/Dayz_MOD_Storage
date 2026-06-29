@@ -250,6 +250,15 @@ modded class PlayerBase
 	{
 		super.HandleView();
 
+		// SOLO CLIENTE: toda la logica de abajo es de camara/UI/input (SetIsInThirdPerson,
+		// GetUIManager, IsInventoryOpen, KeyState) y es ILEGAL en el server. HandleView corre
+		// tambien server-side para cada ocupante de un vehiculo -> sin este guard tiraba la
+		// excepcion "Calling GetUIManager on server is illegal" CADA FRAME por jugador en auto
+		// (cientos de miles en el RPT del server real). La camara es 100% client-side; el server
+		// no necesita nada de esto (el 1pp forzado lo aplica el engine via Is3rdPersonDisabled).
+		if (!GetGame().IsClient())
+			return;
+
 		HumanCommandVehicle hcv = GetCommand_Vehicle();
 		if (!hcv)
 			return;
@@ -526,9 +535,21 @@ modded class PlayerBase
 				weapon = ExorKfWeaponName(kp);
 			int dist = Math.Round(vector.Distance(kp.GetPosition(), GetPosition()));
 
-			// stats (siempre, para el Score)
-			ExorStats.Get().AddKill(killerSid, killerName, dist, weapon);
-			ExorStats.Get().AddDeath(victimSid, victimName);
+			// TEAMKILL (mismo clan/party/territorio): el kill IGUAL sale en el killfeed
+			// (mas abajo), pero NO suma al Score -> ni kill al asesino ni death a la
+			// victima. Asi no inflan stats matandose entre socios del mismo mastil.
+			bool teamKill = ExorGroupManager.Get().SameParty(killerSid, victimSid);
+
+			// stats (para el Score) - salvo teamkill
+			if (!teamKill)
+			{
+				ExorStats.Get().AddKill(killerSid, killerName, dist, weapon);
+				ExorStats.Get().AddDeath(victimSid, victimName);
+			}
+
+			// FORENSE anti-farmeo: registra el par killer->victima (por steamid, a prueba
+			// de cambio de nombre) y loguea al raidlog si supera el umbral en la ventana.
+			ExorKillFarm.OnKill(killerSid, killerName, victimSid, victimName, kp.GetPosition(), teamKill);
 
 			// anti-cheat: evaluar el kill (LOS/angulo/distancia) -> log si hay indicios.
 			// Se saltea para granadas/lanzagranadas: el explosivo no necesita LOS ni punteria
@@ -932,13 +953,15 @@ modded class PlayerBase
 
 	void ExorOnMemberSync(ParamsReadContext ctx)
 	{
-		Param1<string> p = new Param1<string>("");
-		if (!ctx.Read(p))
-			return;
+		// reensamblado por trozos (el server ahora chunkea MEMBER_SYNC, igual que
+		// ROSTER/MARKER, para no corromper el string con 5+ miembros).
+		string full = ExorBigStringRx.Feed(ExorRPC.MEMBER_SYNC, ctx);
+		if (full == "")
+			return;	// aun faltan trozos
 		ExorLiveDTO dto = new ExorLiveDTO();
 		JsonSerializer js = new JsonSerializer();
 		string err;
-		if (js.ReadFromString(dto, p.param1, err))
+		if (js.ReadFromString(dto, full, err))
 			ExorPartyClient.SetLive(dto);
 	}
 

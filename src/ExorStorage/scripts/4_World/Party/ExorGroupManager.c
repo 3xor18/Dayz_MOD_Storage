@@ -102,6 +102,18 @@ class ExorGroupManager
 		return null;
 	}
 
+	// true si ambos steamids estan en el MISMO grupo (clan/party/territorio = mismo
+	// mastil). Un solo lookup, solo se llama al morir alguien -> sin costo en performance.
+	// Lo usa el Score para NO contar teamkills (kill del asesino / death de la victima),
+	// aunque el kill SI se muestre en el killfeed.
+	bool SameParty(string sidA, string sidB)
+	{
+		if (sidA == "" || sidB == "")
+			return false;
+		ExorGroup g = FindByPlayer(sidA);
+		return g != null && g.HasMember(sidB);
+	}
+
 	// ------------------------- persistencia -------------------------
 	string GroupPath(string id)
 	{

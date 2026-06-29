@@ -226,6 +226,9 @@ class ExorCfgPartyProteccion
 	bool log_combat_log = true;                   // #7: loguear deslogueo dentro de una zona de combate PvP (combat-log)
 	int combat_log_minutos = 8;                   // minutos reales que la zona de combate sigue viva tras el ultimo daño PvP (0 = off)
 	float combat_log_radio = 150;                 // radio (m) de la zona de combate alrededor de cada participante (tirador y victima); 150 cubre PvP largo por el anclaje a ambos extremos
+	bool log_farmeo_kills = true;                 // #8: loguear posible farmeo de kills (un mismo killer mata al MISMO steamid muchas veces en poco tiempo). Por steamid -> inmune al cambio de nombre.
+	int farmeo_ventana_minutos = 240;             // ventana deslizante en minutos reales (240 = 4h). Persiste entre reinicios.
+	int farmeo_umbral = 4;                        // a partir de cuantos kills al MISMO steamid dentro de la ventana se loguea (0 = off)
 }
 
 class ExorCfgParty
@@ -291,6 +294,9 @@ class ExorCfgParty
 		proteccion.inactividad_dias = 21;
 		proteccion.log_combat_log = true;
 		proteccion.combat_log_minutos = 8;
+		proteccion.log_farmeo_kills = true;
+		proteccion.farmeo_ventana_minutos = 240;
+		proteccion.farmeo_umbral = 4;
 		proteccion.combat_log_radio = 150;
 	}
 }

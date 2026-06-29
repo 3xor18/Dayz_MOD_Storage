@@ -4,7 +4,7 @@
 class ExorStorageConstants
 {
 	static const string MOD_NAME = "3xor_Vanilla_Optimization";
-	static const string MOD_VERSION = "2.5.5";
+	static const string MOD_VERSION = "2.5.9";
 	static const string LOG = "[3xorVO]";
 	// DEBUG temporal del ciclo de vida del barril (setear/levantar/abrir/cerrar/item
 	// in-out/virtualizar/restaurar/load/save/shutdown). Poner en false (o borrar las
@@ -55,6 +55,11 @@ class ExorStorageConstants
 
 	// Log de auditoria del server (1 archivo por dia: audit_YYYY-MM-DD.txt, auto-purga)
 	static const string AUDITLOG_DIR = "$profile:3xorVanillaOptimization\\ServerAuditLog";
+
+	// Ledger anti-farmeo de kills: por par killer->victima (steamid), timestamps de los
+	// kills recientes. Persiste para sobrevivir los reinicios cada 4h (si no, la ventana
+	// se resetearia en cada arranque). Lo maneja ExorKillFarm (4_World).
+	static const string KILLFARM_FILE = "$profile:3xorVanillaOptimization\\killfarm.json";
 
 	// Duracion de las acciones (segundos)
 	static const float PACK_SECONDS = 3;

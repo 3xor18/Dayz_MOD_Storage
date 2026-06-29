@@ -343,6 +343,67 @@ class ExorVO_Serializer
 		return w * h;
 	}
 
+	// ------------------------- RUINED: liberar el contenido -------------------------
+	// Una prenda/contenedor DESTRUIDO (ruined, health01==0) no se puede ATAR a un slot
+	// ni abrir estando anidado -> al lootear un cuerpo el loot quedaba ATRAPADO dentro
+	// de la prenda rota y habia que tirarla al piso para verlo. Para la TUMBA: vaciamos
+	// los contenedores ruined y subimos su contenido al nivel superior (= cargo de la
+	// tumba), accesible de una. El cascaron ruined queda VACIO (para que se siga viendo
+	// que la prenda estaba destruida). Recursivo: tambien vacia ruined anidados.
+	static bool IsRuined(ExorVO_ItemData d)
+	{
+		return d && d.health <= 0.001;
+	}
+
+	// Sube a 'top' el contenido (cargo) de cualquier item RUINED del arbol de cada
+	// elemento de 'top'. Worklist: lo subido se vuelve a procesar (por si era a su vez
+	// un contenedor ruined). El cascaron ruined queda vacio.
+	static void HoistRuinedContents(array<ref ExorVO_ItemData> top)
+	{
+		if (!top)
+			return;
+		int i = 0;
+		while (i < top.Count())
+		{
+			DrainRuinedTree(top.Get(i), top);
+			i++;
+		}
+	}
+
+	// Para 'd' y sus hijos (cargo + attachments): si estan ruined, mueve su cargo a 'top'.
+	static void DrainRuinedTree(ExorVO_ItemData d, array<ref ExorVO_ItemData> top)
+	{
+		if (!d)
+			return;
+
+		// primero recursion en hijos NO-ruined (sus ruined internos tambien se vacian)
+		int j;
+		if (d.attachments)
+			for (j = 0; j < d.attachments.Count(); j++)
+				DrainRuinedTree(d.attachments.Get(j), top);
+		if (d.cargo)
+			for (j = 0; j < d.cargo.Count(); j++)
+				DrainRuinedTree(d.cargo.Get(j), top);
+
+		// si 'd' esta ruined y tiene cargo -> sacarlo al nivel superior
+		if (IsRuined(d) && d.cargo && d.cargo.Count() > 0)
+		{
+			int k;
+			for (k = 0; k < d.cargo.Count(); k++)
+			{
+				ExorVO_ItemData c = d.cargo.Get(k);
+				if (!c)
+					continue;
+				// que caiga en el 1er hueco libre de la tumba (la casilla original era
+				// de la grilla de la prenda rota y podria chocar)
+				c.cargo_row = -1;
+				c.cargo_col = -1;
+				top.Insert(c);
+			}
+			d.cargo.Clear();
+		}
+	}
+
 	// ------------------------- UTILIDADES -------------------------
 	static string GenerateId()
 	{

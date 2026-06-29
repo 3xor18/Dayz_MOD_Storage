@@ -17,6 +17,7 @@ modded class MissionServer
 		ExorGroupManager.Init();
 		ExorPartyLive.Start();
 		ExorRaidLog.Init();	// crea raidlog\ y purga archivos mas viejos que log_dias_retener
+		ExorKillFarm.Init();	// carga el ledger anti-farmeo (sobrevive los reinicios cada 4h)
 		ExorGroupManager.Get().ScanInactiveClans();	// avisa al raidlog de clanes sin conexion hace 'inactividad_dias'
 		ExorAnticheat.Start();	// anti-cheat heuristico: tick de watchlist (~1 Hz) + detector por kill
 
@@ -35,6 +36,7 @@ modded class MissionServer
 		ExorVO_Manager.VirtualizeAll();
 		ExorStats.Get().FlushIfDirty();	// volcar stats pendientes antes de apagar
 		ExorRaidLog.Flush();			// volcar el log de auditoria bufferizado antes de apagar
+		ExorKillFarm.FlushIfDirty();	// volcar el ledger anti-farmeo antes de apagar (ventana 4h vs reinicio)
 		super.OnMissionFinish();
 	}
 

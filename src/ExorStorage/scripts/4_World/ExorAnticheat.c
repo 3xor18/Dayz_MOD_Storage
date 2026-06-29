@@ -478,6 +478,8 @@ class ExorAnticheat
 		// para que se vuelque aunque el anti-cheat este desactivado (el log lo usan tambien
 		// party/anti-raid/etc.). El tick siempre corre (Start lo registra incondicional).
 		ExorRaidLog.Flush();
+		// Persistir el ledger anti-farmeo SOLO si cambio (no I/O por kill -> sin hitches).
+		ExorKillFarm.FlushIfDirty();
 
 		ExorCfgAnticheat ac = GetExorConfig().anticheat;
 		if (!ac.habilitado || !ac.watchlist_activa)

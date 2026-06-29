@@ -281,6 +281,11 @@ class Exor_BodyBag extends Container_Base
 		// limpiamente SOBRE la superficie la deja siempre accesible.
 		bag.PlaceOnSurface();
 
+		// PRENDAS DESTRUIDAS (ruined): su contenido no se puede abrir mientras la prenda
+		// rota esta anidada/atada -> antes quedaba ATRAPADO y habia que tirar la prenda al
+		// piso. Lo sacamos al nivel superior para que caiga directo en el cargo de la tumba.
+		ExorVO_Serializer.HoistRuinedContents(loot);
+
 		// el loot se ARMA en la posicion de la bolsa (NO bajo tierra: a -1000m el motor lo limpia
 		// por out-of-bounds antes de que entre al cargo) y se mueve a la bolsa
 		vector hidden = pos;

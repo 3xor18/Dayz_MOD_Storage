@@ -160,7 +160,12 @@ class ExorPartyLive
 			JsonSerializer js = new JsonSerializer();
 			string data;
 			js.WriteToString(dto, false, data);
-			rcv.RPCSingleParam(ExorRPC.MEMBER_SYNC, new Param1<string>(data), false, rcv.GetIdentity());
+			// CHUNKING (como ROSTER/MARKER): con 5+ miembros el JSON supera ~2KB y el
+			// motor del cliente CORROMPE el string al leerlo de un RPC de un solo param
+			// -> el parse falla -> el cliente se quedaba con los ultimos 4 validos ("no
+			// veo mas de 4 en la party"). Partir en trozos lo evita sin importar cuantos
+			// miembros ni el largo de los nombres.
+			ExorNetChunk.Send(rcv, rcv.GetIdentity(), ExorRPC.MEMBER_SYNC, data);
 		}
 	}
 
@@ -178,7 +183,7 @@ class ExorPartyLive
 		ExorLiveDTO emptyLive = new ExorLiveDTO();
 		string d1;
 		js.WriteToString(emptyLive, false, d1);
-		p.RPCSingleParam(ExorRPC.MEMBER_SYNC, new Param1<string>(d1), true, p.GetIdentity());
+		ExorNetChunk.Send(p, p.GetIdentity(), ExorRPC.MEMBER_SYNC, d1);
 
 		ExorMarkersDTO emptyMk = new ExorMarkersDTO();
 		string d2;
