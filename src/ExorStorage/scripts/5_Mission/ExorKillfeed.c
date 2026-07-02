@@ -154,8 +154,11 @@ class ExorKillfeed
 		array<int> col = new array<int>;
 		if (e.msg != "")
 		{
-			// ALERTA del KOTH: la 1ra palabra ("Koth") en VERDE, el resto en BLANCO.
-			int cKothG = ARGB(255, 45, 215, 60);
+			// ALERTA del KOTH: la 1ra palabra ("Koth") en el COLOR del koth (msgargb),
+			// el resto en BLANCO. Si no viene color, verde por defecto.
+			int cKothG = e.msgargb;
+			if (cKothG == 0)
+				cKothG = ARGB(255, 45, 215, 60);
 			int cKothW = ARGB(255, 240, 240, 240);
 			int sp = e.msg.IndexOf(" ");
 			if (sp > 0)

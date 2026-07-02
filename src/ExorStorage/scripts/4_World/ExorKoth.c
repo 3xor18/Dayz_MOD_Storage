@@ -160,7 +160,7 @@ class ExorKothRun
 				m_WarnFired.Set(i, true);
 				int ix = Math.Round(m_Pos[0]);
 				int iz = Math.Round(m_Pos[2]);
-				ExorKoth.Alert(string.Format("Koth iniciara en %1 en X:%2 Z:%3", ExorKoth.FmtTiempo(w), ix, iz), 13);
+				ExorKoth.Alert(string.Format("Koth iniciara en %1 en X:%2 Z:%3", ExorKoth.FmtTiempo(w), ix, iz), 13, argb);
 				if (g.colocar_marca_mapa_para_todo_el_server)
 					SendMarker(true, argb, "Koth");
 			}
@@ -218,7 +218,7 @@ class ExorKothRun
 		{
 			int ix = Math.Round(m_Pos[0]);
 			int iz = Math.Round(m_Pos[2]);
-			ExorKoth.Alert(string.Format("Koth activo en X:%1 Z:%2", ix, iz), 15);
+			ExorKoth.Alert(string.Format("Koth activo en X:%1 Z:%2", ix, iz), 15, argb);
 		}
 		if (g.colocar_marca_mapa_para_todo_el_server)
 			SendMarker(true, argb, "Koth activo");
@@ -267,6 +267,7 @@ class ExorKothRun
 		ExorCfgKoth g = GetExorConfig().koth;
 		ExorCfgKothColor c = Cfg();
 		int smokeIdx = ExorKoth.SmokeIdx(c.color);
+		int argb = ExorKoth.ColorArgb(c.color);
 
 		float dt = (now - m_LastTickMs) / 1000.0;
 		m_LastTickMs = now;
@@ -284,7 +285,7 @@ class ExorKothRun
 			m_AbandonSinceMs = 0;
 			if (!m_CaptureAnnounced && g.avisar_que_un_player_inicico_koth)
 			{
-				ExorKoth.Alert("Koth lo estan capturando!", 11);
+				ExorKoth.Alert("Koth lo estan capturando!", 11, argb);
 				m_CaptureAnnounced = true;
 			}
 			if (m_SmokeState != smokeIdx)
@@ -316,7 +317,7 @@ class ExorKothRun
 				{
 					m_LastPctMs = now;
 					int pct = Math.Round(m_Progress * 100);
-					ExorKoth.Alert("Koth al " + pct.ToString() + "%", 11);
+					ExorKoth.Alert("Koth al " + pct.ToString() + "%", 11, argb);
 				}
 			}
 
@@ -392,7 +393,7 @@ class ExorKothRun
 		string who = names;
 		if (who == "")
 			who = "los jugadores";
-		ExorKoth.Alert(string.Format("Koth completado por: %1", who), 17);
+		ExorKoth.Alert(string.Format("Koth completado por: %1", who), 17, argb);
 
 		if (m_Mast)
 		{
@@ -474,7 +475,8 @@ class ExorKothRun
 	void DespawnKoth()
 	{
 		ExorCfgKothColor c = Cfg();
-		ExorKoth.Alert("Koth desaparecio (nadie lo capturo)", 13);
+		int argb = ExorKoth.ColorArgb(c.color);
+		ExorKoth.Alert("Koth desaparecio (nadie lo capturo)", 13, argb);
 		if (m_Mast)
 		{
 			GetGame().ObjectDelete(m_Mast);
@@ -709,13 +711,13 @@ class ExorKoth
 		return seg.ToString() + " segundos";
 	}
 
-	static void Alert(string msg, int durSec)
+	static void Alert(string msg, int durSec, int argb)
 	{
 		if (!GetGame() || !GetGame().IsServer())
 			return;
 		ExorKfDTO d = new ExorKfDTO();
 		d.msg = msg;
-		d.msgargb = 0;
+		d.msgargb = argb;	// color de la palabra "Koth" (= color del koth que avisa)
 		d.dur = durSec;
 		d.max = 5;
 		JsonSerializer js = new JsonSerializer();
