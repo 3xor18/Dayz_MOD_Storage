@@ -1476,12 +1476,20 @@ class ExorConfig
 
 	void LoadKoth()
 	{
+		// Si ya existe, cargarlo y NO re-guardarlo: asi el archivo del admin queda EXACTO
+		// como lo edito (no se reformatea ni se pisa en cada arranque). Solo se crea/guarda
+		// la primera vez (con defaults). Mismo criterio que serverinfo.json.
 		if (FileExist(ExorStorageConstants.CFG_KOTH))
+		{
 			JsonFileLoader<ExorCfgKoth>.JsonLoadFile(ExorStorageConstants.CFG_KOTH, koth);
+			koth.Validate();	// clampa en memoria (no toca el archivo)
+		}
 		else
+		{
 			koth.SetDefaults();
-		koth.Validate();	// clampa negativos/invalidos (ej. zombies < 0 -> 0)
-		JsonFileLoader<ExorCfgKoth>.JsonSaveFile(ExorStorageConstants.CFG_KOTH, koth);
+			koth.Validate();
+			JsonFileLoader<ExorCfgKoth>.JsonSaveFile(ExorStorageConstants.CFG_KOTH, koth);
+		}
 	}
 
 	void LoadItems()
