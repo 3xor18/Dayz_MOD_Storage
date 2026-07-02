@@ -785,6 +785,19 @@ modded class PlayerBase
 					ExorPopClient.s_Count = pc.param1;
 				break;
 			}
+			case ExorRPC.KOTH_SYNC:
+			{
+				Param1<string> kp = new Param1<string>("");
+				if (ctx.Read(kp))
+				{
+					ExorKothMarkerDTO km = new ExorKothMarkerDTO();
+					JsonSerializer kjs = new JsonSerializer();
+					string kerr;
+					if (kjs.ReadFromString(km, kp.param1, kerr))
+						ExorKothClient.Apply(km);
+				}
+				break;
+			}
 			case ExorRPC.CHAT_SEND:
 				if (GetGame().IsServer())
 				{

@@ -17,6 +17,8 @@ class ExorKfEntry
 	bool suicide;
 	bool generic;   // "X murio" a secas (enfermedad/hambre/sed)
 	string cause;   // muerte ambiental: "X murio por <cause>" (vacio = no aplica)
+	string msg;     // ALERTA generica (KOTH): si != "" se muestra tal cual en msgargb
+	int msgargb;    // color del texto de la alerta generica
 	int expireMs;
 }
 
@@ -64,6 +66,8 @@ class ExorKillfeed
 		e.suicide = dto.suicide;
 		e.generic = dto.generic;
 		e.cause = dto.cause;
+		e.msg = dto.msg;
+		e.msgargb = dto.msgargb;
 		int dur = dto.dur;
 		if (dur <= 0)
 			dur = 6;
@@ -148,7 +152,23 @@ class ExorKillfeed
 
 		TStringArray txt = new TStringArray;
 		array<int> col = new array<int>;
-		if (e.generic)
+		if (e.msg != "")
+		{
+			// ALERTA del KOTH: la 1ra palabra ("Koth") en VERDE, el resto en BLANCO.
+			int cKothG = ARGB(255, 45, 215, 60);
+			int cKothW = ARGB(255, 240, 240, 240);
+			int sp = e.msg.IndexOf(" ");
+			if (sp > 0)
+			{
+				txt.Insert(e.msg.Substring(0, sp));                    col.Insert(cKothG);
+				txt.Insert(e.msg.Substring(sp, e.msg.Length() - sp));  col.Insert(cKothW);
+			}
+			else
+			{
+				txt.Insert(e.msg);   col.Insert(cKothG);
+			}
+		}
+		else if (e.generic)
 		{
 			// muerte sin causa conocida: "Victima murió"
 			txt.Insert(e.victim);     col.Insert(cR);

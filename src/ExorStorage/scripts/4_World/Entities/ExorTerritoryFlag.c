@@ -17,10 +17,18 @@ modded class TerritoryFlag
 	protected bool m_ExorInviteOpen;	// hay invitacion abierta (sincronizado a clientes)
 	protected int m_ExorInviteUntilMin;	// server: minuto limite de la invitacion (auto-cierra a los 10 min)
 
+	// ---- KOTH (mastil de evento King of the Hill) ----
+	protected bool m_ExorIsKothMast;	// este mastil es de un KOTH: NO reclama territorio
+	protected int m_ExorKothColorIdx;	// humo del color al capturar (1 amarillo / 2 verde / 3 morado)
+	protected int m_ExorKothSmoke;		// NETSYNC: humo actual -1 ninguno / 0 blanco / 1..3 color
+	protected Particle m_ExorSmokeFx;	// cliente: particula de humo activa (SIN ref: Particle es Object, gestionado por el motor)
+
 	void TerritoryFlag()
 	{
 		RegisterNetSyncVariableBool("m_ExorFlagRaised");
 		RegisterNetSyncVariableBool("m_ExorInviteOpen");
+		RegisterNetSyncVariableInt("m_ExorKothSmoke", -1, 3);
+		m_ExorKothSmoke = -1;
 	}
 
 	// ------------------------- estado de grupo/bandera -------------------------
@@ -241,6 +249,14 @@ modded class TerritoryFlag
 		super.EEInit();
 		if (!GetGame().IsServer())
 			return;
+		// KOTH: si este mastil lo esta creando el manager de koth, NO reclama territorio
+		// ni se registra como mastil de party (lo configura ExorKoth directamente).
+		if (ExorKoth.s_SpawningKothMast)
+		{
+			m_ExorIsKothMast = true;
+			ExorKoth.s_SpawningKothMast = false;
+			return;
+		}
 		if (!GetExorConfig().party.territorio.habilitado)
 			return;	// sistema de territorio desactivado: la bandera queda 100% vanilla
 		ExorTerritoryManager.Get().RegisterMast(this);
@@ -255,6 +271,15 @@ modded class TerritoryFlag
 		if (m_ExorInitDone)
 			return;
 		m_ExorInitDone = true;
+
+		// KOTH huerfano (mastil de koth persistido de una sesion anterior tras crash/reinicio):
+		// borrarlo. El estado del koth se reinicia en cada arranque, asi que no debe quedar.
+		if (m_ExorIsKothMast)
+		{
+			ExorMarkDisbanding();
+			GetGame().ObjectDelete(this);
+			return;
+		}
 
 		if (m_ExorGroupId != "")
 		{
@@ -447,13 +472,130 @@ modded class TerritoryFlag
 		construction.UpdateVisuals();
 	}
 
+	// ------------------------- KOTH (mastil de evento) -------------------------
+	bool ExorIsKothMast() { return m_ExorIsKothMast; }
+	int ExorKothCapturedSmokeIdx() { return m_ExorKothColorIdx; }
+
+	// Prepara este mastil como KOTH: arma el poste (sin materiales), cuelga la bandera
+	// (abajo) y deja humo BLANCO (idle). capturedSmokeIdx = humo del color al capturar.
+	void ExorKothSetup(int capturedSmokeIdx)
+	{
+		if (!GetGame().IsServer())
+			return;
+		m_ExorIsKothMast = true;
+		m_ExorKothColorIdx = capturedSmokeIdx;
+
+		// armar el poste. OnPartBuiltServer necesita un Man; con koth puede no haber nadie
+		// al lado, asi que se usa el mas cercano o, si no, cualquiera conectado.
+		PlayerBase builder = ExorNearestPlayer(3000);
+		if (!builder)
+			builder = ExorAnyPlayer();
+		if (builder)
+			ExorAutoBuild(builder);
+
+		// colgar la bandera (destrabar el slot primero)
+		if (!FindAttachmentBySlotName("Material_FPole_Flag"))
+		{
+			int slotId = InventorySlots.GetSlotIdFromString("Material_FPole_Flag");
+			GetInventory().SetSlotLock(slotId, false);
+			string flagCls = GetExorConfig().koth.clase_bandera;
+			if (flagCls != "")
+				GetInventory().CreateAttachment(flagCls);
+		}
+
+		// bandera abajo al empezar (progreso 0) + humo blanco (idle)
+		m_ExorFlagRaised = false;
+		ExorAnimateCloth(false);
+		ExorKothSetSmoke(0);
+
+		// borrar el kit (TerritoryFlagKit/FenceKit) que puede quedar en el piso al
+		// auto-construir el mastil. Varias pasadas por si aparece un tick despues.
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanupKitGround, 1000, false);
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanupKitGround, 4000, false);
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanupKitGround, 9000, false);
+	}
+
+	// setea el humo (server) y lo sincroniza a los clientes cercanos
+	void ExorKothSetSmoke(int s)
+	{
+		if (!GetGame().IsServer())
+			return;
+		m_ExorKothSmoke = s;
+		SetSynchDirty();
+	}
+
+	// iza la bandera segun el progreso 0..1 (0 = abajo, 1 = arriba del todo)
+	void ExorKothRaise(float progress)
+	{
+		if (!GetGame().IsServer())
+			return;
+		float ph = 1.0 - progress;
+		if (ph < 0)
+			ph = 0;
+		if (ph > 1)
+			ph = 1;
+		AnimateFlagEx(ph);
+	}
+
+	// primer jugador conectado (fallback para armar el poste del koth)
+	PlayerBase ExorAnyPlayer()
+	{
+		array<Man> players = new array<Man>;
+		GetGame().GetPlayers(players);
+		if (players.Count() > 0)
+			return PlayerBase.Cast(players.Get(0));
+		return null;
+	}
+
+	// CLIENTE: al cambiar el humo sincronizado, (re)crear la particula del color.
+	override void OnVariablesSynchronized()
+	{
+		super.OnVariablesSynchronized();
+		ExorKothUpdateSmokeFx();
+	}
+
+	void ExorKothUpdateSmokeFx()
+	{
+		if (!GetGame().IsClient())
+			return;
+		if (m_ExorSmokeFx)
+		{
+			m_ExorSmokeFx.Stop();
+			m_ExorSmokeFx = null;
+		}
+		if (m_ExorKothSmoke < 0)
+			return;
+		int pid = ExorKothParticleId(m_ExorKothSmoke);
+		vector p = GetPosition();
+		p[1] = p[1] + 2.0;
+		m_ExorSmokeFx = Particle.PlayInWorld(pid, p);
+	}
+
+	int ExorKothParticleId(int s)
+	{
+		if (s == 1)
+			return ParticleList.GRENADE_M18_YELLOW_LOOP;
+		if (s == 2)
+			return ParticleList.GRENADE_M18_GREEN_LOOP;
+		if (s == 3)
+			return ParticleList.GRENADE_M18_PURPLE_LOOP;
+		return ParticleList.GRENADE_M18_WHITE_LOOP;
+	}
+
 	// ------------------------- despawn al disolverse -------------------------
 	override void EEDelete(EntityAI parent)
 	{
+		// cliente: apagar el humo si estaba activo
+		if (m_ExorSmokeFx)
+		{
+			m_ExorSmokeFx.Stop();
+			m_ExorSmokeFx = null;
+		}
 		if (GetGame().IsServer())
 		{
 			ExorTerritoryManager.Get().UnregisterMast(this);
-			if (!m_ExorDisbanding && m_ExorGroupId != "")
+			// KOTH: nunca disolver party (no tiene grupo). Solo banderas de territorio.
+			if (!m_ExorDisbanding && m_ExorGroupId != "" && !m_ExorIsKothMast)
 			{
 				ExorGroup g = ExorGroupManager.Get().FindById(m_ExorGroupId);
 				if (g)
@@ -470,6 +612,7 @@ modded class TerritoryFlag
 		ctx.Write(m_ExorGroupId);
 		ctx.Write(m_ExorFlagRaised);
 		ctx.Write(m_ExorClaimMinute);
+		ctx.Write(m_ExorIsKothMast);	// para poder borrar mastiles de koth huerfanos al recargar
 	}
 
 	override bool OnStoreLoad(ParamsReadContext ctx, int version)
@@ -485,6 +628,10 @@ modded class TerritoryFlag
 		int claimMinute;
 		if (!ctx.Read(claimMinute)) return false;
 		m_ExorClaimMinute = claimMinute;
+		// campo NUEVO al final: lectura tolerante (saves viejos no lo tienen -> queda false).
+		bool kf;
+		if (ctx.Read(kf))
+			m_ExorIsKothMast = kf;
 		return true;
 	}
 }

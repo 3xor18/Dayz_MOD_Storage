@@ -497,6 +497,215 @@ class ExorCfgBodyCadaver
 }
 
 // ----------------------------------------------------------------------------
+// koth.json (King of the Hill: eventos de captura con recompensa)
+//   Cada entrada de "colores" es UN koth INDEPENDIENTE con su PROPIA config y su
+//   propio ciclo (pueden estar varios activos a la vez). Adentro de cada color van
+//   TODOS los tiempos/parametros (inicio, completar, avisos, despawn, bonos, etc.),
+//   ademas del color de humo (amarillo/verde/morado), min de jugadores, osos,
+//   coordenadas (array; se elige una al azar) e items de recompensa (% por item;
+//   repetir un classname = "1 seguro + 1 con suerte"). Solo quedan globales los
+//   classnames de objetos y el ajuste del pallet.
+// ----------------------------------------------------------------------------
+class ExorCfgKothItem
+{
+	string classname = "";
+	int probabilidad_drop_en_porcentaje_maximo_100 = 100;
+}
+
+class ExorCfgKothCoord
+{
+	float x = 0;
+	float y = 0;
+	float z = 0;
+}
+
+// UN koth independiente. Solo lleva lo PROPIO de cada koth; el resto es global (abajo).
+class ExorCfgKothColor
+{
+	string color = "amarillo";                 // SOLO: amarillo / verde / morado (color del humo y de la marca)
+	int cantidad_minima_players_online = 1;    // solo aparece si hay >= esta cantidad de conectados
+	int spawnear_osos = 0;                     // osos a spawnear en ESTE koth
+	int cantidad_zombies = 0;                  // infectados a spawnear en ESTE koth
+	ref TStringArray clase_zombie;             // lista de classnames de infectados (por cada zombie se elige uno al azar de la lista)
+	int no_spawnear_con_player_cerca_en_metros = 30; // radio: una coordenada con un player dentro NO se usa (se prueba la siguiente)
+	int segundos_para_inicio_koth_al_reinicar_server = 60;   // demora del 1er spawn de ESTE koth tras arrancar
+	int segundos_spawnear_nuevo_koth_tras_completar_otro = 60; // demora hasta el siguiente ciclo de ESTE koth
+	int segundos_para_completar_koth = 60;     // tiempo base para izar la bandera al 100%
+	ref array<ref ExorCfgKothCoord> coordenadas;     // 1 o mas ubicaciones; se elige una LIBRE al azar cada ciclo
+	ref array<ref ExorCfgKothItem> item;
+
+	void ExorCfgKothColor()
+	{
+		clase_zombie = new TStringArray;
+		coordenadas = new array<ref ExorCfgKothCoord>;
+		item = new array<ref ExorCfgKothItem>;
+	}
+
+	void Validate()
+	{
+		if (cantidad_zombies < 0)
+			cantidad_zombies = 0;
+		if (spawnear_osos < 0)
+			spawnear_osos = 0;
+		if (segundos_para_completar_koth < 1)
+			segundos_para_completar_koth = 1;
+		if (segundos_spawnear_nuevo_koth_tras_completar_otro < 0)
+			segundos_spawnear_nuevo_koth_tras_completar_otro = 0;
+		if (segundos_para_inicio_koth_al_reinicar_server < 0)
+			segundos_para_inicio_koth_al_reinicar_server = 0;
+		if (no_spawnear_con_player_cerca_en_metros < 0)
+			no_spawnear_con_player_cerca_en_metros = 0;
+	}
+}
+
+class ExorCfgKoth
+{
+	int version = 1;
+	bool activar = false;                       // MASTER on/off de TODO el sistema
+	// ---- globales (compartidos por todos los koth) ----
+	int metros_cercania_player_para_completar = 30;  // radio de captura (y del color del humo)
+	ref array<int> segundos_aviso_antes_crear_koth;  // ej [60,120,200]: avisa "faltan X" + coords + marca
+	int segundos_aviso_porcentaje_completado = 60;   // cada X seg avisa el % (0 = no avisar)
+	int segundos_despawner_koth_sin_player_cerca = 120; // si NADIE cerca por este tiempo, desaparece
+	int metros_para_detectar_falta_player = 500;     // radio de "no hay nadie cerca" (despawn por abandono)
+	bool avisar_spawn_koth = true;                   // aviso al spawnear
+	bool avisar_que_un_player_inicico_koth = true;   // aviso cuando alguien empieza a capturarlo
+	int segundos_limpiar_cosas_al_completar_koth = 80; // tiempo minimo antes de limpiar pallet/fuegos/marca
+	int metros_limpieza_sin_player_cerca = 10;       // no limpia si hay alguien a menos de esto (no borrar mientras lootean)
+	bool colocar_marca_mapa_para_todo_el_server = true; // marca en el mapa visible por TODOS
+	int bonus_por_mas_de_un_player_en_radio_en_procentaje_por_player = 10; // +X% por jugador extra en el radio
+	int bonus_proximidad_mastil_menos_de_5_metros_en_procentaje_solo_cuenta_1_player = 10; // +X% si hay alguien muy cerca
+	int metros_proximidad_mastil_para_bonus = 5;     // radio del bonus de proximidad
+	int cantidad_maxima_players_en_bono = 3;         // tope de jugadores que suman al bonus
+	string clase_mastil = "TerritoryFlag";           // objeto del mastil con bandera (la bandera se iza con el progreso)
+	string clase_bandera = "Flag_White";             // tela que se cuelga en el mastil
+	string clase_pallet_recompensa = "";  // OVERRIDE del pallet para TODOS. Vacio = supply crate por color (amarillo=Exor_KothCrate_1, verde=_2, morado=_3). Lo que no entra NO se spawnea.
+	string clase_fuegos_artificiales = "FireworksLauncher";  // objeto de fuegos que se enciende al completar
+	float altura_extra_pallet = 0;                // metros que se sube el pallet si queda enterrado
+	float metros_fuegos_lejos_del_pallet = 10;    // los fuegos se encienden a esta distancia del pallet
+	float pallet_yaw = 0;                         // rotacion del pallet (grados); el crate ya viene derecho en 0,0,0
+	float pallet_pitch = 0;
+	float pallet_roll = 0;
+	ref array<ref ExorCfgKothColor> colores;
+
+	void ExorCfgKoth()
+	{
+		segundos_aviso_antes_crear_koth = new array<int>;
+		colores = new array<ref ExorCfgKothColor>;
+	}
+
+	void Validate()
+	{
+		if (metros_cercania_player_para_completar < 1)
+			metros_cercania_player_para_completar = 1;
+		if (cantidad_maxima_players_en_bono < 1)
+			cantidad_maxima_players_en_bono = 1;
+		if (bonus_por_mas_de_un_player_en_radio_en_procentaje_por_player < 0)
+			bonus_por_mas_de_un_player_en_radio_en_procentaje_por_player = 0;
+		if (bonus_proximidad_mastil_menos_de_5_metros_en_procentaje_solo_cuenta_1_player < 0)
+			bonus_proximidad_mastil_menos_de_5_metros_en_procentaje_solo_cuenta_1_player = 0;
+		if (metros_proximidad_mastil_para_bonus < 0)
+			metros_proximidad_mastil_para_bonus = 0;
+		if (segundos_despawner_koth_sin_player_cerca < 0)
+			segundos_despawner_koth_sin_player_cerca = 0;
+		if (segundos_limpiar_cosas_al_completar_koth < 0)
+			segundos_limpiar_cosas_al_completar_koth = 0;
+		if (metros_limpieza_sin_player_cerca < 0)
+			metros_limpieza_sin_player_cerca = 0;
+		if (metros_fuegos_lejos_del_pallet < 0)
+			metros_fuegos_lejos_del_pallet = 0;
+		if (colores)
+		{
+			int i;
+			for (i = 0; i < colores.Count(); i++)
+			{
+				if (colores.Get(i))
+					colores.Get(i).Validate();
+			}
+		}
+	}
+
+	void SetDefaults()
+	{
+		version = 1;
+		activar = false;
+		metros_cercania_player_para_completar = 30;
+		segundos_aviso_antes_crear_koth = new array<int>;
+		segundos_aviso_antes_crear_koth.Insert(60);
+		segundos_aviso_antes_crear_koth.Insert(120);
+		segundos_aviso_antes_crear_koth.Insert(200);
+		segundos_aviso_porcentaje_completado = 60;
+		segundos_despawner_koth_sin_player_cerca = 120;
+		metros_para_detectar_falta_player = 500;
+		avisar_spawn_koth = true;
+		avisar_que_un_player_inicico_koth = true;
+		segundos_limpiar_cosas_al_completar_koth = 80;
+		metros_limpieza_sin_player_cerca = 10;
+		colocar_marca_mapa_para_todo_el_server = true;
+		bonus_por_mas_de_un_player_en_radio_en_procentaje_por_player = 10;
+		bonus_proximidad_mastil_menos_de_5_metros_en_procentaje_solo_cuenta_1_player = 10;
+		metros_proximidad_mastil_para_bonus = 5;
+		cantidad_maxima_players_en_bono = 3;
+		clase_mastil = "TerritoryFlag";
+		clase_bandera = "Flag_White";
+		clase_pallet_recompensa = "";
+		clase_fuegos_artificiales = "FireworksLauncher";
+		altura_extra_pallet = 0;
+		metros_fuegos_lejos_del_pallet = 10;
+		pallet_yaw = 0;
+		pallet_pitch = 0;
+		pallet_roll = 0;
+		colores = new array<ref ExorCfgKothColor>;
+		// 3 koth de ejemplo (amarillo/verde/morado). EDITAR coordenadas reales y poner activar=true.
+		ExorCfgKothColor ka = new ExorCfgKothColor();
+		ka.color = "amarillo"; ka.cantidad_minima_players_online = 1;
+		ExorKothAddZombie(ka, "ZmbM_SoldierNormal");
+		ExorKothAddCoord(ka, 0, 0, 0);
+		ExorKothAddItem(ka, "AKM", 100);
+		ExorKothAddItem(ka, "Mag_AKM_30Rnd", 100);
+		ExorKothAddItem(ka, "Mag_AKM_30Rnd", 50);
+		colores.Insert(ka);
+		ExorCfgKothColor kv = new ExorCfgKothColor();
+		kv.color = "verde"; kv.cantidad_minima_players_online = 1;
+		ExorKothAddZombie(kv, "ZmbM_SoldierNormal");
+		ExorKothAddCoord(kv, 0, 0, 0);
+		ExorKothAddItem(kv, "M4A1", 100);
+		ExorKothAddItem(kv, "Mag_STANAG_30Rnd", 100);
+		ExorKothAddItem(kv, "Mag_STANAG_30Rnd", 50);
+		colores.Insert(kv);
+		ExorCfgKothColor km = new ExorCfgKothColor();
+		km.color = "morado"; km.cantidad_minima_players_online = 1; km.spawnear_osos = 5;
+		ExorKothAddZombie(km, "ZmbM_SoldierNormal");
+		ExorKothAddCoord(km, 0, 0, 0);
+		ExorKothAddItem(km, "FAL", 100);
+		ExorKothAddItem(km, "Mag_FAL_20Rnd", 100);
+		ExorKothAddItem(km, "Mag_FAL_20Rnd", 50);
+		colores.Insert(km);
+	}
+
+	// helpers de ejemplo (Enforce: sin expresiones multilinea)
+	void ExorKothAddItem(ExorCfgKothColor c, string cls, int prob)
+	{
+		ExorCfgKothItem it = new ExorCfgKothItem();
+		it.classname = cls;
+		it.probabilidad_drop_en_porcentaje_maximo_100 = prob;
+		c.item.Insert(it);
+	}
+
+	void ExorKothAddCoord(ExorCfgKothColor c, float x, float y, float z)
+	{
+		ExorCfgKothCoord co = new ExorCfgKothCoord();
+		co.x = x; co.y = y; co.z = z;
+		c.coordenadas.Insert(co);
+	}
+
+	void ExorKothAddZombie(ExorCfgKothColor c, string cls)
+	{
+		c.clase_zombie.Insert(cls);
+	}
+}
+
+// ----------------------------------------------------------------------------
 // Sync server -> cliente: SOLO la config que el cliente necesita para mostrar
 // (toggles de party/HUD/nameplates/marcas, mapa, durabilidad/rareza+tabla).
 // Lo pesado (municion/storage/vehiculos) es logica de server y NO se envia.
@@ -1072,6 +1281,7 @@ class ExorConfig
 	ref ExorCfgBodyCadaver bodycadaver;
 	ref ExorCfgAutorun autorun;
 	ref ExorCfgAnticheat anticheat;
+	ref ExorCfgKoth koth;
 	bool m_Synced;	// cliente: true cuando ya recibio la config del server
 
 	void ExorConfig()
@@ -1091,6 +1301,7 @@ class ExorConfig
 		bodycadaver = new ExorCfgBodyCadaver;
 		autorun = new ExorCfgAutorun;
 		anticheat = new ExorCfgAnticheat;
+		koth = new ExorCfgKoth;
 	}
 
 	// SERVER: serializa la config relevante al cliente a JSON
@@ -1185,6 +1396,7 @@ class ExorConfig
 		c.LoadBodyCadaver();
 		c.LoadAutorun();
 		c.LoadAnticheat();
+		c.LoadKoth();
 
 		return c;
 	}
@@ -1260,6 +1472,16 @@ class ExorConfig
 		else
 			anticheat.SetDefaults();
 		JsonFileLoader<ExorCfgAnticheat>.JsonSaveFile(ExorStorageConstants.CFG_ANTICHEAT, anticheat);
+	}
+
+	void LoadKoth()
+	{
+		if (FileExist(ExorStorageConstants.CFG_KOTH))
+			JsonFileLoader<ExorCfgKoth>.JsonLoadFile(ExorStorageConstants.CFG_KOTH, koth);
+		else
+			koth.SetDefaults();
+		koth.Validate();	// clampa negativos/invalidos (ej. zombies < 0 -> 0)
+		JsonFileLoader<ExorCfgKoth>.JsonSaveFile(ExorStorageConstants.CFG_KOTH, koth);
 	}
 
 	void LoadItems()

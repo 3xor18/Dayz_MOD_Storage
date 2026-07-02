@@ -121,6 +121,18 @@ class ExorMapMenu extends UIScriptedMenu
 			}
 		}
 
+		// marcas del KOTH (visibles por TODOS) - varias a la vez, con el color de cada koth
+		if (ExorKothClient.s_Markers)
+		{
+			int km;
+			for (km = 0; km < ExorKothClient.s_Markers.Count(); km++)
+			{
+				ExorKothMarkerDTO koth = ExorKothClient.s_Markers.GetElement(km);
+				if (koth && koth.show)
+					m_Map.AddUserMark(Vector(koth.x, koth.y, koth.z), koth.label, koth.argb, icon);
+			}
+		}
+
 		// marcas PERSONALES (PIN) - color por categoria (rojo/verde/blanco)
 		array<ref ExorMapPin> pins = ExorMapPins.Get();
 		int n;

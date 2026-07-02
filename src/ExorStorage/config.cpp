@@ -9,7 +9,7 @@ class CfgPatches
 {
 	class ExorStorage
 	{
-		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_BodyBag"};
+		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3"};
 		weapons[] = {};
 		requiredVersion = 0.1;
 		// DZ_Gear_Camping = TerritoryFlag/Kit + SeaChest. DZ_Characters_Backpacks =
@@ -161,6 +161,43 @@ class CfgVehicles
 			itemsCargoSize[] = {10, 30};	// 300 slots
 			openable = 0;
 		};
+	};
+
+	// ------------------------------------------------------------------
+	//  KOTH - pallet de recompensa. Basado en Barrel_ColorBase (contenedor LOOTABLE
+	//  que se apoya DERECHO en el piso, igual que los barriles del mod) con el MODELO
+	//  del supply crate del airfield. Cargo 1500; el manager corta al llenarse.
+	//  openable=0: cargo siempre accesible (sin animacion de tapa).
+	// ------------------------------------------------------------------
+	class Exor_KothCrate_Base: Barrel_ColorBase
+	{
+		scope = 0;
+		class Cargo
+		{
+			itemsCargoSize[] = {30, 50};	// 1500 slots
+			openable = 0;
+		};
+	};
+	class Exor_KothCrate_1: Exor_KothCrate_Base
+	{
+		scope = 2;
+		displayName = "Supply Crate (KOTH)";
+		descriptionShort = "Recompensa del KOTH. Se autodestruye pasados los minutos configurados.";
+		model = "DZ\structures\Military\Misc\Misc_SupplyBox1.p3d";
+	};
+	class Exor_KothCrate_2: Exor_KothCrate_Base
+	{
+		scope = 2;
+		displayName = "Supply Crate (KOTH)";
+		descriptionShort = "Recompensa del KOTH. Se autodestruye pasados los minutos configurados.";
+		model = "DZ\structures\Military\Misc\Misc_SupplyBox2.p3d";
+	};
+	class Exor_KothCrate_3: Exor_KothCrate_Base
+	{
+		scope = 2;
+		displayName = "Supply Crate (KOTH)";
+		descriptionShort = "Recompensa del KOTH. Se autodestruye pasados los minutos configurados.";
+		model = "DZ\structures\Military\Misc\Misc_SupplyBox3.p3d";
 	};
 
 	// --------------------------------------------------------------------

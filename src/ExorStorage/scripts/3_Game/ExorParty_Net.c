@@ -37,6 +37,7 @@ class ExorRPC
 	static const int AUTORUN_SET    = 49238;	// C -> S: estado del auto-run del jugador (para que el server tambien simule y no haya rubber-band)
 	static const int POP_REQ        = 49239;	// C -> S: pedir la cantidad de jugadores conectados (al abrir el mapa, refrescado)
 	static const int POP_COUNT      = 49240;	// S -> C: cantidad de jugadores conectados (para el contador del mapa)
+	static const int KOTH_SYNC      = 49241;	// S -> C: estado de la marca del KOTH en el mapa (mostrar/ocultar + pos + color + label)
 }
 
 // Cache cliente: cantidad de jugadores conectados (la setea el server por POP_COUNT).
@@ -137,6 +138,41 @@ class ExorBigStringRx
 	}
 }
 
+// ============================================================================
+// KOTH: marca del mapa sincronizada a TODOS los clientes (S -> C por KOTH_SYNC).
+// El mapa de este mod (ExorMapMenu) la dibuja con el color del koth. show=false
+// = ocultar (koth despawneado/limpiado). Es 1 solo koth activo a la vez.
+// ============================================================================
+class ExorKothMarkerDTO
+{
+	bool show;
+	int id;        // id del koth (indice del color): permite varias marcas a la vez
+	float x;
+	float y;
+	float z;
+	int argb;      // color de la marca (= color del koth: amarillo/verde/morado)
+	string label;  // texto de la marca ("Koth", "Koth activo", "Koth completado"...)
+}
+
+// Cache cliente de las marcas del koth (por id). El server las setea por KOTH_SYNC;
+// las lee ExorMapMenu. Varios koth pueden estar activos a la vez -> varias marcas.
+class ExorKothClient
+{
+	static ref map<int, ref ExorKothMarkerDTO> s_Markers;
+
+	static void Apply(ExorKothMarkerDTO m)
+	{
+		if (!m)
+			return;
+		if (!s_Markers)
+			s_Markers = new map<int, ref ExorKothMarkerDTO>;
+		if (m.show)
+			s_Markers.Set(m.id, m);
+		else
+			s_Markers.Remove(m.id);
+	}
+}
+
 // Estado VIP del jugador LOCAL en el cliente (lo setea el server por RPC VIP_STATUS).
 // Lo usan features VIP client-side (ej. mostrar la distancia en las marcas del party).
 class ExorVipClient
@@ -200,6 +236,8 @@ class ExorKfDTO
 	bool generic;    // true = "X murio" a secas (enfermedad/hambre/sed/sangrado sin fuente)
 	string cause;    // muerte AMBIENTAL (mina/claymore/gas/explosivo improvisado/caida): "X murio por <cause>".
 	                 // vacio = no ambiental (usar el flujo PvP/suicidio/generico normal)
+	string msg;      // ALERTA generica (KOTH): si != "" se muestra este texto tal cual (en msgargb) en vez de una muerte
+	int msgargb;     // color ARGB del texto de la alerta generica
 	int dur;         // segundos que dura la linea
 	int max;         // maximo de lineas simultaneas
 }
