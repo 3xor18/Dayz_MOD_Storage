@@ -310,11 +310,34 @@ modded class TerritoryFlag
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanupKitGround, 10000, false);
 
 		string sid = ExorGroupManager.SteamId(placer);
-		if (ExorGroupManager.Get().FindByPlayer(sid))
+		ExorGroup existing = ExorGroupManager.Get().FindByPlayer(sid);
+		if (existing)
 		{
-			placer.MessageImportant("Ya tenés un party/territorio. Borrá la bandera anterior primero.");
-			ExorMarkDisbanding();
-			GetGame().ObjectDelete(this);
+			// Ya pertenece a un party. Si ese party TODAVIA tiene un mastil vivo -> rechazar
+			// (no se permiten 2 mastiles por party).
+			TerritoryFlag liveMast = ExorTerritoryManager.Get().FindMastByGroup(existing.id);
+			if (liveMast && liveMast != this)
+			{
+				placer.MessageImportant("Ya tenés un party/territorio. Borrá la bandera anterior primero.");
+				ExorMarkDisbanding();
+				GetGame().ObjectDelete(this);
+				return;
+			}
+			// AUTO-REPARACION: el party existe pero su mastil se perdio (corrupcion de
+			// persistencia tras un crash: el objeto TerritoryFlag no cargo, pero el grupo
+			// -que se guarda aparte en groups/<id>.json- sobrevivio). Adoptamos esta
+			// bandera nueva en el grupo existente en vez de rechazarla.
+			ExorAutoBuild(placer);
+			m_ExorGroupId = existing.id;
+			ExorOnClaimed(ExorTimeUtil.NowMinutes());
+			vector rp = GetPosition();
+			existing.mast_x = rp[0]; existing.mast_y = rp[1]; existing.mast_z = rp[2];
+			ExorGroupManager.Get().SaveGroup(existing);
+			ExorTerritoryManager.Get().SyncToAll();
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorEnsureWhiteFlag, 1500, false);
+			ExorScheduleWhiteFlagExpiry();
+			Print(string.Format("%1 mastil REPARADO para grupo %2 (se habia perdido; re-ligado a bandera nueva)", ExorStorageConstants.LOG, existing.id));
+			placer.MessageImportant("Tu mástil se había perdido: se reconstruyó y quedó ligado a tu party.");
 			return;
 		}
 

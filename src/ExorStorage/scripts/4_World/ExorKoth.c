@@ -26,6 +26,7 @@ class ExorKothRun
 	int m_State;
 	int m_ScheduledAtMs;
 	int m_SpawnAtMs;
+	int m_ScheduleDelaySec;	// delay del re-arme (para pausar el contador si faltan players)
 	ref array<bool> m_WarnFired;
 	TerritoryFlag m_Mast;
 	Object m_Pallet;
@@ -115,6 +116,7 @@ class ExorKothRun
 		ExorCfgKoth g = GetExorConfig().koth;
 		ExorCfgKothColor c = Cfg();
 		int now = GetGame().GetTime();
+		m_ScheduleDelaySec = delaySec;
 		m_ScheduledAtMs = now;
 		m_SpawnAtMs = now + (delaySec * 1000);
 		m_State = ExorKothState.SCHEDULED;
@@ -141,6 +143,20 @@ class ExorKothRun
 		ExorCfgKoth g = GetExorConfig().koth;
 		ExorCfgKothColor c = Cfg();
 		int argb = ExorKoth.ColorArgb(c.color);
+
+		// faltan players -> koth en pausa: sin avisos ni marca. Se reinicia la
+		// cuenta atras cada tick, asi cuando lleguen al minimo avisa desde cero.
+		if (c.cantidad_minima_players_online > Online())
+		{
+			if (m_MarkerShown)
+				ClearMarker();
+			m_ScheduledAtMs = now;
+			m_SpawnAtMs = now + (m_ScheduleDelaySec * 1000);
+			int wf;
+			for (wf = 0; wf < m_WarnFired.Count(); wf++)
+				m_WarnFired.Set(wf, false);
+			return;
+		}
 
 		int i;
 		for (i = 0; i < g.segundos_aviso_antes_crear_koth.Count(); i++)
