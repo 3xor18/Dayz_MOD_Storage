@@ -174,7 +174,10 @@ class CfgVehicles
 		scope = 0;
 		class Cargo
 		{
-			itemsCargoSize[] = {30, 50};	// 1500 slots
+			// ancho 10 (normal, como los barriles) x alto 100 = 1000 slots. NO usar un
+			// ancho grande (ej 30): la grilla se va "para el costado" y los items quedan
+			// fuera de la vista (parece que no spawnearon aunque si estan).
+			itemsCargoSize[] = {10, 100};
 			openable = 0;
 		};
 	};

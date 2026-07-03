@@ -452,11 +452,16 @@ class ExorKothRun
 				continue;
 			EntityAI e = cont.GetInventory().CreateInInventory(it.classname);
 			if (e)
+			{
 				puestos++;
+			}
 			else
+			{
 				nospace++;
+				Print(string.Format("%1 KOTH[%2] item NO entro (classname invalido / mod no cargado / lleno): %3", ExorStorageConstants.LOG, c.color, it.classname));
+			}
 		}
-		Print(string.Format("%1 KOTH[%2] recompensa: %3 puestos, %4 sin espacio", ExorStorageConstants.LOG, c.color, puestos, nospace));
+		Print(string.Format("%1 KOTH[%2] recompensa: %3 puestos, %4 no entraron", ExorStorageConstants.LOG, c.color, puestos, nospace));
 	}
 
 	void TickCompleted(int now)
