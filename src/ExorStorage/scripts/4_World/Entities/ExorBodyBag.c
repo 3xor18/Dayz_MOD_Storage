@@ -111,7 +111,14 @@ class Exor_BodyBag extends Container_Base
 		return cargo.GetItemCount();
 	}
 
-	// ------------------------- tick lento (30s): TTL + virtualizar -------------------------
+	// ------------------------- tick lento (5s): TTL -------------------------
+	// IMPORTANTE: las TUMBAS ya NO se virtualizan. Virtualizar sacaba el loot a disco
+	// tras 5 min sin nadie a <10m y el camino de restauracion no lo devolvia a tiempo
+	// (0 restauraciones en produccion sobre 270 virtualizaciones) -> las tumbas quedaban
+	// VACIAS y se perdian las armas/gear. Una tumba vive pocos minutos (duracion_minutos)
+	// y guarda el loot de UN jugador: el costo de tenerlo real es trivial y evita el
+	// round-trip fragil que ademas degrada las armas. El loot queda SIEMPRE como
+	// entidades reales durante toda la vida de la tumba.
 	void ExorBagTick(int nowMs)
 	{
 		ExorCfgBodyCadaver cfg = GetExorConfig().bodycadaver;
@@ -130,38 +137,20 @@ class Exor_BodyBag extends Container_Base
 			}
 		}
 
-		if (!cfg.habilitado)
-			return;
-		if (cfg.virtualizar_minutos <= 0)
-			return;
+		// RECUPERACION: una tumba que quedo virtualizada por una version anterior (JSON en
+		// disco) se realiza AHORA, sin depender de que un player se acerque -> devuelve el
+		// loot que estaba atrapado en disco.
 		if (ExorIsVirtualized())
-			return;
-		if (ExorCargoCount() == 0)
-			return;
-
-		// hay player vivo a menos de alejar_metros? -> marcar "cerca", no virtualizar
-		if (ExorVO_Manager.IsAlivePlayerNear(GetPosition(), cfg.alejar_metros))
-		{
-			m_ExorLastNearMs = nowMs;
-			return;
-		}
-		// sin player cerca por virtualizar_minutos -> virtualizar
-		if (nowMs - m_ExorLastNearMs < cfg.virtualizar_minutos * 60000)
-			return;
-		ExorVirtualize();
+			ExorRestore();
 	}
 
-	// ------------------------- tick rapido (5s): des-virtualizar -------------------------
+	// ------------------------- tick rapido (5s): recuperar loot legacy -------------------------
+	// Las tumbas ya no duermen/virtualizan. Solo sirve para recuperar de inmediato una
+	// tumba que quedo virtualizada por una version anterior (devuelve su loot a mundo).
 	void ExorBagWake()
 	{
-		if (!ExorIsVirtualized())
-			return;
-		ExorCfgBodyCadaver cfg = GetExorConfig().bodycadaver;
-		if (ExorVO_Manager.IsAlivePlayerNear(GetPosition(), cfg.acercar_metros))
-		{
+		if (ExorIsVirtualized())
 			ExorRestore();
-			m_ExorLastNearMs = GetGame().GetTime();
-		}
 	}
 
 	void ExorVirtualize()

@@ -116,16 +116,9 @@ class ExorVO_Manager
 				virt++;
 			}
 		}
-		int j;
-		for (j = 0; j < m.m_BodyBags.Count(); j++)
-		{
-			Exor_BodyBag bag = m.m_BodyBags.Get(j);
-			if (bag && !bag.ExorIsVirtualized() && bag.ExorCargoCount() > 0)
-			{
-				bag.ExorVirtualize();
-				virt++;
-			}
-		}
+		// Las bolsas de cadaver NO se virtualizan (virtualizar perdia el loot). Su cargo es
+		// top-level (no anidado en un barril), asi que persiste bien como entidades reales
+		// via la persistencia normal del contenedor -> nada que hacer al apagar.
 		Print(string.Format("%1 VirtualizeAll (apagado): %2 contenedores virtualizados a disco", ExorStorageConstants.LOG, virt));
 	}
 

@@ -18,6 +18,9 @@ modded class ItemBase
 		PlayerBase pb = PlayerBase.Cast(player);
 		if (GetGame().IsServer())
 		{
+			// zonas de NO construccion definidas por el admin (nobuild.json)
+			if (!ExorNoBuild.CanBuildAt(position, GetType()))
+				return false;
 			if (!ExorTerritoryManager.Get().CanPlaceServer(pb, position, GetType()))
 				return false;
 		}
@@ -27,6 +30,21 @@ modded class ItemBase
 				return false;
 		}
 		return true;
+	}
+
+	// Backstop SERVER de las zonas de NO construccion (nobuild.json): si un kit/
+	// deployable se coloca DENTRO de una zona prohibida (y no esta whitelisteado),
+	// se borra. Cubre fence/watchtower/tienda/barril/fogata y los kits de
+	// BuildEverywhere / BaseBuildingPlus (todos son ItemBase y pasan por aca).
+	override void OnPlacementComplete(Man player, vector position = "0 0 0", vector orientation = "0 0 0")
+	{
+		super.OnPlacementComplete(player, position, orientation);
+		if (!GetGame() || !GetGame().IsServer())
+			return;
+		if (ExorNoBuild.CanBuildAt(GetPosition(), GetType()))
+			return;
+		ExorNoBuild.Warn(player);
+		GetGame().ObjectDelete(this);
 	}
 
 	// #3 (anti-raid): cuando este item entra al inventario de un jugador, si el

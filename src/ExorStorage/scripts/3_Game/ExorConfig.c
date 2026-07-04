@@ -480,9 +480,12 @@ class ExorCfgBodyCadaver
 	bool habilitado = true;         // master on/off de TODO el modulo de la lapida
 	int delay_segundos = 1;         // demora entre la muerte y la aparicion de la lapida
 	int duracion_minutos = 120;     // cuanto dura la lapida (2h). Sobrevive reinicio.
-	float acercar_metros = 10;      // player a <= esto -> des-virtualiza (deja pikear el loot)
-	float alejar_metros = 10;       // si NO hay player a <= esto...
-	int virtualizar_minutos = 5;    // ...por este tiempo -> virtualiza (saca el loot del mundo)
+	// OBSOLETOS: las tumbas ya NO se virtualizan (virtualizar perdia el loot; el loot queda
+	// siempre como entidades reales toda la vida de la tumba). Se conservan por compatibilidad
+	// de config pero el codigo los IGNORA para las bolsas de cadaver.
+	float acercar_metros = 10;      // (obsoleto)
+	float alejar_metros = 10;       // (obsoleto)
+	int virtualizar_minutos = 0;    // (obsoleto - 0 = nunca virtualizar)
 
 	void SetDefaults()
 	{
@@ -492,7 +495,71 @@ class ExorCfgBodyCadaver
 		duracion_minutos = 120;
 		acercar_metros = 10;
 		alejar_metros = 10;
-		virtualizar_minutos = 5;
+		virtualizar_minutos = 0;
+	}
+}
+
+// ----------------------------------------------------------------------------
+// nobuild.json (Zonas de NO construccion definidas por el admin)
+//   Define uno o mas centros (posicion x,y,z del mundo) con un radio en metros
+//   dentro del cual NADIE puede construir/colocar (evita bases en zonas prohibidas:
+//   military, KOTH, spawns, traders, etc.). La "whiteList" son classnames (o parte
+//   del classname) que SI se permiten igual dentro de la zona (minas/trampas/
+//   explosivos/fuegos artificiales), para no romper el PvP.
+//   - La distancia se mide EN HORIZONTAL (x,z del mundo). 'y' = altura, se ignora.
+//   - Copia la posicion tal cual te la da el VPP admintools (x, y=altura, z).
+// ----------------------------------------------------------------------------
+class ExorCfgVec3
+{
+	float x = 0;
+	float y = 0;
+	float z = 0;
+}
+
+class ExorCfgNoBuildZona
+{
+	ref ExorCfgVec3 posicion;
+	float desabilitar_construccion_en_metros = 0;   // radio de bloqueo (0 = zona ignorada)
+
+	void ExorCfgNoBuildZona()
+	{
+		posicion = new ExorCfgVec3();
+	}
+}
+
+class ExorCfgNoBuild
+{
+	int version = 1;
+	bool activado = false;
+	ref array<string> whiteList;                       // classnames permitidos SIEMPRE (contains, case-insensitive)
+	ref array<ref ExorCfgNoBuildZona> lugares_no_permitidos;
+
+	void ExorCfgNoBuild()
+	{
+		whiteList = new array<string>;
+		lugares_no_permitidos = new array<ref ExorCfgNoBuildZona>;
+	}
+
+	void SetDefaults()
+	{
+		version = 1;
+		activado = false;
+		whiteList = new array<string>;
+		// classnames REALES del juego para lo que el user pidio permitir dentro de la zona:
+		whiteList.Insert("LandMineTrap");                // mina
+		whiteList.Insert("ClaymoreMine");                // claymore
+		whiteList.Insert("BearTrap");                    // trampa de osos
+		whiteList.Insert("TripwireTrap");                // trampa de alambre
+		whiteList.Insert("ImprovisedExplosive");         // explosivo improvisado
+		whiteList.Insert("FireworksLauncher");           // fuegos artificiales (incluye Anniversary_FireworksLauncher por 'contains')
+
+		lugares_no_permitidos = new array<ref ExorCfgNoBuildZona>;
+		ExorCfgNoBuildZona z = new ExorCfgNoBuildZona();
+		z.posicion.x = 0;
+		z.posicion.y = 0;
+		z.posicion.z = 0;
+		z.desabilitar_construccion_en_metros = 1200;
+		lugares_no_permitidos.Insert(z);
 	}
 }
 
@@ -1282,6 +1349,7 @@ class ExorConfig
 	ref ExorCfgAutorun autorun;
 	ref ExorCfgAnticheat anticheat;
 	ref ExorCfgKoth koth;
+	ref ExorCfgNoBuild nobuild;
 	bool m_Synced;	// cliente: true cuando ya recibio la config del server
 
 	void ExorConfig()
@@ -1302,6 +1370,7 @@ class ExorConfig
 		autorun = new ExorCfgAutorun;
 		anticheat = new ExorCfgAnticheat;
 		koth = new ExorCfgKoth;
+		nobuild = new ExorCfgNoBuild;
 	}
 
 	// SERVER: serializa la config relevante al cliente a JSON
@@ -1397,6 +1466,7 @@ class ExorConfig
 		c.LoadAutorun();
 		c.LoadAnticheat();
 		c.LoadKoth();
+		c.LoadNoBuild();
 
 		return c;
 	}
@@ -1563,6 +1633,15 @@ class ExorConfig
 		else
 			bodycadaver.SetDefaults();
 		JsonFileLoader<ExorCfgBodyCadaver>.JsonSaveFile(ExorStorageConstants.CFG_BODYCADAVER, bodycadaver);
+	}
+
+	void LoadNoBuild()
+	{
+		if (FileExist(ExorStorageConstants.CFG_NOBUILD))
+			JsonFileLoader<ExorCfgNoBuild>.JsonLoadFile(ExorStorageConstants.CFG_NOBUILD, nobuild);
+		else
+			nobuild.SetDefaults();
+		JsonFileLoader<ExorCfgNoBuild>.JsonSaveFile(ExorStorageConstants.CFG_NOBUILD, nobuild);
 	}
 
 	// ---- migracion del settings.json monolitico viejo ----

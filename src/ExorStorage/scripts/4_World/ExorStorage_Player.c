@@ -79,15 +79,19 @@ modded class PlayerBase
 		inv.CreateInInventory("PlateCarrierHolster");
 		inv.CreateInInventory("PlateCarrierPouches");
 		inv.CreateInInventory("AssaultBag_Black");
-		// arma en manos + cargador + mira (la bolsa MUEVE el arma real -> conserva mag/miras)
+		// arma EN MANOS + cargador + mira (la bolsa MUEVE el arma real -> conserva mag/miras)
 		EntityAI rifle = GetHumanInventory().CreateInHands("M4A1");
 		if (rifle && rifle.GetInventory())
 		{
 			rifle.GetInventory().CreateAttachment("Mag_STANAG_30Rnd");
 			rifle.GetInventory().CreateAttachment("ACOGOptic");
 		}
-		// arma a la espalda
-		inv.CreateInInventory("Mosin9130");
+		// arma AL HOMBRO/ESPALDA: CreateAttachment fuerza el slot del arma (Shoulder/Melee).
+		// OJO: CreateInInventory la metia en la MOCHILA, no en el hombro. Con cargador para
+		// probar que la bolsa conserva el arma REAL + su mag al matarla de lejos.
+		EntityAI backRifle = inv.CreateAttachment("AKM");
+		if (backRifle && backRifle.GetInventory())
+			backRifle.GetInventory().CreateAttachment("Mag_AKM_30Rnd");
 		// items sueltos para que la bolsa tenga loot variado
 		inv.CreateInInventory("Rangefinder");
 		inv.CreateInInventory("FieldShovel");
@@ -363,8 +367,15 @@ modded class PlayerBase
 		// Con el cuerpo INTACTO: la ROPA se copia (capturar+recrear, cae en sus slots)
 		// y las ARMAS se guardan para MOVER la entidad real (copiar un arma pierde el
 		// cargador). 1s despues el motor ya pudo dropear cosas, por eso se hace aca.
+		// TODO el loadout se CAPTURA a datos y se RECREA dentro de la bolsa (ropa Y armas).
+		// Antes las armas se MOVIAN como entidad real desde el cuerpo y el cuerpo se borraba
+		// en el mismo frame -> el cliente perdia el re-parent del arma (quedaba en la bolsa
+		// server-side pero INVISIBLE client-side). Recrearlas (mismo camino que la ropa, que
+		// SI se ve) garantiza que se repliquen. El serializer conserva cargador (ammo) + miras
+		// + supresor via SpawnAttachedMagazine/TakeEntityAsAttachment (solo se pierde la bala
+		// en recamara, despreciable).
 		m_ExorDeathLoot = new array<ref ExorVO_ItemData>;
-		m_ExorDeathWeapons = new array<EntityAI>;
+		m_ExorDeathWeapons = new array<EntityAI>;	// sin uso ahora (se recrea todo); se deja por compat de firma
 		GameInventory inv = GetInventory();
 		int natt = 0;
 		if (inv)
@@ -376,20 +387,17 @@ modded class PlayerBase
 				EntityAI att = inv.GetAttachmentFromIndex(i);
 				if (!att)
 					continue;
-				if (Weapon_Base.Cast(att))
-					m_ExorDeathWeapons.Insert(att);	// arma puesta (espalda/hombro) -> mover real
-				else
-					m_ExorDeathLoot.Insert(ExorVO_Serializer.CaptureItem(att));	// ropa -> copiar
+				m_ExorDeathLoot.Insert(ExorVO_Serializer.CaptureItem(att));	// ropa Y armas puestas -> recrear
 			}
 		}
-		// lo que tenga en manos (arma u otro) tambien se mueve real
+		// lo que tenga en manos (arma u otro) tambien se captura -> recrear en la bolsa
 		EntityAI hands = null;
 		if (GetHumanInventory())
 			hands = GetHumanInventory().GetEntityInHands();
 		if (hands)
-			m_ExorDeathWeapons.Insert(hands);
+			m_ExorDeathLoot.Insert(ExorVO_Serializer.CaptureItem(hands));
 
-		Print(string.Format("%1 muerte: %2 prendas + %3 armas/manos para la bolsa (attachments=%4)", ExorStorageConstants.LOG, m_ExorDeathLoot.Count(), m_ExorDeathWeapons.Count(), natt));
+		Print(string.Format("%1 muerte: %2 items (loadout completo) para la bolsa (attachments=%3)", ExorStorageConstants.LOG, m_ExorDeathLoot.Count(), natt));
 
 		int delayMs = cfg.delay_segundos * 1000;
 		if (delayMs < 1)
@@ -397,13 +405,15 @@ modded class PlayerBase
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorDoSpawnBodyBag, delayMs, false);
 	}
 
-	// 'this' es el cadaver -> spawnear la bolsa con el loot recreado + el arma real movida.
+	// 'this' es el cadaver -> spawnear la bolsa con TODO el loadout recreado (ropa + armas).
 	void ExorDoSpawnBodyBag()
 	{
 		Exor_BodyBag bag = Exor_BodyBag.SpawnFromLoot(GetPosition(), m_ExorDeathLoot, m_ExorDeathWeapons);
 		if (!bag)
 			return;
-		GetGame().ObjectDelete(this);	// borrar el cuerpo - las armas reales ya se movieron
+		// Ya es seguro borrar el cuerpo en el acto: las armas se RECREARON en la bolsa (no se
+		// movio la entidad real), asi que borrar el cuerpo no afecta el loot de la bolsa.
+		GetGame().ObjectDelete(this);
 	}
 
 	// Nombre legible del arma usada (server).

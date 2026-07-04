@@ -1,0 +1,22 @@
+{
+    "version": 1,
+    "activado": true,
+    "whiteList": [
+        "LandMineTrap",
+        "ClaymoreMine",
+        "BearTrap",
+        "TripwireTrap",
+        "ImprovisedExplosive",
+        "FireworksLauncher"
+    ],
+    "lugares_no_permitidos": [
+        {
+            "posicion": { "x": 7500, "y": 300, "z": 8500 },
+            "desabilitar_construccion_en_metros": 1200
+        },
+        {
+            "posicion": { "x": 3600, "y": 0, "z": 5900 },
+            "desabilitar_construccion_en_metros": 400
+        }
+    ]
+}

@@ -78,9 +78,14 @@ Mide geometría y resultados con los eventos del motor para dar **indicios** (NU
 - **Combinar kits gastados**: 2 kits del mismo tipo (costura, limpieza de armas, piedra de afilar, etc.) se **unen sumando su uso** (2 al 50% → 1 al 100%). Lista configurable.
 
 ### Bolsa de cadáver (lápida)
-- Al morir, ~1s después el cuerpo se convierte en una **lápida** (sin colisión, no se mueve) con **todo el loot en los slots del equipo** (chaleco/mochila/bolsillos) — se lootea como un cadáver. Las armas conservan su cargador.
-- **Persiste 2h** y **sobrevive el reinicio** del server.
-- **Optimización por proximidad**: si no hay nadie cerca, el loot se virtualiza (sale del mundo); reaparece cuando un jugador se acerca. Todo configurable y apagable.
+- Al morir, ~1s después el cuerpo se convierte en una **lápida** (sin colisión, no se mueve) con **todo el loadout** (ropa/chaleco/mochila/bolsillos **+ las dos armas**) — se lootea como un cadáver. Las armas conservan su cargador, mira y supresor.
+- **Persiste** (configurable, default 2h) y **sobrevive el reinicio** del server.
+- El loot queda **siempre como entidades reales** durante toda la vida de la lápida: se ve y se lootea sin depender de proximidad (nada se "pierde" ni desaparece).
+
+### Zonas de no-construcción
+- Definí uno o más **centros (coordenadas x,y,z) con un radio en metros** donde **nadie puede construir/colocar nada**: bases, deployables, torres, etc. Ideal para proteger military, KOTH, spawns, traders.
+- **Whitelist** de classnames que **sí** se permiten dentro de la zona (minas/trampas/explosivos/fuegos artificiales), para no romper el PvP.
+- Cubre construcción **vanilla, BuildEverywhere y BaseBuildingPlus (BBP)**. Funciona con o sin BBP cargado. Solo afecta colocaciones **nuevas** (las bases existentes nunca se tocan).
 
 ### Vanilla tweaks
 - **Ghillies al slot del brazalete**: los ghillie vanilla pasan al slot Armband, liberando la espalda (podés llevar **bolso + ghillie** a la vez).
@@ -265,9 +270,15 @@ Todo se configura por JSON en `<profile>/3xorVanillaOptimization/`. Cada archivo
 | `habilitado` | `true` | Master on/off de la bolsa de cadáver (lápida) |
 | `delay_segundos` | `1` | Demora entre la muerte y la aparición de la lápida |
 | `duracion_minutos` | `120` | Cuánto dura la lápida (2h). Sobrevive reinicio |
-| `acercar_metros` | `10` | Player a ≤ esto → des-virtualiza (deja pikear el loot) |
-| `alejar_metros` | `10` | Radio para considerar "hay alguien cerca" |
-| `virtualizar_minutos` | `5` | Tras N min sin nadie a ≤`alejar_metros` → virtualiza (saca el loot del mundo) |
+| `acercar_metros` / `alejar_metros` / `virtualizar_minutos` | — | **Obsoletos**: la lápida ya no virtualiza (el loot queda siempre real). Se ignoran |
+
+### `nobuild.json`
+Zonas donde no se puede construir. Los cambios se aplican **reiniciando el server**.
+| Parámetro | Default | Qué hace |
+|---|---|---|
+| `activado` | `false` | Master on/off de todas las zonas |
+| `whiteList` | (minas/trampas/explosivos/fuegos) | Classnames permitidos **siempre**, aun dentro de una zona (match por *contains*, sin distinguir mayúsculas) |
+| `lugares_no_permitidos` | `[]` | Lista de zonas. Cada una: `posicion` `{x,y,z}` (coords del mundo; pegá las del VPP admintools, `y`=altura) + `desabilitar_construccion_en_metros` (radio horizontal) |
 
 ### `anticheat.json`
 Todo server-side. Por defecto solo evalúa a los SteamIDs de `watchlist`; los de `exentos` se saltean por completo.
@@ -301,12 +312,11 @@ Todo server-side. Por defecto solo evalúa a los SteamIDs de `watchlist`; los de
 
 ## Archivos que crea el mod (en `<profile>/3xorVanillaOptimization/`)
 
-**Config (editables):** `storage.json` · `vehiculos.json` · `municion.json` · `party.json` · `spawns.json` · `mapa.json` · `items.json` · `vip.json` · `killfeed.json` · `serverinfo.json` · `chat.json` · `reparacion.json` · `bodycadaver.json` · `anticheat.json`
+**Config (editables):** `storage.json` · `vehiculos.json` · `municion.json` · `party.json` · `spawns.json` · `mapa.json` · `items.json` · `vip.json` · `killfeed.json` · `serverinfo.json` · `chat.json` · `reparacion.json` · `bodycadaver.json` · `nobuild.json` · `anticheat.json` · `koth.json`
 
 **Datos (los maneja el server, no editar a mano salvo que sepas):**
 - `groups/<id>.json` — grupos/party persistidos
 - `storage/<id>.json` — contenido virtualizado de barriles
-- `bodybags/<id>.json` — contenido virtualizado de bolsas de cadáver
 - `ServerAuditLog/audit_AAAA-MM-DD.txt` — logs forenses anti-raid + anti-cheat (auto-purga)
 - `stats.json` — ranking (kills/deaths/suicidios)
 - `vip_state.json` — usos de equipamiento por VIP
