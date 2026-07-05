@@ -1331,6 +1331,221 @@ class ExorCfgAnticheat
 // ============================================================================
 // Manager de configuracion
 // ============================================================================
+// ============================================================================
+//  COFRE - cofres de recompensa que se abren en zonas por horario.
+//  El player suelta una CAJA CERRADA (item del mod) en el piso de una zona activa;
+//  tras tiempo_abrir_un_cofre_minutos se convierte en un COFRE ABIERTO (1000 slots)
+//  relleno con UN bundle aleatorio de la tabla de loot de su color (cofres[]).
+// ============================================================================
+class ExorCfgCofreDia
+{
+	string dia = "lunes";        // lunes/martes/miercoles/jueves/viernes/sabado/domingo
+	string hora_inicio = "07:00";
+	string hora_fin = "18:00";
+	bool activado = true;
+}
+
+class ExorCfgCofrePos
+{
+	float x = 0;
+	float y = 0;   // 0 = auto (altura de la superficie)
+	float z = 0;
+}
+
+// UNA zona: donde se pueden abrir cofres, con su ventana por dia.
+class ExorCfgCofreLugar
+{
+	bool activo = true;
+	ref ExorCfgCofrePos posicion;
+	int rango_efecto = 5;        // radio (m): la caja tiene que soltarse dentro de esto
+	ref array<ref ExorCfgCofreDia> dias;
+
+	void ExorCfgCofreLugar()
+	{
+		posicion = new ExorCfgCofrePos;
+		dias = new array<ref ExorCfgCofreDia>;
+	}
+}
+
+// UN color de cofre + su tabla de loot. items: cada clave ("1","2",...) es un BUNDLE
+// (lista de classnames). Al abrir se elige UN bundle al azar y se spawnea completo.
+class ExorCfgCofreDef
+{
+	string color = "azul";
+	ref map<string, ref TStringArray> items;
+
+	void ExorCfgCofreDef()
+	{
+		items = new map<string, ref TStringArray>;
+	}
+}
+
+// UN objeto de la estructura del evento (se spawnea en pos_zona + offset, con rotacion yaw).
+class ExorCfgCofreObj
+{
+	string classname = "";
+	float dx = 0;   // offset respecto al centro de la zona (metros)
+	float dy = 0;
+	float dz = 0;
+	float yaw = 0;  // rotacion (grados)
+}
+
+class ExorCfgCofre
+{
+	int version = 1;
+	bool activado = false;                              // MASTER on/off del modulo
+	// El reloj del host puede estar en UTC (ver diagnostico NWD): ajusta las horas del
+	// horario. Ej: host en UTC y server en UTC-3 -> offset_horas = -3.
+	int offset_horas = 0;
+	int tiempo_abrir_un_cofre_minutos = 10;            // minutos en zona activa para abrir la caja
+	bool colocar_marca_mapa = true;                    // marca en el mapa mientras la zona esta abierta
+	ref array<int> aviso_antes_de_spawnear;            // minutos antes de abrir la ventana: avisa "en X min..."
+	bool aviso_al_spawnwar = true;                     // aviso al abrirse la ventana [nombre del JSON, sic]
+	int rango_detectar_payer_para_aviso_metros = 100;  // radio para contar players en zona [sic]
+	bool aviso_de_players_dentro_del_rango_efecto = true;
+	int minutos_aviso_players_en_zona = 8;             // cada cuantos min avisa "hay N players en la zona"
+	// Al abrir la ventana aparece una ESTRUCTURA (uno o mas objetos con offset) rodeada de
+	// bengalas; al cerrar la ventana la estructura y las bengalas se despawnean.
+	bool evento_estructura = true;
+	ref array<ref ExorCfgCofreObj> estructura_objetos;	// objetos de la estructura (pos = zona + offset)
+	float altura_estructura = 0.5;                      // sube toda la estructura sobre el piso (para que no queden patas enterradas)
+	int cantidad_luces = 1;                             // roadflares encendidas DEBAJO de la mesa
+	float luces_altura = 0.15;                          // altura (m) de la roadflare SOBRE EL PISO de la zona (debajo de la mesa)
+	float luces_espaciado = 1.5;                        // separacion (m) entre luces a lo largo de la mesa
+	// Slots de la mesa: en vez de tirar la caja al piso, se coloca sobre la mesa (hasta N).
+	int mesa_max_cajas = 3;                             // cuantas cajas caben en la mesa
+	float mesa_altura_slots = 0.45;                     // altura (m) de los slots sobre la base de la mesa (donde se apoyan las cajas)
+	float mesa_espaciado_slots = 0.9;                   // separacion (m) entre cajas a lo largo de la mesa
+	// Si al cerrar el evento hay una caja (cerrada o abierta CON loot) en la mesa, se mantiene
+	// TODO (mesa, luz, cajas) esta cantidad de minutos de GRACIA antes de despawnear (para que
+	// los players no pierdan cajas). Si no hay cajas con contenido, se despawnea al toque.
+	int minutos_despawn_cofres_tras_evento = 30;
+	// (Los cofres ABIERTOS y VACIOS se despawnean con el scan de la mesa cada minuto.)
+	ref array<ref ExorCfgCofreLugar> lugares;
+	ref array<ref ExorCfgCofreDef> cofres;
+
+	void ExorCfgCofre()
+	{
+		aviso_antes_de_spawnear = new array<int>;
+		estructura_objetos = new array<ref ExorCfgCofreObj>;
+		lugares = new array<ref ExorCfgCofreLugar>;
+		cofres = new array<ref ExorCfgCofreDef>;
+	}
+
+	void Validate()
+	{
+		if (tiempo_abrir_un_cofre_minutos < 0)
+			tiempo_abrir_un_cofre_minutos = 0;
+		if (rango_detectar_payer_para_aviso_metros < 0)
+			rango_detectar_payer_para_aviso_metros = 0;
+		if (minutos_aviso_players_en_zona < 1)
+			minutos_aviso_players_en_zona = 1;
+		if (lugares)
+		{
+			int i;
+			for (i = 0; i < lugares.Count(); i++)
+			{
+				ExorCfgCofreLugar l = lugares.Get(i);
+				if (l && l.rango_efecto < 1)
+					l.rango_efecto = 1;
+			}
+		}
+	}
+
+	void SetDefaults()
+	{
+		version = 1;
+		activado = false;
+		offset_horas = 0;
+		tiempo_abrir_un_cofre_minutos = 10;
+		colocar_marca_mapa = true;
+		aviso_antes_de_spawnear = new array<int>;
+		aviso_antes_de_spawnear.Insert(15);
+		aviso_antes_de_spawnear.Insert(10);
+		aviso_antes_de_spawnear.Insert(5);
+		aviso_al_spawnwar = true;
+		rango_detectar_payer_para_aviso_metros = 100;
+		aviso_de_players_dentro_del_rango_efecto = true;
+		minutos_aviso_players_en_zona = 8;
+		evento_estructura = true;
+		// estructura = mesa + drill (el drill va sobre la mesa: offset parseado del set de VPP).
+		estructura_objetos = new array<ref ExorCfgCofreObj>;
+		ExorCofreAddObj("vbldr_table_umakart", 0, 0, 0, 0);
+		ExorCofreAddObj("StaticObj_Furniture_Drill", 0, 0.8, -1.4, 0);
+		altura_estructura = 0.5;
+		cantidad_luces = 1;
+		luces_altura = 0.15;
+		luces_espaciado = 1.5;
+		mesa_max_cajas = 3;
+		mesa_altura_slots = 0.45;
+		mesa_espaciado_slots = 0.9;
+		minutos_despawn_cofres_tras_evento = 30;
+		lugares = new array<ref ExorCfgCofreLugar>;
+		// 2 zonas de ejemplo (0,0,0 = EDITAR). Ventana 07:00-18:00 todos los dias.
+		lugares.Insert(ExorCofreDefaultLugar());
+		lugares.Insert(ExorCofreDefaultLugar());
+		// 3 cofres de ejemplo (azul/verde/rojo) con classnames REALES de dayz para testear.
+		cofres = new array<ref ExorCfgCofreDef>;
+		ExorCfgCofreDef az = new ExorCfgCofreDef();
+		az.color = "azul";
+		ExorCofreAddBundle(az, "1", "AKM", "Mag_AKM_30Rnd");
+		ExorCofreAddBundle(az, "2", "M4A1", "Mag_STANAG_30Rnd");
+		cofres.Insert(az);
+		ExorCfgCofreDef vd = new ExorCfgCofreDef();
+		vd.color = "verde";
+		ExorCofreAddBundle(vd, "1", "VSS", "Mag_VSS_10Rnd");
+		ExorCofreAddBundle(vd, "2", "SVD", "Mag_SVD_10Rnd");
+		cofres.Insert(vd);
+		ExorCfgCofreDef rj = new ExorCfgCofreDef();
+		rj.color = "rojo";
+		ExorCofreAddBundle(rj, "1", "M67Grenade", "LandMineTrap");
+		ExorCofreAddBundle(rj, "2", "PlasticExplosive", "ElectronicRepairKit");
+		cofres.Insert(rj);
+	}
+
+	// helpers (Enforce: sin expresiones multilinea)
+	ExorCfgCofreLugar ExorCofreDefaultLugar()
+	{
+		ExorCfgCofreLugar l = new ExorCfgCofreLugar();
+		l.activo = true;
+		l.rango_efecto = 5;
+		ExorCofreAddDia(l, "lunes");
+		ExorCofreAddDia(l, "martes");
+		ExorCofreAddDia(l, "miercoles");
+		ExorCofreAddDia(l, "jueves");
+		ExorCofreAddDia(l, "viernes");
+		ExorCofreAddDia(l, "sabado");
+		ExorCofreAddDia(l, "domingo");
+		return l;
+	}
+
+	void ExorCofreAddDia(ExorCfgCofreLugar l, string dia)
+	{
+		ExorCfgCofreDia d = new ExorCfgCofreDia();
+		d.dia = dia;
+		d.hora_inicio = "07:00";
+		d.hora_fin = "18:00";
+		d.activado = true;
+		l.dias.Insert(d);
+	}
+
+	void ExorCofreAddBundle(ExorCfgCofreDef def, string key, string a, string b)
+	{
+		TStringArray arr = new TStringArray;
+		arr.Insert(a);
+		arr.Insert(b);
+		def.items.Set(key, arr);
+	}
+
+	void ExorCofreAddObj(string cls, float dx, float dy, float dz, float yaw)
+	{
+		ExorCfgCofreObj o = new ExorCfgCofreObj();
+		o.classname = cls;
+		o.dx = dx; o.dy = dy; o.dz = dz; o.yaw = yaw;
+		estructura_objetos.Insert(o);
+	}
+}
+
 class ExorConfig
 {
 	ref ExorCfgStorage storage;
@@ -1350,6 +1565,7 @@ class ExorConfig
 	ref ExorCfgAnticheat anticheat;
 	ref ExorCfgKoth koth;
 	ref ExorCfgNoBuild nobuild;
+	ref ExorCfgCofre cofre;
 	bool m_Synced;	// cliente: true cuando ya recibio la config del server
 
 	void ExorConfig()
@@ -1371,6 +1587,7 @@ class ExorConfig
 		anticheat = new ExorCfgAnticheat;
 		koth = new ExorCfgKoth;
 		nobuild = new ExorCfgNoBuild;
+		cofre = new ExorCfgCofre;
 	}
 
 	// SERVER: serializa la config relevante al cliente a JSON
@@ -1467,6 +1684,7 @@ class ExorConfig
 		c.LoadAnticheat();
 		c.LoadKoth();
 		c.LoadNoBuild();
+		c.LoadCofre();
 
 		return c;
 	}
@@ -1642,6 +1860,23 @@ class ExorConfig
 		else
 			nobuild.SetDefaults();
 		JsonFileLoader<ExorCfgNoBuild>.JsonSaveFile(ExorStorageConstants.CFG_NOBUILD, nobuild);
+	}
+
+	void LoadCofre()
+	{
+		// Igual que KOTH: si ya existe, cargar y NO re-guardar (el archivo del admin queda
+		// EXACTO como lo edito, no se reformatea). Solo se crea la 1ra vez con defaults.
+		if (FileExist(ExorStorageConstants.CFG_COFRE))
+		{
+			JsonFileLoader<ExorCfgCofre>.JsonLoadFile(ExorStorageConstants.CFG_COFRE, cofre);
+			cofre.Validate();
+		}
+		else
+		{
+			cofre.SetDefaults();
+			cofre.Validate();
+			JsonFileLoader<ExorCfgCofre>.JsonSaveFile(ExorStorageConstants.CFG_COFRE, cofre);
+		}
 	}
 
 	// ---- migracion del settings.json monolitico viejo ----

@@ -35,6 +35,7 @@ class ExorStorageConstants
 	static const string CFG_ANTICHEAT = "$profile:3xorVanillaOptimization\\anticheat.json";
 	static const string CFG_KOTH      = "$profile:3xorVanillaOptimization\\koth.json";
 	static const string CFG_NOBUILD   = "$profile:3xorVanillaOptimization\\nobuild.json";
+	static const string CFG_COFRE     = "$profile:3xorVanillaOptimization\\cofre.json";
 
 	// Datos del sistema party (Fase B+): grupos persistidos
 	static const string GROUPS_DIR = "$profile:3xorVanillaOptimization\\groups";

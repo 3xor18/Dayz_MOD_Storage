@@ -21,6 +21,7 @@ modded class MissionServer
 		ExorGroupManager.Get().ScanInactiveClans();	// avisa al raidlog de clanes sin conexion hace 'inactividad_dias'
 		ExorAnticheat.Start();	// anti-cheat heuristico: tick de watchlist (~1 Hz) + detector por kill
 		ExorKoth.Start();	// KOTH: eventos de captura con recompensa (si koth.json activar=true)
+		ExorCofre.Start();	// COFRE: zonas de apertura de cofres por horario (si cofre.json activado=true)
 
 		// OJO: este compilador no acepta expresiones partidas en varias lineas (ni ternarios)
 		Print(string.Format("%1 %2 v%3 inicializado", ExorStorageConstants.LOG, ExorStorageConstants.MOD_NAME, ExorStorageConstants.MOD_VERSION));
@@ -67,6 +68,7 @@ modded class MissionServer
 		ExorGroupManager.Get().OnPlayerConnected(player);
 		ExorTerritoryManager.Get().SyncToPlayer(player);
 		ExorKoth.Get().SyncMarkersToPlayer(player);	// que vea las marcas de los koth activos en su mapa
+		ExorCofre.Get().SyncMarkersToPlayer(player);	// marcas de las zonas de cofres abiertas
 
 		// BUGFIX (relog con lag): el roster (lista de miembros / menu P) se mandaba UNA
 		// sola vez aca. En un relog laggy ese envio fragmentado puede llegar antes de que

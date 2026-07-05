@@ -9,12 +9,12 @@ class CfgPatches
 {
 	class ExorStorage
 	{
-		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3"};
+		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight"};
 		weapons[] = {};
 		requiredVersion = 0.1;
 		// DZ_Gear_Camping = TerritoryFlag/Kit + SeaChest. DZ_Characters_Backpacks =
 		// GhillieSuit vanilla. DZ_Characters = modelo del cuerpo (bolsa de cadaver).
-		requiredAddons[] = {"DZ_Data", "DZ_Scripts", "DZ_Gear_Containers", "DZ_Weapons_Ammunition", "DZ_Gear_Camping", "DZ_Characters_Backpacks", "DZ_Characters"};
+		requiredAddons[] = {"DZ_Data", "DZ_Scripts", "DZ_Gear_Containers", "DZ_Weapons_Ammunition", "DZ_Gear_Camping", "DZ_Characters_Backpacks", "DZ_Characters", "DZ_Gear_Consumables"};
 	};
 };
 
@@ -201,6 +201,90 @@ class CfgVehicles
 		displayName = "Supply Crate (KOTH)";
 		descriptionShort = "Recompensa del KOTH. Se autodestruye pasados los minutos configurados.";
 		model = "DZ\structures\Military\Misc\Misc_SupplyBox3.p3d";
+	};
+
+	// ------------------------------------------------------------------
+	//  COFRE - modulo de cofres de recompensa por zonas/horario (ExorCofre.c).
+	//  Dos formas por color:
+	//   - *_Packed: CAJA CERRADA (item normal del mod, carriable, 5x4, sin cargo).
+	//     El admin la spawnea / va en types.xml. Modelo = caja de papel CERRADA.
+	//     Al soltarla en una zona activa, tras N min se transforma en el cofre abierto.
+	//   - (sin sufijo): COFRE ABIERTO, contenedor de 1000 slots {10,100} (como el
+	//     KothCrate: ancho 10 para que NO se salga de la pantalla). Modelo = caja ABIERTA.
+	//     Se rellena con un bundle aleatorio de la tabla de loot del color (cofre.json).
+	// ------------------------------------------------------------------
+	// -- cajas cerradas (item carriable) --
+	class Exor_Cofre_Packed_Base: Inventory_Base
+	{
+		scope = 0;
+		model = "\DZ\structures\Furniture\Cases\PaperBox\PaperBox_01_small_closed.p3d";
+		rotationFlags = 17;
+		itemSize[] = {5, 4};	// 20 casillas en la mochila
+		weight = 8000;
+		itemBehaviour = 0;
+	};
+	class Exor_Cofre_Azul_Packed: Exor_Cofre_Packed_Base
+	{
+		scope = 2;
+		displayName = "Cofre Azul (cerrado)";
+		descriptionShort = "Cofre de recompensa AZUL. Se abre llevandolo a la zona del evento 'apertura cajas' y dejandolo en el suelo hasta que se abra.";
+	};
+	class Exor_Cofre_Verde_Packed: Exor_Cofre_Packed_Base
+	{
+		scope = 2;
+		displayName = "Cofre Verde (cerrado)";
+		descriptionShort = "Cofre de recompensa VERDE. Se abre llevandolo a la zona del evento 'apertura cajas' y dejandolo en el suelo hasta que se abra.";
+	};
+	class Exor_Cofre_Rojo_Packed: Exor_Cofre_Packed_Base
+	{
+		scope = 2;
+		displayName = "Cofre Rojo (cerrado)";
+		descriptionShort = "Cofre de recompensa ROJO. Se abre llevandolo a la zona del evento 'apertura cajas' y dejandolo en el suelo hasta que se abra.";
+	};
+
+	// -- cofres abiertos (contenedor de 1000 slots) --
+	class Exor_Cofre_Base: Barrel_ColorBase
+	{
+		scope = 0;
+		model = "\DZ\structures\Furniture\Cases\PaperBox\PaperBox_01_small_open.p3d";
+		class Cargo
+		{
+			// ancho 10 x alto 100 = 1000 slots. NO ampliar el ancho: la grilla se va "para
+			// el costado" y los items quedan fuera de la vista (igual que el KothCrate).
+			itemsCargoSize[] = {10, 100};
+			openable = 0;
+			allowOwnedCargoManipulation = 1;
+		};
+	};
+	class Exor_Cofre_Azul: Exor_Cofre_Base
+	{
+		scope = 2;
+		displayName = "Cofre Azul";
+		descriptionShort = "Cofre de recompensa AZUL abierto. Fijo en el suelo.";
+	};
+	class Exor_Cofre_Verde: Exor_Cofre_Base
+	{
+		scope = 2;
+		displayName = "Cofre Verde";
+		descriptionShort = "Cofre de recompensa VERDE abierto. Fijo en el suelo.";
+	};
+	class Exor_Cofre_Rojo: Exor_Cofre_Base
+	{
+		scope = 2;
+		displayName = "Cofre Rojo";
+		descriptionShort = "Cofre de recompensa ROJO abierto. Fijo en el suelo.";
+	};
+
+	// -- luz del evento: Roadflare ENCENDIDA debajo de la mesa (NO agarrable) --
+	//  El manager pone 1 (cantidad_luces) debajo de la mesa, encendida; el manager la
+	//  re-enciende/re-spawnea periodicamente (una roadflare encendida se autoconsume).
+	//  Fija (no se puede tomar), se despawnea al cerrar el evento.
+	class Roadflare;	// externa (DZ_Gear_Consumables)
+	class Exor_CofreLight: Roadflare
+	{
+		scope = 2;
+		displayName = "Luz del evento";
+		descriptionShort = "Luz del evento de cofres. Fija, no se puede tomar.";
 	};
 
 	// --------------------------------------------------------------------
