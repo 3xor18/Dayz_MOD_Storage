@@ -1397,10 +1397,10 @@ class ExorCfgCofreObj
 class ExorCfgCofre
 {
 	int version = 1;
-	bool activado = false;                              // MASTER on/off del modulo
+	bool activado = true;                               // MASTER on/off del modulo
 	// El reloj del host puede estar en UTC (ver diagnostico NWD): ajusta las horas del
 	// horario. Ej: host en UTC y server en UTC-3 -> offset_horas = -3.
-	int offset_horas = 0;
+	int offset_horas = -4;
 	int tiempo_abrir_un_cofre_minutos = 10;            // minutos en zona activa para abrir la caja
 	bool colocar_marca_mapa = true;                    // marca en el mapa mientras la zona esta abierta
 	ref array<int> aviso_antes_de_spawnear;            // minutos antes de abrir la ventana: avisa "en X min..."
@@ -1460,8 +1460,8 @@ class ExorCfgCofre
 	void SetDefaults()
 	{
 		version = 1;
-		activado = false;
-		offset_horas = 0;
+		activado = true;
+		offset_horas = -4;
 		tiempo_abrir_un_cofre_minutos = 10;
 		colocar_marca_mapa = true;
 		aviso_antes_de_spawnear = new array<int>;
