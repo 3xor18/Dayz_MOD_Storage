@@ -67,6 +67,13 @@ modded class MissionServer
 		ExorAnticheat.MarkTeleport(ExorGroupManager.SteamId(player));	// gracia AC: conexion/respawn no son speedhack/godmode
 		ExorGroupManager.Get().OnPlayerConnected(player);
 		ExorTerritoryManager.Get().SyncToPlayer(player);
+		// SELF-HEAL del mastil: si el grupo del jugador perdio su mastil (se cayo tras un crash
+		// del server y el grupo -guardado aparte- sobrevivio), recrearlo en su posicion guardada.
+		// Diferido 8s para que la persistencia vanilla termine de cargar los mastiles que si
+		// sobrevivieron (asi FindBuiltMastByGroup no crea un duplicado).
+		ExorGroup exorHealG = ExorGroupManager.Get().FindByPlayer(ExorGroupManager.SteamId(player));
+		if (exorHealG)
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorTerritoryManager.Get().HealGroupMast, 8000, false, exorHealG, player);
 		ExorKoth.Get().SyncMarkersToPlayer(player);	// que vea las marcas de los koth activos en su mapa
 		ExorCofre.Get().SyncMarkersToPlayer(player);	// marcas de las zonas de cofres abiertas
 

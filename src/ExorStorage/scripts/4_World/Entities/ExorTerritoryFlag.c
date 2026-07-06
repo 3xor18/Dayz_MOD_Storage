@@ -148,6 +148,24 @@ modded class TerritoryFlag
 		return super.CanReleaseAttachment(attachment);
 	}
 
+	// Al colgar una bandera en el poste: guardar su classname en el grupo para poder
+	// restaurar el MISMO color (blanca o de pais/clan) si el mastil se pierde tras un
+	// crash y hay que recrearlo (self-heal, ExorHangSavedFlag).
+	override void EEItemAttached(EntityAI item, string slot_name)
+	{
+		super.EEItemAttached(item, slot_name);
+		if (!GetGame().IsServer() || !item)
+			return;
+		if (slot_name != "Material_FPole_Flag" || m_ExorGroupId == "")
+			return;
+		ExorGroup g = ExorGroupManager.Get().FindById(m_ExorGroupId);
+		if (g && g.mast_flag != item.GetType())
+		{
+			g.mast_flag = item.GetType();
+			ExorGroupManager.Get().SaveGroup(g);
+		}
+	}
+
 	// Al expirar la proteccion: destrabar el slot de la bandera para que se pueda
 	// cambiar la tela blanca por una de pais (sin tener que bajarla 40s).
 	void ExorWhiteFlagExpire()
@@ -257,6 +275,14 @@ modded class TerritoryFlag
 			ExorKoth.s_SpawningKothMast = false;
 			return;
 		}
+		// SELF-HEAL: mastil recreado por ExorTerritoryManager.HealGroupMast -> registrarlo
+		// pero NO reclamar territorio (el bind + construccion los hace ExorHealBind).
+		if (ExorTerritoryManager.s_Healing)
+		{
+			ExorTerritoryManager.Get().RegisterMast(this);
+			m_ExorInitDone = true;	// que el ExorPostInit diferido no reclame
+			return;
+		}
 		if (!GetExorConfig().party.territorio.habilitado)
 			return;	// sistema de territorio desactivado: la bandera queda 100% vanilla
 		ExorTerritoryManager.Get().RegisterMast(this);
@@ -313,15 +339,23 @@ modded class TerritoryFlag
 		ExorGroup existing = ExorGroupManager.Get().FindByPlayer(sid);
 		if (existing)
 		{
-			// Ya pertenece a un party. Si ese party TODAVIA tiene un mastil vivo -> rechazar
-			// (no se permiten 2 mastiles por party).
+			// Ya pertenece a un party. Si ese party TODAVIA tiene un mastil REAL (construido)
+			// vivo -> rechazar (no se permiten 2 mastiles por party).
 			TerritoryFlag liveMast = ExorTerritoryManager.Get().FindMastByGroup(existing.id);
-			if (liveMast && liveMast != this)
+			if (liveMast && liveMast != this && liveMast.ExorIsBuilt())
 			{
 				placer.MessageImportant("Ya tenés un party/territorio. Borrá la bandera anterior primero.");
 				ExorMarkDisbanding();
 				GetGame().ObjectDelete(this);
 				return;
+			}
+			// Si el "mastil vivo" es un FANTASMA (registrado pero sin construir, tras un crash):
+			// borrarlo (sin disolver el grupo) y adoptar esta bandera nueva -> deja rearmar.
+			if (liveMast && liveMast != this)
+			{
+				liveMast.ExorMarkDisbanding();
+				GetGame().ObjectDelete(liveMast);
+				Print(string.Format("%1 mastil fantasma del grupo %2 borrado (sin construir) -> se adopta la bandera nueva", ExorStorageConstants.LOG, existing.id));
 			}
 			// AUTO-REPARACION: el party existe pero su mastil se perdio (corrupcion de
 			// persistencia tras un crash: el objeto TerritoryFlag no cargo, pero el grupo
@@ -493,6 +527,63 @@ modded class TerritoryFlag
 			}
 		}
 		construction.UpdateVisuals();
+	}
+
+	// true si el mastil tiene al menos una parte del poste CONSTRUIDA. Un mastil REAL esta
+	// construido; un "fantasma" (cargado a medias tras un crash) tiene el cargo/construccion
+	// vacia -> devuelve false, y el sistema lo trata como perdido (permite rearmar / self-heal).
+	bool ExorIsBuilt()
+	{
+		Construction c = GetConstruction();
+		if (!c)
+			return false;
+		map<string, ref ConstructionPart> parts = c.GetConstructionParts();
+		if (!parts)
+			return false;
+		foreach (string nm, ConstructionPart p : parts)
+		{
+			if (p && p.IsBuilt())
+				return true;
+		}
+		return false;
+	}
+
+	// Liga un mastil recreado por el self-heal a un grupo YA existente: arma el poste, cuelga
+	// la bandera y lo deja como territorio ya reclamado, SIN proteccion de bandera blanca
+	// (la base es vieja). NO crea grupo nuevo (eso lo hace el flujo de reclamo normal).
+	void ExorHealBind(string groupId, Man builder)
+	{
+		if (!GetGame().IsServer())
+			return;
+		m_ExorGroupId = groupId;
+		if (builder)
+			ExorAutoBuild(builder);
+		m_ExorFlagRaised = true;
+		m_ExorClaimMinute = -999999;	// proteccion de bandera blanca ya vencida (territorio viejo)
+		// colgar la MISMA bandera que tenia (blanca o de color, guardada en el grupo)
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorHangSavedFlag, 1500, false);
+		ExorScheduleWhiteFlagExpiry();
+		ExorReapplyFlagVisual();
+		SetSynchDirty();
+		ExorTerritoryManager.Get().SyncToAll();
+	}
+
+	// Cuelga en el poste la bandera GUARDADA del grupo (mast_flag), o blanca si no hay ninguna
+	// guardada. Se usa al recrear un mastil por self-heal, para respetar su color original.
+	void ExorHangSavedFlag()
+	{
+		if (!GetGame().IsServer())
+			return;
+		if (FindAttachmentBySlotName("Material_FPole_Flag"))
+			return;	// ya tiene bandera colgada
+		string flagCls = "Flag_White";
+		ExorGroup g = ExorGroupManager.Get().FindById(m_ExorGroupId);
+		if (g && g.mast_flag != "")
+			flagCls = g.mast_flag;
+		int slotId = InventorySlots.GetSlotIdFromString("Material_FPole_Flag");
+		GetInventory().SetSlotLock(slotId, false);
+		GetInventory().CreateAttachment(flagCls);
+		ExorAnimateCloth(m_ExorFlagRaised);
 	}
 
 	// ------------------------- KOTH (mastil de evento) -------------------------

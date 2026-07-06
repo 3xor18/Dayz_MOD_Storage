@@ -69,6 +69,7 @@ class ExorTerritoryRules
 class ExorTerritoryManager
 {
 	static ref ExorTerritoryManager s_Instance;
+	static bool s_Healing;	// self-heal en curso: el mastil recreado NO reclama territorio (guard, como ExorKoth.s_SpawningKothMast)
 	ref array<TerritoryFlag> m_Masts;
 
 	void ExorTerritoryManager()
@@ -107,6 +108,54 @@ class ExorTerritoryManager
 				return m_Masts.Get(i);
 		}
 		return null;
+	}
+
+	// como FindMastByGroup pero SOLO devuelve un mastil REAL (con el poste construido);
+	// ignora los "fantasmas" (registrados pero sin construir tras un crash/load fallido).
+	TerritoryFlag FindBuiltMastByGroup(string groupId)
+	{
+		int i;
+		for (i = 0; i < m_Masts.Count(); i++)
+		{
+			TerritoryFlag m = m_Masts.Get(i);
+			if (m && m.ExorGetGroupId() == groupId && m.ExorIsBuilt())
+				return m;
+		}
+		return null;
+	}
+
+	// SELF-HEAL: si el grupo tiene posicion de mastil guardada y NO hay un mastil real vivo,
+	// recrea el TerritoryFlag en esa posicion y lo re-liga al grupo. Necesita un 'builder'
+	// (Man) para armar el poste (OnPartBuiltServer) -> se llama al CONECTAR un miembro (al
+	// arrancar el server no hay nadie para construirlo).
+	void HealGroupMast(ExorGroup g, Man builder)
+	{
+		if (!GetGame().IsServer() || !g || !builder)
+			return;
+		if (g.mast_x == 0 && g.mast_z == 0)
+			return;	// el grupo no tiene mastil guardado
+		if (FindBuiltMastByGroup(g.id))
+			return;	// ya tiene un mastil real -> nada que reparar
+		// borrar cualquier mastil FANTASMA del grupo (registrado pero sin construir) sin
+		// disolver el grupo (ExorMarkDisbanding evita el disband en EEDelete).
+		TerritoryFlag ghost = FindMastByGroup(g.id);
+		if (ghost)
+		{
+			ghost.ExorMarkDisbanding();
+			GetGame().ObjectDelete(ghost);
+		}
+		vector pos = Vector(g.mast_x, g.mast_y, g.mast_z);
+		ExorTerritoryManager.s_Healing = true;
+		Object mo = GetGame().CreateObjectEx("TerritoryFlag", pos, ECE_PLACE_ON_SURFACE);
+		ExorTerritoryManager.s_Healing = false;
+		TerritoryFlag m = TerritoryFlag.Cast(mo);
+		if (m)
+		{
+			m.ExorHealBind(g.id, builder);
+			Print(string.Format("%1 self-heal: mastil del grupo %2 recreado en %3 (se habia perdido tras crash)", ExorStorageConstants.LOG, g.id, pos));
+		}
+		else
+			Print(string.Format("%1 self-heal: NO se pudo recrear el mastil del grupo %2", ExorStorageConstants.LOG, g.id));
 	}
 
 	void DespawnMastForGroup(string groupId)

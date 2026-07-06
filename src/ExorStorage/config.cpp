@@ -25,7 +25,7 @@ class CfgMods
 		dir = "3xor_Vanilla_Optimization";
 		name = "3xor_Vanilla_Optimization";
 		author = "3xor";
-		version = "0.3.0";
+		version = "0.4.0";
 		type = "mod";
 		dependencies[] = {"Game", "World", "Mission"};
 		class defs
@@ -227,19 +227,19 @@ class CfgVehicles
 	{
 		scope = 2;
 		displayName = "Cofre Azul (cerrado)";
-		descriptionShort = "Cofre de recompensa AZUL. Se abre llevandolo a la zona del evento 'apertura cajas' y dejandolo en el suelo hasta que se abra.";
+		descriptionShort = "Debes llevar esta caja a la mesa del evento apertura de cajas y dropearla en el suelo, se coloca sola sobre la mesa, esperar unos minutos y se abre sola y puedes tomar los items dentro";
 	};
 	class Exor_Cofre_Verde_Packed: Exor_Cofre_Packed_Base
 	{
 		scope = 2;
 		displayName = "Cofre Verde (cerrado)";
-		descriptionShort = "Cofre de recompensa VERDE. Se abre llevandolo a la zona del evento 'apertura cajas' y dejandolo en el suelo hasta que se abra.";
+		descriptionShort = "Debes llevar esta caja a la mesa del evento apertura de cajas y dropearla en el suelo, se coloca sola sobre la mesa, esperar unos minutos y se abre sola y puedes tomar los items dentro";
 	};
 	class Exor_Cofre_Rojo_Packed: Exor_Cofre_Packed_Base
 	{
 		scope = 2;
 		displayName = "Cofre Rojo (cerrado)";
-		descriptionShort = "Cofre de recompensa ROJO. Se abre llevandolo a la zona del evento 'apertura cajas' y dejandolo en el suelo hasta que se abra.";
+		descriptionShort = "Debes llevar esta caja a la mesa del evento apertura de cajas y dropearla en el suelo, se coloca sola sobre la mesa, esperar unos minutos y se abre sola y puedes tomar los items dentro";
 	};
 
 	// -- cofres abiertos (contenedor de 1000 slots) --
@@ -249,9 +249,9 @@ class CfgVehicles
 		model = "\DZ\structures\Furniture\Cases\PaperBox\PaperBox_01_small_open.p3d";
 		class Cargo
 		{
-			// ancho 10 x alto 100 = 1000 slots. NO ampliar el ancho: la grilla se va "para
+			// ancho 10 x alto 13 = 130 slots. NO ampliar el ancho: la grilla se va "para
 			// el costado" y los items quedan fuera de la vista (igual que el KothCrate).
-			itemsCargoSize[] = {10, 100};
+			itemsCargoSize[] = {10, 13};
 			openable = 0;
 			allowOwnedCargoManipulation = 1;
 		};

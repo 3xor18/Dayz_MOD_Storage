@@ -30,6 +30,7 @@ class ExorGroup
 	float mast_x;        // posicion del mastil (Fase C) - floats sueltos: JSON-safe
 	float mast_y;
 	float mast_z;
+	string mast_flag;    // classname de la bandera colgada (para restaurar el color al recrear el mastil tras crash)
 	ref array<ref ExorGroupMember> members;
 	ref array<ref ExorExMember> former_members;   // historial de los que salieron (para baneo de clan)
 	int inactivity_alert_day;                      // ultimo dia que se aviso inactividad (0 = nunca); se resetea al conectarse alguien

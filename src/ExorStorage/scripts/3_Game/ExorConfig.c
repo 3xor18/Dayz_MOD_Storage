@@ -1380,7 +1380,9 @@ class ExorCfgCofreDef
 	}
 }
 
-// UN objeto de la estructura del evento (se spawnea en pos_zona + offset, con rotacion yaw).
+// UN objeto de la estructura del evento (se spawnea en pos_zona + offset, con rotacion).
+// Tambien se usa para las LUCES (roadflares): classname se ignora (siempre Exor_CofreLight),
+// dx/dy/dz = offset respecto al PISO de la zona, yaw/pitch/roll = orientacion (roll 90 = parada).
 class ExorCfgCofreObj
 {
 	string classname = "";
@@ -1388,6 +1390,8 @@ class ExorCfgCofreObj
 	float dy = 0;
 	float dz = 0;
 	float yaw = 0;  // rotacion (grados)
+	float pitch = 0;
+	float roll = 0;
 }
 
 class ExorCfgCofre
@@ -1409,9 +1413,9 @@ class ExorCfgCofre
 	bool evento_estructura = true;
 	ref array<ref ExorCfgCofreObj> estructura_objetos;	// objetos de la estructura (pos = zona + offset)
 	float altura_estructura = 0.5;                      // sube toda la estructura sobre el piso (para que no queden patas enterradas)
-	int cantidad_luces = 1;                             // roadflares encendidas DEBAJO de la mesa
-	float luces_altura = 0.15;                          // altura (m) de la roadflare SOBRE EL PISO de la zona (debajo de la mesa)
-	float luces_espaciado = 1.5;                        // separacion (m) entre luces a lo largo de la mesa
+	// roadflares encendidas del evento: cada una con posicion (offset respecto al PISO de la
+	// zona) y orientacion (roll 90 = parada/vertical). Default: 1 bajo la mesa + 1 parada sobre el drill.
+	ref array<ref ExorCfgCofreObj> luces;
 	// Slots de la mesa: en vez de tirar la caja al piso, se coloca sobre la mesa (hasta N).
 	int mesa_max_cajas = 3;                             // cuantas cajas caben en la mesa
 	float mesa_altura_slots = 0.45;                     // altura (m) de los slots sobre la base de la mesa (donde se apoyan las cajas)
@@ -1428,6 +1432,7 @@ class ExorCfgCofre
 	{
 		aviso_antes_de_spawnear = new array<int>;
 		estructura_objetos = new array<ref ExorCfgCofreObj>;
+		luces = new array<ref ExorCfgCofreObj>;
 		lugares = new array<ref ExorCfgCofreLugar>;
 		cofres = new array<ref ExorCfgCofreDef>;
 	}
@@ -1473,41 +1478,72 @@ class ExorCfgCofre
 		ExorCofreAddObj("vbldr_table_umakart", 0, 0, 0, 0);
 		ExorCofreAddObj("StaticObj_Furniture_Drill", 0, 0.8, -1.4, 0);
 		altura_estructura = 0.5;
-		cantidad_luces = 1;
-		luces_altura = 0.15;
-		luces_espaciado = 1.5;
+		luces = new array<ref ExorCfgCofreObj>;
+		ExorCofreAddLuz(0, 0.15, 0, 0, 0, 0);      // roadflare tirada bajo la mesa (piso + 0.15)
+		ExorCofreAddLuz(0, 2.0, -1.4, 0, 0, 90);   // roadflare PARADA (roll 90) sobre el drill
 		mesa_max_cajas = 3;
 		mesa_altura_slots = 0.45;
 		mesa_espaciado_slots = 0.9;
 		minutos_despawn_cofres_tras_evento = 30;
 		lugares = new array<ref ExorCfgCofreLugar>;
 		// 2 zonas de ejemplo (0,0,0 = EDITAR). Ventana 07:00-18:00 todos los dias.
-		lugares.Insert(ExorCofreDefaultLugar());
-		lugares.Insert(ExorCofreDefaultLugar());
+		lugares.Insert(ExorCofreDefaultLugar(644.0, 486.357, 1149.0));
+		lugares.Insert(ExorCofreDefaultLugar(3965.58, 238.16, 10120.7));
 		// 3 cofres de ejemplo (azul/verde/rojo) con classnames REALES de dayz para testear.
 		cofres = new array<ref ExorCfgCofreDef>;
+
+		// AZUL: bundle 1 = set M4 (+ ghillie); bundle 2 = set AKM (+ 2 ammo + ghillie)
 		ExorCfgCofreDef az = new ExorCfgCofreDef();
 		az.color = "azul";
-		ExorCofreAddBundle(az, "1", "AKM", "Mag_AKM_30Rnd");
-		ExorCofreAddBundle(az, "2", "M4A1", "Mag_STANAG_30Rnd");
+		TStringArray az1 = new TStringArray;
+		az1.Insert("M4_Suppressor"); az1.Insert("M4_T3NRDSOptic"); az1.Insert("M4_CQBBttstck_Black");
+		az1.Insert("M4_MPHndgrd_Black"); az1.Insert("M4A1"); az1.Insert("Mag_STANAG_60Rnd");
+		az1.Insert("Mag_STANAG_60Rnd"); az1.Insert("Ammo_556x45"); az1.Insert("Ammo_556x45");
+		az1.Insert("GhillieAtt_Mossy");
+		az.items.Set("1", az1);
+		TStringArray az2 = new TStringArray;
+		az2.Insert("AKM"); az2.Insert("ak_suppressor"); az2.Insert("ak_woodbttstck_black");
+		az2.Insert("ak_railhndgrd_black"); az2.Insert("pso1optic"); az2.Insert("Mag_AKM_Drum75Rnd");
+		az2.Insert("Mag_AKM_Drum75Rnd"); az2.Insert("Ammo_762x39"); az2.Insert("Ammo_762x39");
+		az2.Insert("GhillieAtt_Mossy");
+		az.items.Set("2", az2);
 		cofres.Insert(az);
+
+		// VERDE: bundle 1 = set SV98 (+ ammo); bundle 2 = set M14
 		ExorCfgCofreDef vd = new ExorCfgCofreDef();
 		vd.color = "verde";
-		ExorCofreAddBundle(vd, "1", "VSS", "Mag_VSS_10Rnd");
-		ExorCofreAddBundle(vd, "2", "SVD", "Mag_SVD_10Rnd");
+		TStringArray vd1 = new TStringArray;
+		vd1.Insert("SV98"); vd1.Insert("Mag_SV98_10Rnd"); vd1.Insert("Mag_SV98_10Rnd");
+		vd1.Insert("MK4Optic_Green"); vd1.Insert("GhillieAtt_Woodland"); vd1.Insert("Ammo_762x54");
+		vd.items.Set("1", vd1);
+		TStringArray vd2 = new TStringArray;
+		vd2.Insert("M14"); vd2.Insert("Mag_M14_20Rnd"); vd2.Insert("Mag_M14_20Rnd");
+		vd2.Insert("MK4Optic_Black"); vd2.Insert("Ammo_308Win"); vd2.Insert("Ammo_308Win");
+		vd2.Insert("GhillieAtt_Tan");
+		vd.items.Set("2", vd2);
 		cofres.Insert(vd);
+
+		// ROJO: bundle 1 = granadas/40mm/M79; bundle 2 = explosivos
 		ExorCfgCofreDef rj = new ExorCfgCofreDef();
 		rj.color = "rojo";
-		ExorCofreAddBundle(rj, "1", "M67Grenade", "LandMineTrap");
-		ExorCofreAddBundle(rj, "2", "PlasticExplosive", "ElectronicRepairKit");
+		TStringArray rj1 = new TStringArray;
+		rj1.Insert("M67Grenade:20"); rj1.Insert("Grenade_ChemGas:5"); rj1.Insert("Ammo_40mm_ChemGas:5");
+		rj1.Insert("Ammo_40mm_Explosive:5"); rj1.Insert("M79");
+		rj.items.Set("1", rj1);
+		TStringArray rj2 = new TStringArray;
+		rj2.Insert("ImprovisedExplosive:3"); rj2.Insert("Plastic_Explosive:6"); rj2.Insert("RemoteDetonator:3");
+		rj.items.Set("2", rj2);
 		cofres.Insert(rj);
 	}
 
 	// helpers (Enforce: sin expresiones multilinea)
-	ExorCfgCofreLugar ExorCofreDefaultLugar()
+	ExorCfgCofreLugar ExorCofreDefaultLugar(float x, float y, float z)
 	{
 		ExorCfgCofreLugar l = new ExorCfgCofreLugar();
 		l.activo = true;
+		l.posicion.x = x;
+		l.posicion.y = y;
+		l.posicion.z = z;
 		l.rango_efecto = 5;
 		ExorCofreAddDia(l, "lunes");
 		ExorCofreAddDia(l, "martes");
@@ -1523,8 +1559,8 @@ class ExorCfgCofre
 	{
 		ExorCfgCofreDia d = new ExorCfgCofreDia();
 		d.dia = dia;
-		d.hora_inicio = "07:00";
-		d.hora_fin = "18:00";
+		d.hora_inicio = "00:00";
+		d.hora_fin = "23:59";
 		d.activado = true;
 		l.dias.Insert(d);
 	}
@@ -1543,6 +1579,13 @@ class ExorCfgCofre
 		o.classname = cls;
 		o.dx = dx; o.dy = dy; o.dz = dz; o.yaw = yaw;
 		estructura_objetos.Insert(o);
+	}
+
+	void ExorCofreAddLuz(float dx, float dy, float dz, float yaw, float pitch, float roll)
+	{
+		ExorCfgCofreObj o = new ExorCfgCofreObj();
+		o.dx = dx; o.dy = dy; o.dz = dz; o.yaw = yaw; o.pitch = pitch; o.roll = roll;
+		luces.Insert(o);
 	}
 }
 

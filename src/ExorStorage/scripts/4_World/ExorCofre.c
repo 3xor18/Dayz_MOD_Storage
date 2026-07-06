@@ -371,13 +371,19 @@ class ExorCofreZone
 			ExorCfgCofreObj o0 = g.estructura_objetos.Get(0);
 			float ax = pos[0] + o0.dx;
 			float az = pos[2] + o0.dz;
-			// apoyar en la superficie + subir altura_estructura (para que no queden patas enterradas)
-			vector a = Vector(ax, GetGame().SurfaceY(ax, az) + g.altura_estructura, az);
-			Object anchor = GetGame().CreateObjectEx(o0.classname, a, ECE_PLACE_ON_SURFACE);
+			// usar la Y de la ZONA (posicion.y que dio el admin) + altura_estructura, NO la
+			// superficie del terreno: asi funciona tambien en pisos ELEVADOS (bases/edificios,
+			// donde el terreno queda muy por debajo). ResolvePos ya resolvio pos[1] (posicion.y
+			// si >0, o SurfaceY si el admin puso y=0).
+			vector a = Vector(ax, pos[1] + g.altura_estructura, az);
+			// crear en la posicion EXACTA (sin ECE_PLACE_ON_SURFACE) para que funcione en pisos
+			// ELEVADOS: el snap al terreno tiraba la mesa muy abajo y no se reposicionaba.
+			Object anchor = GetGame().CreateObjectEx(o0.classname, a, ECE_CREATEPHYSICS);
 			if (anchor)
 			{
-				anchor.SetPosition(a);	// Y exacta (superficie + altura_estructura)
+				anchor.SetPosition(a);
 				anchor.SetOrientation(Vector(o0.yaw, 0, 0));
+				Print(string.Format("%1 COFRE: estructura '%2' creada, pos real=%3 (pedida=%4)", ExorStorageConstants.LOG, o0.classname, anchor.GetPosition(), a));
 			}
 			else
 				Print(string.Format("%1 COFRE: NO se pudo crear estructura '%2'", ExorStorageConstants.LOG, o0.classname));
@@ -388,26 +394,30 @@ class ExorCofreZone
 			int oi = m_StructureObjs.Count();
 			ExorCfgCofreObj oc = g.estructura_objetos.Get(oi);
 			ExorCfgCofreObj ob = g.estructura_objetos.Get(0);
-			// pos real de la mesa (ancla); fallback a la superficie + altura de la zona
+			// pos real de la mesa (ancla); fallback a la Y de la zona + altura
 			vector anchorPos = pos;
-			anchorPos[1] = GetGame().SurfaceY(pos[0], pos[2]) + g.altura_estructura;
+			anchorPos[1] = pos[1] + g.altura_estructura;
 			if (m_StructureObjs.Get(0))
 				anchorPos = m_StructureObjs.Get(0).GetPosition();
 			vector op = anchorPos + Vector(oc.dx - ob.dx, oc.dy - ob.dy, oc.dz - ob.dz);
-			Object so = GetGame().CreateObjectEx(oc.classname, op, ECE_PLACE_ON_SURFACE);
+			Object so = GetGame().CreateObjectEx(oc.classname, op, ECE_CREATEPHYSICS);
 			if (so)
 			{
-				so.SetPosition(op);	// posicion EXACTA sobre la mesa (override del snap)
+				so.SetPosition(op);	// posicion EXACTA sobre la mesa
 				so.SetOrientation(Vector(oc.yaw, 0, 0));
+				Print(string.Format("%1 COFRE: objeto '%2' creado, pos real=%3 (pedida=%4)", ExorStorageConstants.LOG, oc.classname, so.GetPosition(), op));
 			}
 			else
 				Print(string.Format("%1 COFRE: NO se pudo crear objeto de estructura '%2'", ExorStorageConstants.LOG, oc.classname));
 			m_StructureObjs.Insert(so);	// insertar aunque sea null: no reintentar cada tick
 		}
 
-		// luces (roadflare): N encendidas DEBAJO de la mesa. Keep-alive con throttle: cada 15s
-		// se limpian las que se consumieron y se re-spawnean las que falten (una roadflare
-		// encendida se autoconsume; asi dura todo el evento sin loop rapido).
+		// LUCES (roadflares): lista `luces[]` con offset (respecto al PISO de la zona = pos.Y que
+		// dio el admin) + orientacion (roll 90 = parada). Keep-alive throttle 15s (respawnea las
+		// consumidas) + re-pin cada tick (para que la roadflare PARADA sobre el drill no se caiga).
+		int nFl = 0;
+		if (g.luces)
+			nFl = g.luces.Count();
 		int nowLm = GetGame().GetTime();
 		if (nowLm - m_LightsCheckMs >= 15000)
 		{
@@ -418,25 +428,32 @@ class ExorCofreZone
 				if (!m_Lights.Get(li))
 					m_Lights.Remove(li);
 			}
-			int nFl = g.cantidad_luces;
-			if (nFl < 0)
-				nFl = 0;
-			// ancla de las luces = PISO de la zona (pos.Y = posicion.y que dio el admin), centrado
-			// bajo la mesa (mismo XZ). Asi la roadflare queda SOBRE el piso, debajo de la mesa.
-			vector lanchor = pos;
-			float lmid = (nFl - 1) / 2.0;
 			while (m_Lights.Count() < nFl)
 			{
 				int idx = m_Lights.Count();
-				float ldz = (idx - lmid) * g.luces_espaciado;
-				vector fp = lanchor + Vector(0, g.luces_altura, ldz);
-				Object fo = GetGame().CreateObjectEx("Exor_CofreLight", fp, ECE_PLACE_ON_SURFACE);
+				ExorCfgCofreObj lz = g.luces.Get(idx);
+				vector fp = pos + Vector(lz.dx, lz.dy, lz.dz);
+				Object fo = GetGame().CreateObjectEx("Exor_CofreLight", fp, ECE_CREATEPHYSICS);
 				if (fo)
-					fo.SetPosition(fp);	// exacto debajo de la mesa
+				{
+					fo.SetPosition(fp);
+					fo.SetOrientation(Vector(lz.yaw, lz.pitch, lz.roll));
+				}
 				else
 					Print(string.Format("%1 COFRE: NO se pudo crear luz Exor_CofreLight", ExorStorageConstants.LOG));
 				m_Lights.Insert(fo);
 			}
+		}
+		// re-pin cada tick: mantiene cada roadflare en su offset/orientacion (la parada no se cae)
+		int rpi;
+		for (rpi = 0; rpi < m_Lights.Count() && rpi < nFl; rpi++)
+		{
+			Object lo = m_Lights.Get(rpi);
+			if (!lo)
+				continue;
+			ExorCfgCofreObj lz2 = g.luces.Get(rpi);
+			lo.SetPosition(pos + Vector(lz2.dx, lz2.dy, lz2.dz));
+			lo.SetOrientation(Vector(lz2.yaw, lz2.pitch, lz2.roll));
 		}
 	}
 
@@ -474,6 +491,7 @@ class ExorCofreZone
 class ExorCofre
 {
 	static ref ExorCofre s_Instance;
+	static int s_LootCounter;	// contador rotativo para de-correlacionar el bundle de cofres que abren en el mismo tick
 
 	static const int MARKER_ID_BASE = 5000;                 // offset de id de marca (no choca con KOTH)
 
@@ -1003,7 +1021,16 @@ class ExorCofre
 		ExorCfgCofreDef def = FindDef(cfg, color);
 		if (!def || !def.items || def.items.Count() == 0)
 			return 0;
-		int pick = Math.RandomInt(0, def.items.Count());
+		int nb = def.items.Count();
+		// pick random + contador rotativo: DayZ Math.RandomInt puede devolver el mismo valor
+		// varias veces en el MISMO frame (varias cajas abriendo en el mismo tick) -> el contador
+		// asegura que aperturas consecutivas caigan en bundles distintos.
+		int pick = (Math.RandomInt(0, nb) + ExorCofre.s_LootCounter) % nb;
+		ExorCofre.s_LootCounter++;
+		if (pick < 0)
+			pick = 0;
+		if (pick >= nb)
+			pick = nb - 1;
 		TStringArray bundle = def.items.GetElement(pick);
 		if (!bundle)
 			return 0;
@@ -1011,14 +1038,32 @@ class ExorCofre
 		int i;
 		for (i = 0; i < bundle.Count(); i++)
 		{
-			string cls = bundle.Get(i);
-			if (cls == "")
+			string entry = bundle.Get(i);
+			if (entry == "")
 				continue;
-			EntityAI e = chest.GetInventory().CreateInInventory(cls);
-			if (e)
-				puestos++;
-			else
-				Print(string.Format("%1 COFRE: item NO entro (classname invalido / mod no cargado / lleno): %2", ExorStorageConstants.LOG, cls));
+			// formato "classname" (1) o "classname:cantidad" (ej. "M67Grenade:20")
+			string cls = entry;
+			int count = 1;
+			int cc = entry.IndexOf(":");
+			if (cc >= 0)
+			{
+				cls = entry.Substring(0, cc);
+				count = entry.Substring(cc + 1, entry.Length() - (cc + 1)).ToInt();
+				if (count < 1)
+					count = 1;
+			}
+			int n;
+			for (n = 0; n < count; n++)
+			{
+				EntityAI e = chest.GetInventory().CreateInInventory(cls);
+				if (e)
+					puestos++;
+				else
+				{
+					Print(string.Format("%1 COFRE: item NO entro (classname invalido / mod no cargado / lleno): %2", ExorStorageConstants.LOG, cls));
+					break;	// no seguir repitiendo el mismo item si no entra (lleno/invalido)
+				}
+			}
 		}
 		return puestos;
 	}
