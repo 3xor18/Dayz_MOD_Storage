@@ -69,6 +69,19 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		super.EEDelete(parent);
 	}
 
+	// true si el barril esta ATTACHED a un slot de barril de un vehiculo/objeto (no en el piso
+	// ni en un cargo suelto). Se usa para abrirlo solo en el slot (asi acepta items ahi) y no
+	// en el cargo del vehiculo (transporte). No se toca EEParentedTo para no romper la colocacion.
+	bool ExorIsInVehicleSlot()
+	{
+		if (!GetInventory())
+			return false;
+		InventoryLocation loc = new InventoryLocation();
+		if (!GetInventory().GetCurrentInventoryLocation(loc))
+			return false;
+		return loc.GetType() == InventoryLocationType.ATTACHMENT;
+	}
+
 	override void OnStoreSave(ParamsWriteContext ctx)
 	{
 		super.OnStoreSave(ctx);
@@ -248,6 +261,20 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		// Si todavia no reconcilio, no hacer nada este tick (espera su turno).
 		if (!m_ExorLoadDone)
 			return false;
+
+		// Barril ATTACHED a un SLOT de barril de un vehiculo (no en cargo suelto): mantenerlo
+		// ABIERTO para que acepte items (un barril cerrado rechaza el cargo -regla vanilla- y en
+		// el vehiculo no hay accion de "abrir"), y NO auto-cerrarlo/virtualizarlo. Si esta en el
+		// CARGO del vehiculo (no en un slot), se deja cerrado y NO acepta items (transporte).
+		if (ExorIsInVehicleSlot())
+		{
+			if (!IsOpen())
+			{
+				m_ExorLastCloseMs = 0;	// sin cooldown de reapertura estando en el slot
+				Open();
+			}
+			return false;
+		}
 
 		// Umbrales en ms (config en SEGUNDOS). Recomendado: cerrar 10s, virtualizar 30s.
 		int cerrarMs = settings.auto_cerrar_segundos * 1000;
