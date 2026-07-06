@@ -1405,9 +1405,9 @@ class ExorCfgCofre
 	bool colocar_marca_mapa = true;                    // marca en el mapa mientras la zona esta abierta
 	ref array<int> aviso_antes_de_spawnear;            // minutos antes de abrir la ventana: avisa "en X min..."
 	bool aviso_al_spawnwar = true;                     // aviso al abrirse la ventana [nombre del JSON, sic]
-	int rango_detectar_payer_para_aviso_metros = 100;  // radio para contar players en zona [sic]
+	int rango_detectar_payer_para_aviso_metros = 150;  // radio para contar players en zona [sic]
 	bool aviso_de_players_dentro_del_rango_efecto = true;
-	int minutos_aviso_players_en_zona = 8;             // cada cuantos min avisa "hay N players en la zona"
+	int minutos_aviso_players_en_zona = 5;             // cada cuantos min avisa "hay N players en la zona"
 	// Al abrir la ventana aparece una ESTRUCTURA (uno o mas objetos con offset) rodeada de
 	// bengalas; al cerrar la ventana la estructura y las bengalas se despawnean.
 	bool evento_estructura = true;
@@ -1469,9 +1469,9 @@ class ExorCfgCofre
 		aviso_antes_de_spawnear.Insert(10);
 		aviso_antes_de_spawnear.Insert(5);
 		aviso_al_spawnwar = true;
-		rango_detectar_payer_para_aviso_metros = 100;
+		rango_detectar_payer_para_aviso_metros = 150;
 		aviso_de_players_dentro_del_rango_efecto = true;
-		minutos_aviso_players_en_zona = 8;
+		minutos_aviso_players_en_zona = 5;
 		evento_estructura = true;
 		// estructura = mesa + drill (el drill va sobre la mesa: offset parseado del set de VPP).
 		estructura_objetos = new array<ref ExorCfgCofreObj>;
