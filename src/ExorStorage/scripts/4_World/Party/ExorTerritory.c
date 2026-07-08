@@ -99,6 +99,11 @@ class ExorTerritoryManager
 		SyncToAll();
 	}
 
+	// NOTA: la "inmortalidad" del mastil (que no lo borre el CE por lifetime) se maneja en el
+	// types.xml del server subiendo el <lifetime> del TerritoryFlag. La API de script para refrescar
+	// el lifetime en vivo (CEApi.SetItemLifetime) NO existe en esta version de DayZ. Igual, si por
+	// cualquier causa el objeto-bandera se pierde, el self-heal recrea el mastil (party se conserva).
+
 	TerritoryFlag FindMastByGroup(string groupId)
 	{
 		int i;
@@ -135,7 +140,29 @@ class ExorTerritoryManager
 		if (g.mast_x == 0 && g.mast_z == 0)
 			return;	// el grupo no tiene mastil guardado
 		if (FindBuiltMastByGroup(g.id))
-			return;	// ya tiene un mastil real -> nada que reparar
+		{
+			// el mastil del grupo ya esta vivo -> nada que reparar; limpiar la marca de perdido
+			if (g.mast_lost != 0)
+			{
+				g.mast_lost = 0;
+				ExorGroupManager.Get().SaveGroup(g);
+			}
+			return;
+		}
+
+		vector pos = Vector(g.mast_x, g.mast_y, g.mast_z);
+
+		// "SALVO que ya exista una bandera NUEVA creada en esa base": si hay un mastil
+		// construido de OTRO grupo justo en esta posicion, la base ya fue reconstruida.
+		// No restauramos (evitar 2 territorios superpuestos) y descartamos el grupo viejo.
+		TerritoryFlag other = FindBuiltMastNear(pos, 15.0, g.id);
+		if (other)
+		{
+			Print(string.Format("%1 self-heal: la base del grupo %2 ya fue reconstruida (bandera nueva del grupo %3) -> se descarta el grupo viejo", ExorStorageConstants.LOG, g.id, other.ExorGetGroupId()));
+			ExorGroupManager.Get().MarkGroupDeleted(g, "");	// no borra el file (baneo de clan); solo lo saca de activos
+			return;
+		}
+
 		// borrar cualquier mastil FANTASMA del grupo (registrado pero sin construir) sin
 		// disolver el grupo (ExorMarkDisbanding evita el disband en EEDelete).
 		TerritoryFlag ghost = FindMastByGroup(g.id);
@@ -144,7 +171,6 @@ class ExorTerritoryManager
 			ghost.ExorMarkDisbanding();
 			GetGame().ObjectDelete(ghost);
 		}
-		vector pos = Vector(g.mast_x, g.mast_y, g.mast_z);
 		ExorTerritoryManager.s_Healing = true;
 		Object mo = GetGame().CreateObjectEx("TerritoryFlag", pos, ECE_PLACE_ON_SURFACE);
 		ExorTerritoryManager.s_Healing = false;
@@ -152,10 +178,30 @@ class ExorTerritoryManager
 		if (m)
 		{
 			m.ExorHealBind(g.id, builder);
-			Print(string.Format("%1 self-heal: mastil del grupo %2 recreado en %3 (se habia perdido tras crash)", ExorStorageConstants.LOG, g.id, pos));
+			g.mast_lost = 0;	// restaurado -> ya no esta perdido
+			ExorGroupManager.Get().SaveGroup(g);
+			Print(string.Format("%1 self-heal: mastil del grupo %2 recreado en %3 (se habia perdido tras crash/bug)", ExorStorageConstants.LOG, g.id, pos));
 		}
 		else
 			Print(string.Format("%1 self-heal: NO se pudo recrear el mastil del grupo %2", ExorStorageConstants.LOG, g.id));
+	}
+
+	// Devuelve un mastil CONSTRUIDO (real) dentro de 'radius' de 'pos' que NO sea del grupo
+	// 'excludeGroupId'. Sirve para saber si la base ya fue reconstruida por OTRA bandera.
+	TerritoryFlag FindBuiltMastNear(vector pos, float radius, string excludeGroupId)
+	{
+		int i;
+		for (i = 0; i < m_Masts.Count(); i++)
+		{
+			TerritoryFlag m = m_Masts.Get(i);
+			if (!m || !m.ExorIsBuilt())
+				continue;
+			if (excludeGroupId != "" && m.ExorGetGroupId() == excludeGroupId)
+				continue;
+			if (ExorTerritoryRules.Dist2D(pos, m.GetPosition()) <= radius)
+				return m;
+		}
+		return null;
 	}
 
 	void DespawnMastForGroup(string groupId)

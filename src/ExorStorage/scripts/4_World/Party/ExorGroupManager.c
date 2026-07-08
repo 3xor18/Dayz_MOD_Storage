@@ -160,6 +160,10 @@ class ExorGroupManager
 		JsonFileLoader<ExorGroup>.JsonLoadFile(full, g);
 		if (g.id == "" || g.owner_id == "")
 			return;
+		// Grupo marcado como borrado (disuelto/eliminado): NO se carga como activo -> sus miembros
+		// quedan libres y su mastil NO se recrea. El FILE se conserva en disco (baneo de clan).
+		if (g.borrado == 1)
+			return;
 		m_Groups.Insert(g);
 	}
 
@@ -240,11 +244,9 @@ class ExorGroupManager
 		return g;
 	}
 
-	void DisbandGroup(ExorGroup g, string reason)
+	void DisbandGroup(ExorGroup g, string reason, string bySteamId = "")
 	{
-		// Volcar el roster al log forense ANTES de borrar el grupo: al disolverse se
-		// borra groups/<id>.json y se perderia la lista de miembros/ex-miembros (que
-		// sirve justamente para banear a un clan completo). Asi queda rastro en el raidlog.
+		// Volcar el roster al log forense (miembros/ex-miembros: sirve para banear un clan).
 		ExorLogDisband(g, reason);
 		int i;
 		for (i = 0; i < g.members.Count(); i++)
@@ -258,9 +260,27 @@ class ExorGroupManager
 				pb.MessageImportant(reason);
 			}
 		}
-		DeleteGroup(g);
+		// NO se borra el file: se marca borrado=1 (se conserva el roster para baneo de clan).
+		MarkGroupDeleted(g, bySteamId);
 		// Hook para la Fase C: despawnear el mastil del territorio.
 		ExorOnGroupDisbanded(g);
+	}
+
+	// Marca un grupo como disuelto/eliminado SIN borrar el file: borrado=1 + quien + cuando,
+	// lo guarda y lo saca de la lista ACTIVA (deja de existir para miembros/mastil/zonas). El
+	// file queda en disco para poder banear a un clan entero despues (miembros + ex-miembros).
+	void MarkGroupDeleted(ExorGroup g, string bySteamId)
+	{
+		if (!g)
+			return;
+		g.borrado = 1;
+		g.borrado_por = bySteamId;
+		g.borrado_fecha = ExorRaidLog.TimeStamp();
+		SaveGroup(g);	// persiste el file con la marca (NO se borra del disco)
+		int idx = m_Groups.Find(g);
+		if (idx != -1)
+			m_Groups.Remove(idx);
+		Print(string.Format("%1 Party: grupo %2 marcado BORRADO por %3 (%4) -> file conservado", ExorStorageConstants.LOG, g.id, bySteamId, g.borrado_fecha));
 	}
 
 	// Fase C: al disolverse el grupo, despawnear su mastil (si quedo alguno).
@@ -269,6 +289,65 @@ class ExorGroupManager
 		if (!GetGame().IsServer() || !g)
 			return;
 		ExorTerritoryManager.Get().DespawnMastForGroup(g.id);
+	}
+
+	// El OBJETO-bandera desaparecio SIN que el owner disolviera el party (bug/CE/crash:
+	// el TerritoryFlag se borro solo, normalmente sin nadie en la base). A diferencia de
+	// DisbandGroup, esto NO borra el grupo: el party se CONSERVA y el mastil se auto-restaura
+	// (al reconectar un miembro, o diferido si hay alguno online). Solo se pierde temporalmente
+	// la proteccion de territorio hasta que el mastil se recrea.
+	void MarkMastLost(ExorGroup g, string reason)
+	{
+		if (!GetGame().IsServer() || !g)
+			return;
+		g.mast_lost = 1;
+		SaveGroup(g);
+
+		// log forense (evento propio, NO CLAN_DISUELTO: el clan NO se disolvio)
+		string ownerName = "?";
+		ExorGroupMember owner = g.FindMember(g.owner_id);
+		if (owner)
+			ownerName = owner.name;
+		vector basePos = Vector(g.mast_x, g.mast_y, g.mast_z);
+		ExorRaidLog.Write("MASTIL_PERDIDO", g.owner_id, ownerName,
+			basePos, string.Format("clan %1 (lider %2): %3 | el party se CONSERVA, el mastil se auto-restaura", g.id, ownerName, reason));
+
+		// avisar a los miembros online (sin limpiar su party)
+		int i;
+		for (i = 0; i < g.members.Count(); i++)
+		{
+			PlayerBase pb = FindOnline(g.members.Get(i).steamid);
+			if (pb)
+				pb.MessageImportant("Tu mástil desapareció (bug del servidor). Tu party sigue activo; el mástil se restaurará solo (reconectá si no aparece).");
+		}
+
+		Print(string.Format("%1 Party: MASTIL PERDIDO del grupo %2 -> party conservado, pendiente de auto-restaurar (%3)", ExorStorageConstants.LOG, g.id, reason));
+
+		// intento de restauracion diferido: si hay algun miembro online sirve de "builder".
+		// Diferido (no en el mismo frame del borrado) para no chocar con la pasada del CE
+		// que pudo haber borrado la bandera.
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(TryRestoreGroupMast, 5000, false, g.id);
+	}
+
+	// Intenta recrear el mastil perdido de un grupo usando cualquier miembro online como
+	// builder. Si no hay ninguno online, no hace nada (se restaura al reconectar un miembro).
+	void TryRestoreGroupMast(string groupId)
+	{
+		if (!GetGame().IsServer())
+			return;
+		ExorGroup g = FindById(groupId);
+		if (!g || g.mast_lost != 1)
+			return;
+		int i;
+		for (i = 0; i < g.members.Count(); i++)
+		{
+			PlayerBase pb = FindOnline(g.members.Get(i).steamid);
+			if (pb)
+			{
+				ExorTerritoryManager.Get().HealGroupMast(g, pb);
+				return;
+			}
+		}
 	}
 
 	// ------------------------- invitaciones -------------------------
@@ -481,7 +560,7 @@ class ExorGroupManager
 
 		if (g.IsOwner(sid))
 		{
-			DisbandGroup(g, "El lider disolvio el party.");
+			DisbandGroup(g, "El lider disolvio el party.", sid);
 			return;
 		}
 
@@ -515,7 +594,7 @@ class ExorGroupManager
 		// Expulsar al DUENO = disolver el party + borrar el mastil
 		if (targetSid == g.owner_id)
 		{
-			DisbandGroup(g, "El party fue disuelto (se expulso al lider).");
+			DisbandGroup(g, "El party fue disuelto (se expulso al lider).", asid);
 			return true;
 		}
 
@@ -557,6 +636,7 @@ class ExorGroupManager
 		AutoKickScan(g);
 		SaveGroup(g);
 		SyncGroup(g);
+		// (el self-heal del mastil perdido ya lo dispara ExorAfterClientSpawned -> HealGroupMast a los 8s)
 	}
 
 	void AutoKickScan(ExorGroup g)
@@ -582,7 +662,7 @@ class ExorGroupManager
 
 	// ------------------------- aviso de clanes inactivos -------------------------
 	// Recorre todos los grupos y, si NINGUN miembro actual se conecto en los ultimos
-	// 'inactividad_dias', escribe un aviso al log forense diario (ExorRaidLog) con las
+	// 'aviso_tiempo_inactividad_dias', escribe un aviso al log forense diario (ExorRaidLog) con las
 	// coordenadas de la base. Dedup: 1 aviso por clan por dia (inactivity_alert_day),
 	// re-armado cuando alguien se conecta (ver OnPlayerConnected). Se llama en
 	// MissionServer.OnInit tras cargar los grupos; como el server reinicia seguido,
@@ -594,7 +674,7 @@ class ExorGroupManager
 		ExorCfgPartyProteccion p = GetExorConfig().party.proteccion;
 		if (!p.aviso_clan_inactivo)
 			return;
-		int umbral = p.inactividad_dias;
+		int umbral = p.aviso_tiempo_inactividad_dias;
 		if (umbral <= 0)
 			return;
 

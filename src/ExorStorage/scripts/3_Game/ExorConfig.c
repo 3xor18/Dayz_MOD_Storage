@@ -71,7 +71,7 @@ class ExorCfgVehInventario
 
 class ExorCfgVehDano
 {
-	bool quitar_dano_vehiculos = false; // true = los autos no reciben dano
+	bool quitar_dano_vehiculos = false;        // true = los autos no reciben dano
 }
 
 class ExorCfgVehiculos
@@ -221,8 +221,8 @@ class ExorCfgPartyProteccion
 	bool log_desconexion_base_ajena = true;       // #4a: loguear si un ajeno se desloguea dentro de territorio enemigo
 	bool sacar_de_base_ajena_al_reconectar = true;// #4b: al reconectar dentro de territorio ajeno, teletransportar al borde
 	int log_dias_retener = 7;                     // dias que se conservan los archivos de raidlog (0 = nunca borrar)
-	bool aviso_clan_inactivo = true;              // #6: avisar en el raidlog si un clan no conecta a nadie hace 'inactividad_dias'
-	int inactividad_dias = 21;                    // umbral de inactividad de un clan en dias (21 = 3 semanas; 0 = off)
+	bool aviso_clan_inactivo = true;              // #6: avisar en el raidlog si un clan no conecta a nadie hace 'aviso_tiempo_inactividad_dias'
+	int aviso_tiempo_inactividad_dias = 14;       // umbral de inactividad de un clan en dias (default 14; 0 = off). Se auto-agrega (=14) a configs viejas que no lo tengan
 	bool log_combat_log = true;                   // #7: loguear deslogueo dentro de una zona de combate PvP (combat-log)
 	int combat_log_minutos = 8;                   // minutos reales que la zona de combate sigue viva tras el ultimo daño PvP (0 = off)
 	float combat_log_radio = 150;                 // radio (m) de la zona de combate alrededor de cada participante (tirador y victima); 150 cubre PvP largo por el anclaje a ambos extremos
@@ -291,7 +291,7 @@ class ExorCfgParty
 		proteccion.sacar_de_base_ajena_al_reconectar = true;
 		proteccion.log_dias_retener = 7;
 		proteccion.aviso_clan_inactivo = true;
-		proteccion.inactividad_dias = 21;
+		proteccion.aviso_tiempo_inactividad_dias = 14;
 		proteccion.log_combat_log = true;
 		proteccion.combat_log_minutos = 8;
 		proteccion.log_farmeo_kills = true;

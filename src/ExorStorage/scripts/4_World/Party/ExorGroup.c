@@ -31,6 +31,12 @@ class ExorGroup
 	float mast_y;
 	float mast_z;
 	string mast_flag;    // classname de la bandera colgada (para restaurar el color al recrear el mastil tras crash)
+	int mast_lost;       // 1 = el objeto-bandera desaparecio (bug/CE/crash); el PARTY se conserva y el mastil se auto-restaura (no se disuelve el grupo)
+	int claim_min;       // minuto de reclamo actual del territorio (para heredar la ventana de bandera blanca al reconstruir/reparar el mastil)
+	int last_build_min;  // minuto del ultimo build/mudanza de mastil (cooldown de 1 dia para reconstruir)
+	int borrado;         // 1 = grupo disuelto/eliminado; el FILE NO se borra (se conserva para baneo de clan). default 0 (files viejos/nuevos)
+	string borrado_por;  // steamID de quien lo disolvio/elimino
+	string borrado_fecha;// fecha+hora de la eliminacion ("YYYY-MM-DD HH:MM:SS")
 	ref array<ref ExorGroupMember> members;
 	ref array<ref ExorExMember> former_members;   // historial de los que salieron (para baneo de clan)
 	int inactivity_alert_day;                      // ultimo dia que se aviso inactividad (0 = nunca); se resetea al conectarse alguien

@@ -339,36 +339,82 @@ modded class TerritoryFlag
 		ExorGroup existing = ExorGroupManager.Get().FindByPlayer(sid);
 		if (existing)
 		{
-			// Ya pertenece a un party. Si ese party TODAVIA tiene un mastil REAL (construido)
-			// vivo -> rechazar (no se permiten 2 mastiles por party).
-			TerritoryFlag liveMast = ExorTerritoryManager.Get().FindMastByGroup(existing.id);
-			if (liveMast && liveMast != this && liveMast.ExorIsBuilt())
-			{
-				placer.MessageImportant("Ya tenés un party/territorio. Borrá la bandera anterior primero.");
-				ExorMarkDisbanding();
-				GetGame().ObjectDelete(this);
-				return;
-			}
-			// Si el "mastil vivo" es un FANTASMA (registrado pero sin construir, tras un crash):
-			// borrarlo (sin disolver el grupo) y adoptar esta bandera nueva -> deja rearmar.
+			int nowm = ExorTimeUtil.NowMinutes();
+			TerritoryFlag liveMast = ExorTerritoryManager.Get().FindBuiltMastByGroup(existing.id);
+
+			// CASO A: el party YA tiene un mastil REAL construido -> RECONSTRUIR/MUDAR (1 mastil
+			// por party: el viejo desaparece). Permitido, con COOLDOWN de 1 dia.
 			if (liveMast && liveMast != this)
 			{
-				liveMast.ExorMarkDisbanding();
+				if (existing.last_build_min != 0 && (nowm - existing.last_build_min) < 1440)
+				{
+					int restan = 1440 - (nowm - existing.last_build_min);
+					placer.MessageImportant(string.Format("Solo podés mover/reconstruir tu mástil 1 vez por día. Faltan %1 h %2 min.", restan / 60, restan % 60));
+					ExorMarkDisbanding();
+					GetGame().ObjectDelete(this);
+					return;
+				}
+
+				float dist = vector.Distance(GetPosition(), liveMast.GetPosition());
+
+				liveMast.ExorMarkDisbanding();		// quitar el mastil viejo SIN disolver el party
 				GetGame().ObjectDelete(liveMast);
+
+				ExorAutoBuild(placer);
+				m_ExorGroupId = existing.id;
+				vector rpA = GetPosition();
+				existing.mast_x = rpA[0]; existing.mast_y = rpA[1]; existing.mast_z = rpA[2];
+				existing.last_build_min = nowm;
+
+				if (dist <= 100.0)
+				{
+					// MISMA base (<=100 m): hereda la bandera anterior, NO resetea la bandera blanca
+					m_ExorClaimMinute = existing.claim_min;
+					m_ExorFlagRaised = true;
+					SetSynchDirty();
+					GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorHangSavedFlag, 1500, false);
+					placer.MessageImportant("Mástil reconstruido en la misma base: mantiene tu bandera (sin bandera blanca nueva).");
+				}
+				else
+				{
+					// LEJOS (>100 m): territorio NUEVO -> reclamo fresco con bandera blanca
+					existing.claim_min = nowm;
+					existing.mast_flag = "";
+					ExorOnClaimed(nowm);
+					GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorEnsureWhiteFlag, 1500, false);
+					placer.MessageImportant("Mástil movido a una base nueva (>100 m): protección de bandera blanca reiniciada.");
+				}
+				ExorGroupManager.Get().SaveGroup(existing);
+				ExorTerritoryManager.Get().SyncToAll();
+				ExorScheduleWhiteFlagExpiry();
+				return;
+			}
+
+			// CASO B: mastil FANTASMA (registrado pero sin construir tras un crash) -> borrarlo
+			// sin disolver el grupo, y adoptar esta bandera nueva.
+			TerritoryFlag ghostMast = ExorTerritoryManager.Get().FindMastByGroup(existing.id);
+			if (ghostMast && ghostMast != this)
+			{
+				ghostMast.ExorMarkDisbanding();
+				GetGame().ObjectDelete(ghostMast);
 				Print(string.Format("%1 mastil fantasma del grupo %2 borrado (sin construir) -> se adopta la bandera nueva", ExorStorageConstants.LOG, existing.id));
 			}
-			// AUTO-REPARACION: el party existe pero su mastil se perdio (corrupcion de
-			// persistencia tras un crash: el objeto TerritoryFlag no cargo, pero el grupo
-			// -que se guarda aparte en groups/<id>.json- sobrevivio). Adoptamos esta
-			// bandera nueva en el grupo existente en vez de rechazarla.
+
+			// AUTO-REPARACION: el party existe pero su mastil se perdio (bug/crash: el objeto
+			// TerritoryFlag no cargo, pero el grupo -groups/<id>.json- sobrevivio). Adoptamos esta
+			// bandera nueva HEREDANDO su bandera/ventana (misma base). SIN cooldown (es una reparacion).
 			ExorAutoBuild(placer);
 			m_ExorGroupId = existing.id;
-			ExorOnClaimed(ExorTimeUtil.NowMinutes());
-			vector rp = GetPosition();
-			existing.mast_x = rp[0]; existing.mast_y = rp[1]; existing.mast_z = rp[2];
+			vector rpB = GetPosition();
+			existing.mast_x = rpB[0]; existing.mast_y = rpB[1]; existing.mast_z = rpB[2];
+			existing.last_build_min = nowm;
+			existing.mast_lost = 0;
+			m_ExorClaimMinute = existing.claim_min;	// heredar la ventana original (no resetear)
+			m_ExorFlagRaised = true;
+			SetSynchDirty();
 			ExorGroupManager.Get().SaveGroup(existing);
 			ExorTerritoryManager.Get().SyncToAll();
-			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorEnsureWhiteFlag, 1500, false);
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorHangSavedFlag, 1500, false);
 			ExorScheduleWhiteFlagExpiry();
 			Print(string.Format("%1 mastil REPARADO para grupo %2 (se habia perdido; re-ligado a bandera nueva)", ExorStorageConstants.LOG, existing.id));
 			placer.MessageImportant("Tu mástil se había perdido: se reconstruyó y quedó ligado a tu party.");
@@ -381,9 +427,12 @@ modded class TerritoryFlag
 		if (!g)
 			return;
 		m_ExorGroupId = g.id;
-		ExorOnClaimed(ExorTimeUtil.NowMinutes());
+		int nowmN = ExorTimeUtil.NowMinutes();
+		ExorOnClaimed(nowmN);
 		vector p = GetPosition();
 		g.mast_x = p[0]; g.mast_y = p[1]; g.mast_z = p[2];
+		g.claim_min = nowmN;		// minuto de reclamo (herencia de bandera blanca al reconstruir)
+		g.last_build_min = nowmN;	// arranca el cooldown de reconstruccion
 		ExorGroupManager.Get().SaveGroup(g);
 		ExorTerritoryManager.Get().SyncToAll();
 		// Bandera blanca (si esta activada): colgar Flag_White cuando el poste este listo.
@@ -712,8 +761,11 @@ modded class TerritoryFlag
 			if (!m_ExorDisbanding && m_ExorGroupId != "" && !m_ExorIsKothMast)
 			{
 				ExorGroup g = ExorGroupManager.Get().FindById(m_ExorGroupId);
+				// El objeto-bandera desaparecio SIN disband explicito del owner (bug/CE/crash lo
+				// borro solo). NO disolvemos el party: lo conservamos y auto-restauramos el mastil
+				// (MarkMastLost). Antes esto llamaba a DisbandGroup y borraba el grupo para siempre.
 				if (g)
-					ExorGroupManager.Get().DisbandGroup(g, "La bandera fue removida: el party se disolvió.");
+					ExorGroupManager.Get().MarkMastLost(g, "La bandera/mastil desaparecio (no fue el owner).");
 			}
 		}
 		super.EEDelete(parent);

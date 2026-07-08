@@ -18,7 +18,7 @@ modded class MissionServer
 		ExorPartyLive.Start();
 		ExorRaidLog.Init();	// crea raidlog\ y purga archivos mas viejos que log_dias_retener
 		ExorKillFarm.Init();	// carga el ledger anti-farmeo (sobrevive los reinicios cada 4h)
-		ExorGroupManager.Get().ScanInactiveClans();	// avisa al raidlog de clanes sin conexion hace 'inactividad_dias'
+		ExorGroupManager.Get().ScanInactiveClans();	// avisa al raidlog de clanes sin conexion hace 'aviso_tiempo_inactividad_dias'
 		ExorAnticheat.Start();	// anti-cheat heuristico: tick de watchlist (~1 Hz) + detector por kill
 		ExorKoth.Start();	// KOTH: eventos de captura con recompensa (si koth.json activar=true)
 		ExorCofre.Start();	// COFRE: zonas de apertura de cofres por horario (si cofre.json activado=true)
