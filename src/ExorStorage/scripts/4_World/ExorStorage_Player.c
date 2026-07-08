@@ -343,11 +343,18 @@ modded class PlayerBase
 		ExorCombatZones.Register(atk.GetPosition());
 	}
 
+	protected bool m_ExorDeathDone;   // guard: killfeed+tumba UNA sola vez por muerte
+
 	// Al morir: killfeed + programar la bolsa de cadaver.
+	// GUARD: una granada/explosion dispara EEKilled ~11 veces en el mismo instante (cada
+	// fragmento cuenta) -> sin guard salian 6-7 killfeeds y 6-7 tumbas de UNA sola muerte.
+	// Ahora se procesa SOLO la primera vez (m_ExorDeathDone). Al respawnear es otra entidad
+	// PlayerBase (flag nuevo en false), asi que la proxima muerte se procesa normal.
 	override void EEKilled(Object killer)
 	{
-		if (GetGame().IsServer())
+		if (GetGame().IsServer() && !m_ExorDeathDone)
 		{
+			m_ExorDeathDone = true;
 			ExorBuildKillfeed(killer);
 			ExorScheduleBodyBag();
 			// aim-track: cerrar engagements del que murio + volcar el resumen de su vida
