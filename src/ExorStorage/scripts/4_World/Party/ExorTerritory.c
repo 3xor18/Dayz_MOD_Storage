@@ -163,14 +163,21 @@ class ExorTerritoryManager
 			return;
 		}
 
-		// borrar cualquier mastil FANTASMA del grupo (registrado pero sin construir) sin
-		// disolver el grupo (ExorMarkDisbanding evita el disband en EEDelete).
+		// OPTIMIZACION anti-churn: si el mastil del grupo YA persiste (fantasma con el group
+		// id correcto: cargo sin la construccion "built"), NO lo borramos+recreamos cada
+		// arranque -> lo REUSAMOS: re-construimos el poste + re-ligamos sobre el MISMO objeto
+		// persistido. Asi el objeto sobrevive (no hay delete/create), no se pierde nada, y no
+		// deja kit. (Antes: delete + CreateObjectEx nuevo -> churn en cada reinicio.)
 		TerritoryFlag ghost = FindMastByGroup(g.id);
 		if (ghost)
 		{
-			ghost.ExorMarkDisbanding();
-			GetGame().ObjectDelete(ghost);
+			ghost.ExorHealBind(g.id, builder);
+			g.mast_lost = 0;
+			ExorGroupManager.Get().SaveGroup(g);
+			Print(string.Format("%1 self-heal: mastil del grupo %2 RE-CONSTRUIDO reusando el persistido en %3 (el objeto SI persiste; se reconstruye el poste)", ExorStorageConstants.LOG, g.id, ghost.GetPosition()));
+			return;
 		}
+		// No hay mastil persistido -> el objeto NO sobrevivio al reinicio -> crear uno nuevo.
 		ExorTerritoryManager.s_Healing = true;
 		Object mo = GetGame().CreateObjectEx("TerritoryFlag", pos, ECE_PLACE_ON_SURFACE);
 		ExorTerritoryManager.s_Healing = false;
@@ -180,7 +187,7 @@ class ExorTerritoryManager
 			m.ExorHealBind(g.id, builder);
 			g.mast_lost = 0;	// restaurado -> ya no esta perdido
 			ExorGroupManager.Get().SaveGroup(g);
-			Print(string.Format("%1 self-heal: mastil del grupo %2 recreado en %3 (se habia perdido tras crash/bug)", ExorStorageConstants.LOG, g.id, pos));
+			Print(string.Format("%1 self-heal: mastil del grupo %2 CREADO NUEVO en %3 (el objeto persistido NO sobrevivio)", ExorStorageConstants.LOG, g.id, pos));
 		}
 		else
 			Print(string.Format("%1 self-heal: NO se pudo recrear el mastil del grupo %2", ExorStorageConstants.LOG, g.id));

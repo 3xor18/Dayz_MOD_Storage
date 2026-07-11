@@ -609,6 +609,15 @@ modded class TerritoryFlag
 			ExorAutoBuild(builder);
 		m_ExorFlagRaised = true;
 		m_ExorClaimMinute = -999999;	// proteccion de bandera blanca ya vencida (territorio viejo)
+		// LIMPIAR EL KIT: al recrear el mastil por self-heal, borrar el TerritoryFlagKit que
+		// pueda haber quedado en el piso/inventario (igual que el flujo de reclamo normal).
+		// Antes esto NO se hacia en el self-heal -> quedaba "kit de mastil en el suelo".
+		PlayerBase pbBuilder = PlayerBase.Cast(builder);
+		if (pbBuilder)
+			ExorDeleteNearbyKits(pbBuilder);
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanupKitGround, 2500, false);
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanupKitGround, 6000, false);
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanupKitGround, 10000, false);
 		// colgar la MISMA bandera que tenia (blanca o de color, guardada en el grupo)
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorHangSavedFlag, 1500, false);
 		ExorScheduleWhiteFlagExpiry();
