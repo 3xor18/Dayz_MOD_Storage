@@ -240,9 +240,38 @@ class ExorTerritoryManager
 			if (m.ExorGetGroupId() == myGroupId && myGroupId != "")
 				continue;	// mi propio territorio
 			if (ExorTerritoryRules.Dist2D(pos, m.GetPosition()) <= radius)
+			{
+				// DIAG TEMPORAL (bug "no deja construir en base propia"): loguea por que
+				// este mastil se considera ajeno. Comparar myGroupId vs mastil_groupId:
+				//  - myGroupId VACIO  -> la membresia del jugador no resolvio (FindByPlayer)
+				//  - myGroupId OK pero mastil_groupId distinto/vacio -> el mastil perdio su binding (self-heal)
+				string diagSid = "";
+				if (player)
+					diagSid = ExorGroupManager.SteamId(player);
+				Print(string.Format("%1 DIAG-TERRITORIO BLOQUEO: sid=%2 myGroupId='%3' | mastil_groupId='%4' built=%5 pos=%6", ExorStorageConstants.LOG, diagSid, myGroupId, m.ExorGetGroupId(), m.ExorIsBuilt(), m.GetPosition()));
 				return m;	// territorio ajeno
+			}
 		}
 		return null;
+	}
+
+	// ROBUSTEZ (fix "no deja construir en base propia"): true si 'pos' cae dentro del
+	// territorio del PROPIO grupo del jugador segun el mastil GUARDADO del grupo
+	// (mast_x/z del ExorGroup, dato confiable en disco). NO depende del binding del
+	// mastil VIVO, que un self-heal o una persistencia rota puede dejar inconsistente.
+	// Asi, aunque el mastil vivo este mal ligado, el dueno/miembro SIEMPRE puede
+	// construir dentro de su territorio.
+	bool IsInOwnGroupTerritory(PlayerBase player, vector pos)
+	{
+		if (!player)
+			return false;
+		ExorGroup g = ExorGroupManager.Get().FindByPlayer(ExorGroupManager.SteamId(player));
+		if (!g)
+			return false;
+		if (g.mast_x == 0 && g.mast_z == 0)
+			return false;	// el grupo no tiene mastil guardado
+		vector myMast = Vector(g.mast_x, 0, g.mast_z);
+		return ExorTerritoryRules.Dist2D(pos, myMast) <= ExorTerritoryRules.Radius();
 	}
 
 	// Chequeo autoritativo (server): puede 'player' colocar 'itemType' en 'pos'?
@@ -256,6 +285,8 @@ class ExorTerritoryManager
 			return true;
 		if (ExorTerritoryRules.IsWhitelisted(itemType))
 			return true;
+		if (IsInOwnGroupTerritory(player, pos))
+			return true;	// tu propia base (por mastil guardado del grupo) -> siempre permitido
 
 		if (FindEnemyTerritoryAt(player, pos))
 			return false;	// cae en territorio ajeno
@@ -350,7 +381,16 @@ class ExorTerritoryManager
 			z.x = mp[0];
 			z.z = mp[2];
 			z.radius = radius;
+			// "mine" por binding del mastil vivo O por el mastil GUARDADO de mi grupo
+			// (robusto: si el binding del mastil vivo quedo inconsistente por un
+			// self-heal/persistencia, igual reconozco mi propia base por su posicion).
 			z.mine = (myGroupId != "" && m2.ExorGetGroupId() == myGroupId);
+			if (!z.mine && g && (g.mast_x != 0 || g.mast_z != 0))
+			{
+				vector myMastPos = Vector(g.mast_x, 0, g.mast_z);
+				if (ExorTerritoryRules.Dist2D(mp, myMastPos) <= 5.0)
+					z.mine = true;	// esta zona es el mastil guardado de mi grupo
+			}
 			dto.zones.Insert(z);
 		}
 		js.WriteToString(dto, false, data);
