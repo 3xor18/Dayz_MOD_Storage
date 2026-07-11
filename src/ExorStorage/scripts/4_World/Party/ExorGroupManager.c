@@ -440,6 +440,7 @@ class ExorGroupManager
 		m_PendingInvites.Remove(tsid);
 		SaveGroup(g);
 		SyncGroup(g);
+		ExorTerritoryManager.Get().SyncToPlayer(target);	// FIX: refrescar la zona de territorio (mine=true) al que se une, para que pueda construir cerca del mastil sin reloguear
 
 		target.MessageImportant("Te uniste al party.");
 		PlayerBase leader = FindOnline(g.owner_id);
@@ -539,6 +540,7 @@ class ExorGroupManager
 		mast.ExorCloseInvite();	// una invitacion = un ingreso; reabrir para invitar a otro
 		SaveGroup(g);
 		SyncGroup(g);
+		ExorTerritoryManager.Get().SyncToPlayer(joiner);	// FIX: refrescar zona de territorio al que se une (mine=true) -> puede construir sin reloguear
 		joiner.MessageImportant("Te uniste al party.");
 		PlayerBase owner = FindOnline(g.owner_id);
 		if (owner && owner != joiner)
@@ -572,6 +574,7 @@ class ExorGroupManager
 		player.MessageImportant("Saliste del party.");
 		SaveGroup(g);
 		SyncGroup(g);
+		ExorTerritoryManager.Get().SyncToPlayer(player);	// FIX: la zona vuelve a AJENA para el que sale (deja de ver mine=true)
 	}
 
 	bool Kick(PlayerBase leader, string targetSid)
@@ -609,6 +612,7 @@ class ExorGroupManager
 		{
 			kicked.ExorSetGroupId("");
 			SyncToPlayer(kicked, null);
+			ExorTerritoryManager.Get().SyncToPlayer(kicked);	// FIX: la zona vuelve a AJENA para el expulsado
 			ExorPartyLive.Get().ClearForPlayer(kicked);	// limpiar HUD/nameplates/marcas del expulsado
 			kicked.MessageImportant("Fuiste sacado del party.");
 		}
