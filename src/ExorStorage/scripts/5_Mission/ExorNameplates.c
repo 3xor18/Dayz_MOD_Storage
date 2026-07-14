@@ -38,9 +38,18 @@ class ExorNameplates
 			return;
 		m_Plates = new array<TextWidget>;
 		m_Interp = new map<string, ref ExorPlateInterp>;
-		int i;
-		for (i = 0; i < 8; i++)
-			m_Plates.Insert(TextWidget.Cast(m_Root.FindAnyWidget("ExorPlate" + i.ToString())));
+		// Auto-detecta cuantos ExorPlateN hay en el layout (para 10+ miembros basta agregar
+		// widgets al .layout, sin tocar el codigo). Antes estaba fijo en 8 -> clanes de 10
+		// solo veian 8 nameplates.
+		int i = 0;
+		while (true)
+		{
+			TextWidget tw = TextWidget.Cast(m_Root.FindAnyWidget("ExorPlate" + i.ToString()));
+			if (!tw)
+				break;
+			m_Plates.Insert(tw);
+			i++;
+		}
 	}
 
 	void Update(float dt)
@@ -69,7 +78,7 @@ class ExorNameplates
 		{
 			vector me = p.GetPosition();
 			int i;
-			for (i = 0; i < live.members.Count() && shown < 8; i++)
+			for (i = 0; i < live.members.Count() && shown < m_Plates.Count(); i++)
 			{
 				ExorLiveMember m = live.members.Get(i);
 				if (m.is_self && !g.mostrar_propio)
@@ -160,7 +169,7 @@ class ExorNameplates
 			m_Interp.Remove(dead.Get(d));
 
 		int j;
-		for (j = shown; j < 8; j++)
+		for (j = shown; j < m_Plates.Count(); j++)
 			if (m_Plates.Get(j))
 				m_Plates.Get(j).Show(false);
 	}

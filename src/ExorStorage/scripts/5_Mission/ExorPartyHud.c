@@ -25,12 +25,18 @@ class ExorPartyHud
 		m_Names = new array<TextWidget>;
 		m_Bars = new array<Widget>;
 		m_Fills = new array<Widget>;
-		int i;
-		for (i = 0; i < 8; i++)
+		// Auto-detecta cuantas filas ExorHudNameN hay en el layout (para 10+ miembros basta
+		// agregar filas al .layout, sin tocar el codigo). Antes estaba fijo en 8.
+		int i = 0;
+		while (true)
 		{
-			m_Names.Insert(TextWidget.Cast(m_Root.FindAnyWidget("ExorHudName" + i.ToString())));
+			TextWidget nm = TextWidget.Cast(m_Root.FindAnyWidget("ExorHudName" + i.ToString()));
+			if (!nm)
+				break;
+			m_Names.Insert(nm);
 			m_Bars.Insert(m_Root.FindAnyWidget("ExorHudBarBg" + i.ToString()));
 			m_Fills.Insert(m_Root.FindAnyWidget("ExorHudBarFill" + i.ToString()));
+			i++;
 		}
 	}
 
@@ -62,7 +68,7 @@ class ExorPartyHud
 		{
 			vector me = p.GetPosition();
 			int i;
-			for (i = 0; i < live.members.Count() && shown < 8; i++)
+			for (i = 0; i < live.members.Count() && shown < m_Names.Count(); i++)
 			{
 				ExorLiveMember m = live.members.Get(i);
 				if (m.is_self && !g.mostrar_propio)
@@ -96,7 +102,7 @@ class ExorPartyHud
 
 		// ocultar filas sin usar
 		int j;
-		for (j = shown; j < 8; j++)
+		for (j = shown; j < m_Names.Count(); j++)
 		{
 			if (m_Names.Get(j)) m_Names.Get(j).Show(false);
 			if (m_Bars.Get(j)) m_Bars.Get(j).Show(false);

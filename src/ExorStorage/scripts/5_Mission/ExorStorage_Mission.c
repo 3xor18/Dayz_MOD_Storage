@@ -19,6 +19,10 @@ modded class MissionServer
 		ExorRaidLog.Init();	// crea raidlog\ y purga archivos mas viejos que log_dias_retener
 		ExorKillFarm.Init();	// carga el ledger anti-farmeo (sobrevive los reinicios cada 4h)
 		ExorGroupManager.Get().ScanInactiveClans();	// avisa al raidlog de clanes sin conexion hace 'aviso_tiempo_inactividad_dias'
+		// BARRIDO periodico de mastiles perdidos: restaura los que quedaron mast_lost==1
+		// (auto-restore no completado por no haber un miembro online en el momento). Diferido
+		// 30s para no chocar con la carga de persistencia; luego se re-agenda solo cada 2 min.
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorGroupManager.Get().RestoreLostMastsTick, 30000, false);
 		ExorAnticheat.Start();	// anti-cheat heuristico: tick de watchlist (~1 Hz) + detector por kill
 		ExorKoth.Start();	// KOTH: eventos de captura con recompensa (si koth.json activar=true)
 		ExorCofre.Start();	// COFRE: zonas de apertura de cofres por horario (si cofre.json activado=true)
@@ -156,15 +160,23 @@ modded class MissionServer
 			ExorSpawn.SendOpen(player);
 	}
 
-	// Re-envia el roster de party (y el cache de territorio) a un jugador ya conectado.
-	// Diferido tras conectar para tapar la perdida del envio inicial en relogs con lag.
+	// Re-envia el roster de party (y el cache de territorio) tras conectar/respawnear,
+	// para tapar la perdida del envio inicial en relogs con lag.
+	// IMPORTANTE: reenvia el roster a TODO el grupo (SyncGroup), no solo a 'player'. Antes
+	// solo se lo remandaba a si mismo -> un COMPAÑERO ya online recibia el aviso del recien
+	// llegado/revivido UNA sola vez (el envio 0s de OnPlayerConnected/SyncGroup) y si ese
+	// paquete se perdia en lag, "no veia al que entro/revivio" hasta el proximo evento.
+	// Ahora cada connect/respawn le da a TODOS los miembros online 3 envios (0s + 3s + 8s).
 	void ExorResyncRoster(PlayerBase player)
 	{
 		if (!player || !player.GetIdentity())
 			return;
 		ExorGroup g = ExorGroupManager.Get().FindByPlayer(ExorGroupManager.SteamId(player));
-		ExorGroupManager.Get().SyncToPlayer(player, g);	// g==null -> roster vacio (correcto si no esta en grupo)
-		ExorTerritoryManager.Get().SyncToPlayer(player);
+		if (g)
+			ExorGroupManager.Get().SyncGroup(g);	// roster a TODO el grupo online (el que entra + sus compañeros)
+		else
+			ExorGroupManager.Get().SyncToPlayer(player, null);	// sin grupo -> limpiar el roster del cliente
+		ExorTerritoryManager.Get().SyncToPlayer(player);		// el cache de territorio si es propio del receptor
 	}
 
 	void ExorVO_AutoPopulateAmmo(ExorCfgMunicion settings)

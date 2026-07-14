@@ -32,5 +32,17 @@ PanelWidgetClass ExorHudRoot
 
 		TextWidgetClass ExorHudName7 { visible 0 position 0 0.420 size 1 0.028 color 1 1 1 1 text "" font "gui/fonts/MetronBook16" "exact text" 1 "exact text size" 15 "text halign" left }
 		PanelWidgetClass ExorHudBarBg7 { visible 0 position 0 0.450 size 0.5 0.012 color 0.1 0.1 0.1 0.8 style rover_sim_colorable { PanelWidgetClass ExorHudBarFill7 { visible 1 position 0 0 size 1 1 color 0 1 0 1 style rover_sim_colorable } } }
+
+		TextWidgetClass ExorHudName8 { visible 0 position 0 0.480 size 1 0.028 color 1 1 1 1 text "" font "gui/fonts/MetronBook16" "exact text" 1 "exact text size" 15 "text halign" left }
+		PanelWidgetClass ExorHudBarBg8 { visible 0 position 0 0.510 size 0.5 0.012 color 0.1 0.1 0.1 0.8 style rover_sim_colorable { PanelWidgetClass ExorHudBarFill8 { visible 1 position 0 0 size 1 1 color 0 1 0 1 style rover_sim_colorable } } }
+
+		TextWidgetClass ExorHudName9 { visible 0 position 0 0.540 size 1 0.028 color 1 1 1 1 text "" font "gui/fonts/MetronBook16" "exact text" 1 "exact text size" 15 "text halign" left }
+		PanelWidgetClass ExorHudBarBg9 { visible 0 position 0 0.570 size 0.5 0.012 color 0.1 0.1 0.1 0.8 style rover_sim_colorable { PanelWidgetClass ExorHudBarFill9 { visible 1 position 0 0 size 1 1 color 0 1 0 1 style rover_sim_colorable } } }
+
+		TextWidgetClass ExorHudName10 { visible 0 position 0 0.600 size 1 0.028 color 1 1 1 1 text "" font "gui/fonts/MetronBook16" "exact text" 1 "exact text size" 15 "text halign" left }
+		PanelWidgetClass ExorHudBarBg10 { visible 0 position 0 0.630 size 0.5 0.012 color 0.1 0.1 0.1 0.8 style rover_sim_colorable { PanelWidgetClass ExorHudBarFill10 { visible 1 position 0 0 size 1 1 color 0 1 0 1 style rover_sim_colorable } } }
+
+		TextWidgetClass ExorHudName11 { visible 0 position 0 0.660 size 1 0.028 color 1 1 1 1 text "" font "gui/fonts/MetronBook16" "exact text" 1 "exact text size" 15 "text halign" left }
+		PanelWidgetClass ExorHudBarBg11 { visible 0 position 0 0.690 size 0.5 0.012 color 0.1 0.1 0.1 0.8 style rover_sim_colorable { PanelWidgetClass ExorHudBarFill11 { visible 1 position 0 0 size 1 1 color 0 1 0 1 style rover_sim_colorable } } }
 	}
 }

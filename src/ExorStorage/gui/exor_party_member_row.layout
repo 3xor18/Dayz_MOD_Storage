@@ -1,0 +1,12 @@
+ButtonWidgetClass ExorPartyMemberBtn
+{
+	visible 1
+	position 0 0
+	size 1 42
+	hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 1
+	color 0.2 0.2 0.3 1
+	style rover_sim_colorable
+	text ""
+	font "gui/fonts/MetronBook16"
+	"text halign" left
+}

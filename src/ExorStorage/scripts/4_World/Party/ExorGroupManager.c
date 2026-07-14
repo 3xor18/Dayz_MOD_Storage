@@ -10,11 +10,13 @@ class ExorGroupManager
 
 	ref array<ref ExorGroup> m_Groups;
 	ref map<string, ref ExorPendingInvite> m_PendingInvites;	// key = steamid del invitado
+	ref map<string, int> m_MastRestoreCount;	// C: veces que el barrido restauro el mastil de cada grupo (detecta loop de despawn)
 
 	void ExorGroupManager()
 	{
 		m_Groups = new array<ref ExorGroup>;
 		m_PendingInvites = new map<string, ref ExorPendingInvite>;
+		m_MastRestoreCount = new map<string, int>;
 	}
 
 	static ExorGroupManager Get()
@@ -348,6 +350,92 @@ class ExorGroupManager
 				return;
 			}
 		}
+	}
+
+	// Cualquier jugador online (para usarlo de "builder" al recrear un mastil: el motor
+	// necesita un Man para OnPartBuiltServer, pero no hace falta que sea del grupo).
+	PlayerBase AnyOnlinePlayer()
+	{
+		array<Man> players = new array<Man>;
+		GetGame().GetPlayers(players);
+		int i;
+		for (i = 0; i < players.Count(); i++)
+		{
+			PlayerBase pb = PlayerBase.Cast(players.Get(i));
+			if (pb && pb.GetIdentity())
+				return pb;
+		}
+		return null;
+	}
+
+	// BARRIDO PERIODICO / GARANTIA de mastiles (se re-agenda solo cada 2 min).
+	// Antes solo restauraba grupos con mast_lost==1 (los que pasaron por EEDelete). Eso dejaba
+	// un HUECO: si el objeto-bandera NO cargo tras un reinicio (persistencia corrupta) nunca paso
+	// por EEDelete -> mast_lost quedaba en 0 y el barrido lo IGNORABA; el mastil solo volvia si un
+	// miembro de ESE grupo reconectaba. Ahora el barrido GARANTIZA que TODO grupo activo con base
+	// guardada tenga su mastil vivo, sin depender del flag mast_lost ni de quien este online.
+	// HealGroupMast es idempotente (si el mastil ya esta vivo no hace nada; descarta el grupo viejo
+	// si la base fue reconstruida por otro), asi que correrlo seguido es seguro.
+	// Se itera sobre una COPIA de m_Groups: HealGroupMast puede llamar a MarkGroupDeleted (base ya
+	// reconstruida por otro clan) que remueve el grupo de m_Groups -> mutar la lista en pleno for
+	// desincronizaria los indices y saltearia grupos.
+	void RestoreLostMastsTick()
+	{
+		if (!GetGame() || !GetGame().IsServer())
+			return;
+		// re-agendar SIEMPRE (aunque no haya nada que hacer este ciclo)
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(RestoreLostMastsTick, 120000, false);
+
+		if (!GetExorConfig().party.territorio.habilitado)
+			return;
+
+		PlayerBase builder = AnyOnlinePlayer();
+		if (!builder)
+			return;	// sin nadie online no se puede construir el poste; se reintenta en 2 min
+
+		// snapshot (ver nota arriba: HealGroupMast puede remover grupos de m_Groups)
+		array<ExorGroup> snapshot = new array<ExorGroup>;
+		int s;
+		for (s = 0; s < m_Groups.Count(); s++)
+			snapshot.Insert(m_Groups.Get(s));
+
+		int restaurados = 0;
+		int i;
+		for (i = 0; i < snapshot.Count(); i++)
+		{
+			ExorGroup g = snapshot.Get(i);
+			if (!g || g.members.Count() == 0)
+				continue;
+			if (g.mast_x == 0 && g.mast_z == 0)
+				continue;	// sin posicion guardada no se puede recrear
+			// GARANTIA: si el grupo ya tiene un mastil REAL vivo, no hay nada que hacer.
+			if (ExorTerritoryManager.Get().FindBuiltMastByGroup(g.id))
+			{
+				if (g.mast_lost != 0)	// estaba marcado perdido pero ya existe -> limpiar la marca
+				{
+					g.mast_lost = 0;
+					SaveGroup(g);
+				}
+				continue;
+			}
+			// falta el mastil (mast_lost==1 explicito, O caso silencioso con mast_lost==0): recrear.
+			ExorTerritoryManager.Get().HealGroupMast(g, builder);
+			if (ExorTerritoryManager.Get().FindBuiltMastByGroup(g.id))
+			{
+				restaurados++;
+				// C: contar restauraciones. Si un grupo se restaura una y otra vez, ALGO externo
+				// lo sigue borrando (CE/otro mod) -> aviso ruidoso para no dejar el loop callado.
+				int prev = 0;
+				if (m_MastRestoreCount.Contains(g.id))
+					prev = m_MastRestoreCount.Get(g.id);
+				int n = prev + 1;
+				m_MastRestoreCount.Set(g.id, n);
+				if (n >= 3)
+					Print(string.Format("%1 Party: ALERTA LOOP - el mastil del grupo %2 ya se restauro %3 veces esta sesion; algo externo lo sigue borrando (revisar types.xml lifetime de TerritoryFlag / otro mod)", ExorStorageConstants.LOG, g.id, n));
+			}
+		}
+		if (restaurados > 0)
+			Print(string.Format("%1 Party: barrido de mastiles -> %2 restaurado(s)", ExorStorageConstants.LOG, restaurados));
 	}
 
 	// ------------------------- invitaciones -------------------------

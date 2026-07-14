@@ -17,5 +17,9 @@ PanelWidgetClass ExorPlatesRoot
 		TextWidgetClass ExorPlate5 { visible 0 position 0 0 size 260 26 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 0.5 1 0.5 1 text "" font "gui/fonts/MetronBook16" "exact text" 1 "exact text size" 16 "text halign" center "text valign" center }
 		TextWidgetClass ExorPlate6 { visible 0 position 0 0 size 260 26 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 0.5 1 0.5 1 text "" font "gui/fonts/MetronBook16" "exact text" 1 "exact text size" 16 "text halign" center "text valign" center }
 		TextWidgetClass ExorPlate7 { visible 0 position 0 0 size 260 26 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 0.5 1 0.5 1 text "" font "gui/fonts/MetronBook16" "exact text" 1 "exact text size" 16 "text halign" center "text valign" center }
+		TextWidgetClass ExorPlate8 { visible 0 position 0 0 size 260 26 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 0.5 1 0.5 1 text "" font "gui/fonts/MetronBook16" "exact text" 1 "exact text size" 16 "text halign" center "text valign" center }
+		TextWidgetClass ExorPlate9 { visible 0 position 0 0 size 260 26 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 0.5 1 0.5 1 text "" font "gui/fonts/MetronBook16" "exact text" 1 "exact text size" 16 "text halign" center "text valign" center }
+		TextWidgetClass ExorPlate10 { visible 0 position 0 0 size 260 26 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 0.5 1 0.5 1 text "" font "gui/fonts/MetronBook16" "exact text" 1 "exact text size" 16 "text halign" center "text valign" center }
+		TextWidgetClass ExorPlate11 { visible 0 position 0 0 size 260 26 hexactpos 1 vexactpos 1 hexactsize 1 vexactsize 1 color 0.5 1 0.5 1 text "" font "gui/fonts/MetronBook16" "exact text" 1 "exact text size" 16 "text halign" center "text valign" center }
 	}
 }

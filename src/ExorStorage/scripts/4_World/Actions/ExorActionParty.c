@@ -233,7 +233,7 @@ class ExorActionPlaceMarker : ActionContinuousBase
 		// la marca la pone el RPC desde OnStart (cliente)
 	}
 
-	// Punto del mundo al que apunta la camara (raycast)
+	// Punto del mundo al que apunta la camara (raycast al CENTRO de la mira).
 	static vector ExorMarkerAim(PlayerBase player)
 	{
 		vector from = GetGame().GetCurrentCameraPosition();
@@ -242,7 +242,14 @@ class ExorActionPlaceMarker : ActionContinuousBase
 		vector hitPos, hitNormal;
 		int hitComp;
 		set<Object> hitObjs = new set<Object>;
-		if (DayZPhysics.RaycastRV(from, to, hitPos, hitNormal, hitComp, hitObjs, null, player))
+		// iType = ObjIntersectFire: geometria de DISPARO (como una bala). Atraviesa el follaje
+		// de los arbustos y la geometria "solo visual" que NO frena una bala, y pega en lo
+		// SOLIDO (terreno, paredes, edificios). Antes se usaba el default ObjIntersectView
+		// (geometria visual), que SI choca con las hojas de un arbusto o el clutter cercano en
+		// 3ra persona -> la marca se quedaba pegada al lado tuyo en vez de ir al centro de la
+		// mira. Con Fire el pin cae donde apuntas de verdad, aunque estes metido en un arbusto
+		// o dentro de una casa. (ignore=player para no chocar con tu propio cuerpo.)
+		if (DayZPhysics.RaycastRV(from, to, hitPos, hitNormal, hitComp, hitObjs, null, player, false, false, ObjIntersectFire))
 			return hitPos;
 		return to;
 	}

@@ -37,6 +37,18 @@ modded class TerritoryFlag
 	void ExorMarkDisbanding() { m_ExorDisbanding = true; }
 	bool ExorIsFlagRaised() { return m_ExorFlagRaised; }
 
+	// A: hace el mastil INMUNE a daño (no se puede arruinar). Un TerritoryFlag arruinado lo
+	// limpia el CE -> es la causa #1 del despawn "sin nadie cerca". Server-side: SetAllowDamage
+	// bloquea todo el sistema de daño de la entidad. Se llama en cada rama gestionada de EEInit.
+	// NOTA: en este server los raids son por NWD (muros/puerta), el mastil NO es objetivo raideable,
+	// asi que volverlo intocable no cambia el diseño de raideo.
+	void ExorMakeMastImmune()
+	{
+		if (!GetGame().IsServer())
+			return;
+		SetAllowDamage(false);
+	}
+
 	void ExorServerSetFlagRaised(bool v)
 	{
 		m_ExorFlagRaised = v;
@@ -273,6 +285,7 @@ modded class TerritoryFlag
 		{
 			m_ExorIsKothMast = true;
 			ExorKoth.s_SpawningKothMast = false;
+			ExorMakeMastImmune();	// A: el mastil de KOTH no debe poder arruinarse/despawnearse
 			return;
 		}
 		// SELF-HEAL: mastil recreado por ExorTerritoryManager.HealGroupMast -> registrarlo
@@ -280,12 +293,14 @@ modded class TerritoryFlag
 		if (ExorTerritoryManager.s_Healing)
 		{
 			ExorTerritoryManager.Get().RegisterMast(this);
+			ExorMakeMastImmune();	// A: mastil restaurado -> inmune (no vuelve a caerse por daño/ruina)
 			m_ExorInitDone = true;	// que el ExorPostInit diferido no reclame
 			return;
 		}
 		if (!GetExorConfig().party.territorio.habilitado)
 			return;	// sistema de territorio desactivado: la bandera queda 100% vanilla
 		ExorTerritoryManager.Get().RegisterMast(this);
+		ExorMakeMastImmune();	// A: mastil de territorio -> INMUNE a daño/ruina (causa #1 del despawn: ruina -> limpieza del CE)
 		// Diferido: corre despues de OnStoreLoad. Si es nuevo (sin grupo), reclama.
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorPostInit, 1200, false);
 	}
@@ -349,6 +364,10 @@ modded class TerritoryFlag
 				if (existing.last_build_min != 0 && (nowm - existing.last_build_min) < 1440)
 				{
 					int restan = 1440 - (nowm - existing.last_build_min);
+					// LOG: antes este bloqueo borraba el mastil nuevo SIN dejar rastro en el RPT
+					// (solo un MessageImportant client-side) -> "construi y no aparece" era invisible.
+					Print(string.Format("%1 Party: rebuild BLOQUEADO por cooldown (grupo %2, mastil vivo en %3, faltan %4 min) -> se borra el mastil nuevo de %5",
+						ExorStorageConstants.LOG, existing.id, liveMast.GetPosition(), restan, ExorGroupManager.PlayerName(placer)));
 					placer.MessageImportant(string.Format("Solo podés mover/reconstruir tu mástil 1 vez por día. Faltan %1 h %2 min.", restan / 60, restan % 60));
 					ExorMarkDisbanding();
 					GetGame().ObjectDelete(this);
@@ -407,7 +426,11 @@ modded class TerritoryFlag
 			m_ExorGroupId = existing.id;
 			vector rpB = GetPosition();
 			existing.mast_x = rpB[0]; existing.mast_y = rpB[1]; existing.mast_z = rpB[2];
-			existing.last_build_min = nowm;
+			// NO tocar last_build_min: una REPARACION (el mastil se bugueo/desaparecio) no debe
+			// armar el cooldown de "mover 1 vez por dia". Antes esto lo seteaba a 'nowm' -> el
+			// SIGUIENTE mastil que colocaba el jugador caia en CASO A dentro del cooldown y se
+			// borraba en silencio ("coloque otro y no aparecio"). El cooldown solo debe contar
+			// para MOVIMIENTOS deliberados de una base sana (CASO A), no para recuperar un bug.
 			existing.mast_lost = 0;
 			m_ExorClaimMinute = existing.claim_min;	// heredar la ventana original (no resetear)
 			m_ExorFlagRaised = true;
@@ -766,15 +789,47 @@ modded class TerritoryFlag
 		if (GetGame().IsServer())
 		{
 			ExorTerritoryManager.Get().UnregisterMast(this);
-			// KOTH: nunca disolver party (no tiene grupo). Solo banderas de territorio.
-			if (!m_ExorDisbanding && m_ExorGroupId != "" && !m_ExorIsKothMast)
+			// B: FORENSE del despawn. Antes el borrado del mastil era un misterio (no se sabia si
+			// lo arruino un raid, lo limpio el CE, o lo borro otro mod). Logueamos el estado exacto
+			// al morir: si NO fue un disband nuestro (m_ExorDisbanding=false) es una caida anomala.
+			if (!m_ExorDisbanding)
 			{
-				ExorGroup g = ExorGroupManager.Get().FindById(m_ExorGroupId);
-				// El objeto-bandera desaparecio SIN disband explicito del owner (bug/CE/crash lo
-				// borro solo). NO disolvemos el party: lo conservamos y auto-restauramos el mastil
-				// (MarkMastLost). Antes esto llamaba a DisbandGroup y borraba el grupo para siempre.
-				if (g)
-					ExorGroupManager.Get().MarkMastLost(g, "La bandera/mastil desaparecio (no fue el owner).");
+				float hp = GetHealth01("", "");
+				bool ruined = IsRuined();
+				// SEÑAL DECISIVA: distancia al jugador MAS CERCANO + cuantos online en total.
+				//  - nadie cerca (cercano grande) y/o 0 online  -> NO fue un raid de jugador:
+				//    apunta al CE (lifetime del types.xml) o a otro mod que lo limpio server-side.
+				//  - ruined=1  -> se arruino por daño (raid/explosivo) antes de que el CE lo barra.
+				//  - alguien a <10-15 m y ruined=0 -> mirar que mod/accion lo borro estando presente.
+				array<Man> pls = new array<Man>;
+				GetGame().GetPlayers(pls);
+				int onl = pls.Count();
+				float nearest = -1;
+				int pi;
+				for (pi = 0; pi < pls.Count(); pi++)
+				{
+					if (!pls.Get(pi))
+						continue;
+					float dd = vector.Distance(pls.Get(pi).GetPosition(), GetPosition());
+					if (nearest < 0 || dd < nearest)
+						nearest = dd;
+				}
+				string diag = string.Format("built=%1 health01=%2 ruined=%3 online=%4 jugador_cercano=%5m", ExorIsBuilt(), hp, ruined, onl, nearest);
+				Print(string.Format("%1 MASTIL BORRADO (anomalo): grupo='%2' koth=%3 pos=%4 %5 -> nadie cerca/0 online = CE lifetime u otro mod; ruined=1 o alguien cerca = daño/raid",
+					ExorStorageConstants.LOG, m_ExorGroupId, m_ExorIsKothMast, GetPosition(), diag));
+
+				// KOTH: nunca disolver party (no tiene grupo). Solo banderas de territorio.
+				if (m_ExorGroupId != "" && !m_ExorIsKothMast)
+				{
+					ExorGroup g = ExorGroupManager.Get().FindById(m_ExorGroupId);
+					// El objeto-bandera desaparecio SIN disband explicito del owner (bug/CE/crash lo
+					// borro solo). NO disolvemos el party: lo conservamos y auto-restauramos el mastil
+					// (MarkMastLost). Antes esto llamaba a DisbandGroup y borraba el grupo para siempre.
+					// Pasamos el diagnostico en el 'reason' para que quede TAMBIEN en el log de
+					// auditoria durable (raid_YYYY-MM-DD.txt), no solo en el RPT que rota.
+					if (g)
+						ExorGroupManager.Get().MarkMastLost(g, "mastil desaparecio (no fue el owner) | " + diag);
+				}
 			}
 		}
 		super.EEDelete(parent);
