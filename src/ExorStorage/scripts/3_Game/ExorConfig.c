@@ -492,8 +492,8 @@ class ExorCfgBodyCadaver
 	// barril) -> el player nunca ve la tumba vacia. acercar < alejar = histeresis (banda
 	// muerta) para que no virtualice/restaure en loop con alguien merodeando cerca.
 	// virtualizar_minutos = 0 -> nunca virtualiza (loot siempre real toda la vida de la tumba).
-	float acercar_metros = 10;      // restaurar cuando un player vivo entra a este radio (+ Open() al abrir)
-	float alejar_metros = 20;       // virtualizar solo si TODOS estan mas lejos que esto
+	float acercar_metros = 20;      // restaurar cuando un player vivo entra a este radio (+ Open() al abrir)
+	float alejar_metros = 40;       // virtualizar solo si TODOS estan mas lejos que esto (lejos = no se ve el "pop")
 	int virtualizar_minutos = 2;    // minutos sin nadie cerca antes de virtualizar (0 = off)
 	// FORENSE: un JSON por tumba (muerto/pos/fecha/items/looteadores) en tumbas\.
 	bool forense_habilitado = true;         // escribir el JSON forense por tumba
@@ -506,8 +506,8 @@ class ExorCfgBodyCadaver
 		habilitado = true;
 		delay_segundos = 1;
 		duracion_minutos = 120;
-		acercar_metros = 10;
-		alejar_metros = 20;
+		acercar_metros = 20;
+		alejar_metros = 40;
 		virtualizar_minutos = 2;
 		forense_habilitado = true;
 		forense_registrar_looteadores = true;
