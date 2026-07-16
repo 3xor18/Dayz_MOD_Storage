@@ -14,7 +14,6 @@
 class ExorMsgRepetible
 {
 	string texto = "";
-	int    se_repite_canda_tantos_minutos = 5;
 }
 
 class ExorMsgAgendado
@@ -40,6 +39,7 @@ class ExorCfgMensajes
 	int  off_set_dias = 0;
 	int  segundos_entre_mensajes = 4;   // separacion MINIMA entre un mensaje y el siguiente (no salen todos de golpe)
 	int  enviar_mensajes_repetibles_minutos_despues_de_reinicar_server = 5;
+	int  tomar_y_enviar_un_mensaje_repetible_cada_tantos_minutos = 60;  // cada X min agarra UNO random del array de repetibles y lo manda
 	bool enviar_mensajes_repetibles = true;
 	bool enviar_mensajes_agendados = true;
 	ref array<ref ExorMsgRepetible> mensajes_repetibles;
@@ -51,11 +51,10 @@ class ExorCfgMensajes
 		mensajes_agendados = new array<ref ExorMsgAgendado>;
 	}
 
-	ExorMsgRepetible AddRep(string texto, int minutos)
+	ExorMsgRepetible AddRep(string texto)
 	{
 		ExorMsgRepetible r = new ExorMsgRepetible();
 		r.texto = texto;
-		r.se_repite_canda_tantos_minutos = minutos;
 		mensajes_repetibles.Insert(r);
 		return r;
 	}
@@ -80,11 +79,12 @@ class ExorCfgMensajes
 		off_set_dias = 0;
 		segundos_entre_mensajes = 4;
 		enviar_mensajes_repetibles_minutos_despues_de_reinicar_server = 5;
+		tomar_y_enviar_un_mensaje_repetible_cada_tantos_minutos = 60;
 		enviar_mensajes_repetibles = true;
 		enviar_mensajes_agendados = true;
 
-		AddRep("Bienvendio al server", 5);
-		AddRep("Hacer Alianzas es Baneable", 5);
+		AddRep("Bienvenido al server");
+		AddRep("Hacer Alianzas es Baneable");
 
 		ExorMsgAgendado a1 = AddAge("Sever se reinicia en ## minutos", "##", "11:50", "12:00", 5);
 		a1.dias_semana_repetir.Insert("lunes"); a1.dias_semana_repetir.Insert("martes");
@@ -113,7 +113,7 @@ class ExorCfgMensajes
 class ExorServerMsg
 {
 	static ref ExorCfgMensajes s_Cfg;
-	static ref array<int> s_RepLastMs;   // ultimo envio (ms uptime) por mensaje repetible
+	static int s_RepLastMs;              // ultimo envio (ms uptime) de UN repetible (timer global, no por-mensaje)
 	static ref array<int> s_AgeLastMs;   // ultimo envio (ms uptime) por mensaje agendado
 	static ref array<int> s_AgeStartM;   // hora_inicio ya parseada a minutos (1 sola vez al cargar, no en cada tick)
 	static ref array<int> s_AgeEndM;     // hora_fin ya parseada a minutos
@@ -134,10 +134,8 @@ class ExorServerMsg
 			return;
 		}
 
-		s_RepLastMs = new array<int>;
+		s_RepLastMs = -1;
 		int i;
-		for (i = 0; i < s_Cfg.mensajes_repetibles.Count(); i++)
-			s_RepLastMs.Insert(-1);
 		s_AgeLastMs = new array<int>;
 		s_AgeStartM = new array<int>;
 		s_AgeEndM = new array<int>;
@@ -186,25 +184,18 @@ class ExorServerMsg
 		int interval;   // Enforce = scope de FUNCION: se declaran 1 sola vez y se reusan en ambos loops
 		int last;
 
-		// ------------------- REPETIBLES -------------------
-		if (s_Cfg.enviar_mensajes_repetibles)
+		// ------------------- REPETIBLES: uno RANDOM del array cada X min -------------------
+		if (s_Cfg.enviar_mensajes_repetibles && s_Cfg.mensajes_repetibles.Count() > 0)
 		{
 			int startDelay = s_Cfg.enviar_mensajes_repetibles_minutos_despues_de_reinicar_server * 60000;
-			if (uptime >= startDelay)
+			interval = s_Cfg.tomar_y_enviar_un_mensaje_repetible_cada_tantos_minutos * 60000;
+			if (interval <= 0)
+				interval = 60000;
+			if (uptime >= startDelay && (s_RepLastMs < 0 || uptime - s_RepLastMs >= interval))
 			{
-				for (i = 0; i < s_Cfg.mensajes_repetibles.Count(); i++)
-				{
-					ExorMsgRepetible r = s_Cfg.mensajes_repetibles.Get(i);
-					interval = r.se_repite_canda_tantos_minutos * 60000;
-					if (interval <= 0)
-						continue;
-					last = s_RepLastMs.Get(i);
-					if (last < 0 || uptime - last >= interval)
-					{
-						Enqueue(r.texto);
-						s_RepLastMs.Set(i, uptime);
-					}
-				}
+				int idx = Math.RandomInt(0, s_Cfg.mensajes_repetibles.Count());   // 0..count-1
+				Enqueue(s_Cfg.mensajes_repetibles.Get(idx).texto);
+				s_RepLastMs = uptime;
 			}
 		}
 
