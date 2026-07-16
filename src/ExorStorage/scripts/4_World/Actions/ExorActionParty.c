@@ -128,7 +128,9 @@ class ExorActionLeaveParty : ActionContinuousBase
 			ExorGroup g = ExorGroupManager.Get().FindById(mast.ExorGetGroupId());
 			return g && g.HasMember(sid) && !g.IsOwner(sid);	// el lider usa "Quitar mastil"
 		}
-		return player.ExorClientInGroup() && !player.ExorClientIsLeader();
+		// cliente: solo en MI propio mastil (no en ajenos; evita "Salir del party"
+		// fantasma que te sacaria de TU party parado en base ajena)
+		return player.ExorClientInGroup() && !player.ExorClientIsLeader() && ExorTerritoryClient.IsOwnMastNear(mast.GetPosition());
 	}
 
 	override void OnFinishProgressServer(ActionData action_data)

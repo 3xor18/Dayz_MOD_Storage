@@ -43,7 +43,8 @@ class ExorActionOpenInvite : ActionContinuousBase
 			ExorGroup g = ExorGroupManager.Get().FindById(mast.ExorGetGroupId());
 			return g && g.HasMember(ExorGroupManager.SteamId(player));
 		}
-		return player.ExorClientInGroup();
+		// cliente: solo en MI propio mastil (no en ajenos)
+		return player.ExorClientInGroup() && ExorTerritoryClient.IsOwnMastNear(mast.GetPosition());
 	}
 
 	// Efecto en OnStartServer (no en OnFinishProgressServer): las acciones continuas
@@ -89,8 +90,15 @@ class ExorActionJoinGroup : ActionContinuousBase
 		if (!mast.ExorIsInviteOpen())
 			return false;	// solo si hay invitacion abierta
 		if (GetGame().IsServer())
-			return ExorGroupManager.Get().FindByPlayer(ExorGroupManager.SteamId(player)) == null;
-		return !player.ExorClientInGroup();	// solo si NO estoy ya en un party
+		{
+			// Se muestra en un mastil AJENO (no soy miembro de ESE grupo). Si estoy en
+			// OTRO territorio, la opcion IGUAL aparece, pero JoinAtMast me avisa que salga/
+			// disuelva el mio primero. Asi el ex-miembro VE la opcion (antes no aparecia nada).
+			ExorGroup mg = ExorGroupManager.Get().FindById(mast.ExorGetGroupId());
+			return mg != null && !mg.HasMember(ExorGroupManager.SteamId(player));
+		}
+		// cliente: mostrar en un mastil que NO es el mio propio (con invitacion abierta)
+		return !ExorTerritoryClient.IsOwnMastNear(mast.GetPosition());
 	}
 
 	override void OnStartServer(ActionData action_data)
@@ -137,7 +145,8 @@ class ExorActionCancelInvite : ActionContinuousBase
 			ExorGroup g = ExorGroupManager.Get().FindById(mast.ExorGetGroupId());
 			return g && g.HasMember(ExorGroupManager.SteamId(player));
 		}
-		return player.ExorClientInGroup();
+		// cliente: solo en MI propio mastil (no en ajenos)
+		return player.ExorClientInGroup() && ExorTerritoryClient.IsOwnMastNear(mast.GetPosition());
 	}
 
 	override void OnStartServer(ActionData action_data)

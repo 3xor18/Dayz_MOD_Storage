@@ -358,17 +358,18 @@ modded class TerritoryFlag
 			TerritoryFlag liveMast = ExorTerritoryManager.Get().FindBuiltMastByGroup(existing.id);
 
 			// CASO A: el party YA tiene un mastil REAL construido -> RECONSTRUIR/MUDAR (1 mastil
-			// por party: el viejo desaparece). Permitido, con COOLDOWN de 1 dia.
+			// por party: el viejo desaparece). Permitido, con COOLDOWN configurable (default 6h).
+			int cdMin = GetExorConfig().party.territorio.cooldown_reconstruir_mastil_minutos;
 			if (liveMast && liveMast != this)
 			{
-				if (existing.last_build_min != 0 && (nowm - existing.last_build_min) < 1440)
+				if (cdMin > 0 && existing.last_build_min != 0 && (nowm - existing.last_build_min) < cdMin)
 				{
-					int restan = 1440 - (nowm - existing.last_build_min);
+					int restan = cdMin - (nowm - existing.last_build_min);
 					// LOG: antes este bloqueo borraba el mastil nuevo SIN dejar rastro en el RPT
 					// (solo un MessageImportant client-side) -> "construi y no aparece" era invisible.
 					Print(string.Format("%1 Party: rebuild BLOQUEADO por cooldown (grupo %2, mastil vivo en %3, faltan %4 min) -> se borra el mastil nuevo de %5",
 						ExorStorageConstants.LOG, existing.id, liveMast.GetPosition(), restan, ExorGroupManager.PlayerName(placer)));
-					placer.MessageImportant(string.Format("Solo podés mover/reconstruir tu mástil 1 vez por día. Faltan %1 h %2 min.", restan / 60, restan % 60));
+					placer.MessageImportant(string.Format("Solo podés mover/reconstruir tu mástil cada %1 h. Faltan %2 h %3 min.", cdMin / 60, restan / 60, restan % 60));
 					ExorMarkDisbanding();
 					GetGame().ObjectDelete(this);
 					return;

@@ -22,6 +22,17 @@ class ExorExMember
 	string motivo;    // "salio" | "expulsado" | "auto-kick inactividad"
 }
 
+// Clan del que provino el FUNDADOR de este grupo (era ex-miembro de otro clan
+// cuando fundo este territorio). Sirve para rastrear que un jugador expulsado
+// se armo su propia base. Persiste en groups/<id>.json del grupo NUEVO.
+class ExorPriorClan
+{
+	string group_id;   // id del clan anterior
+	string owner_id;   // lider (steamid) del clan anterior
+	int    left_day;   // dia en que salio/lo expulsaron de ese clan
+	string motivo;     // "salio" | "expulsado" | "auto-kick inactividad"
+}
+
 class ExorGroup
 {
 	string id;
@@ -39,12 +50,34 @@ class ExorGroup
 	string borrado_fecha;// fecha+hora de la eliminacion ("YYYY-MM-DD HH:MM:SS")
 	ref array<ref ExorGroupMember> members;
 	ref array<ref ExorExMember> former_members;   // historial de los que salieron (para baneo de clan)
+	ref array<ref ExorPriorClan> founder_prior_clans; // clan(es) de los que el fundador era ex-miembro al crear este grupo
 	int inactivity_alert_day;                      // ultimo dia que se aviso inactividad (0 = nunca); se resetea al conectarse alguien
 
 	void ExorGroup()
 	{
 		members = new array<ref ExorGroupMember>;
 		former_members = new array<ref ExorExMember>;
+		founder_prior_clans = new array<ref ExorPriorClan>;
+	}
+
+	// Deja constancia (en el file de ESTE grupo nuevo) de que su fundador venia
+	// de otro clan como ex-miembro. 1 entrada por group_id anterior.
+	void AddPriorClan(string prevGroupId, string prevOwnerId, int leftDay, string motivo)
+	{
+		if (prevGroupId == "")
+			return;
+		int i;
+		for (i = 0; i < founder_prior_clans.Count(); i++)
+		{
+			if (founder_prior_clans.Get(i).group_id == prevGroupId)
+				return;   // ya registrado
+		}
+		ExorPriorClan pc = new ExorPriorClan();
+		pc.group_id = prevGroupId;
+		pc.owner_id = prevOwnerId;
+		pc.left_day = leftDay;
+		pc.motivo   = motivo;
+		founder_prior_clans.Insert(pc);
 	}
 
 	ExorGroupMember FindMember(string sid)

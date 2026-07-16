@@ -45,7 +45,9 @@ class ExorActionOpenPartyMenu : ActionContinuousBase
 			ExorGroup g = ExorGroupManager.Get().FindById(mast.ExorGetGroupId());
 			return g && g.HasMember(ExorGroupManager.SteamId(player));
 		}
-		return player.ExorClientInGroup();
+		// cliente: solo si estoy en un grupo Y este mastil es de MI territorio
+		// (evita que "Administrar" aparezca en mastiles ajenos)
+		return player.ExorClientInGroup() && ExorTerritoryClient.IsOwnMastNear(mast.GetPosition());
 	}
 
 	override void OnStart(ActionData action_data)

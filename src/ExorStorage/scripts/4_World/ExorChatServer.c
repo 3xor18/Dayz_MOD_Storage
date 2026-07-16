@@ -73,6 +73,8 @@ class ExorChatServer
 		msg.channel = ch;
 		msg.dur = cfg.duracion_segundos;
 		msg.max = cfg.max_lineas;
+		msg.chars = cfg.max_caracteres_por_linea;
+		msg.maxlin = cfg.max_lineas_por_mensaje;
 
 		JsonSerializer js = new JsonSerializer();
 		string data;

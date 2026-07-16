@@ -239,6 +239,22 @@ class ExorGroupManager
 		g.AddOrUpdate(sid, PlayerName(owner), ExorTimeUtil.TodayNumber());
 		m_Groups.Insert(g);
 
+		// Sellar procedencia: si el fundador figura como EX-MIEMBRO de otro clan
+		// activo (p.ej. lo expulsaron y se armo su propia base), dejar constancia
+		// en el file de ESTE territorio nuevo. Cubre el caso reportado (expulsado
+		// de un clan que sigue vivo). Clanes disueltos (borrado=1) no estan en
+		// m_Groups; su procedencia no se captura aca.
+		int gi;
+		for (gi = 0; gi < m_Groups.Count(); gi++)
+		{
+			ExorGroup og = m_Groups.Get(gi);
+			if (og == g)
+				continue;
+			ExorExMember ex = og.FindFormer(sid);
+			if (ex)
+				g.AddPriorClan(og.id, og.owner_id, ex.left_day, ex.motivo);
+		}
+
 		owner.ExorSetGroupId(g.id);
 		SaveGroup(g);
 		SyncToPlayer(owner, g);
@@ -608,7 +624,7 @@ class ExorGroupManager
 		string jsid = SteamId(joiner);
 		if (FindByPlayer(jsid))
 		{
-			joiner.MessageImportant("Ya estas en un party. Sali primero.");
+			joiner.MessageImportant("Ya estas en un territorio. Sali o disolve el tuyo primero para poder unirte a otro.");
 			return;
 		}
 		ExorGroup g = FindById(mast.ExorGetGroupId());

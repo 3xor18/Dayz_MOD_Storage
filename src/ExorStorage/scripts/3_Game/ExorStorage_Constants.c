@@ -4,7 +4,7 @@
 class ExorStorageConstants
 {
 	static const string MOD_NAME = "3xor_Vanilla_Optimization";
-	static const string MOD_VERSION = "2.7.5";
+	static const string MOD_VERSION = "2.8.0";
 	static const string LOG = "[3xorVO]";
 	// DEBUG temporal del ciclo de vida del barril (setear/levantar/abrir/cerrar/item
 	// in-out/virtualizar/restaurar/load/save/shutdown). Poner en false (o borrar las
@@ -36,6 +36,7 @@ class ExorStorageConstants
 	static const string CFG_KOTH      = "$profile:3xorVanillaOptimization\\koth.json";
 	static const string CFG_NOBUILD   = "$profile:3xorVanillaOptimization\\nobuild.json";
 	static const string CFG_COFRE     = "$profile:3xorVanillaOptimization\\cofre.json";
+	static const string CFG_MENSAJES  = "$profile:3xorVanillaOptimization\\mensajes.json";
 
 	// Datos del sistema party (Fase B+): grupos persistidos
 	static const string GROUPS_DIR = "$profile:3xorVanillaOptimization\\groups";

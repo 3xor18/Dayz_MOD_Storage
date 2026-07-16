@@ -188,7 +188,10 @@ class ExorChatMsg
 	string text;
 	int channel;   // 0 = global, 1 = zona
 	int dur;       // segundos que dura la linea
-	int max;       // maximo de lineas simultaneas
+	int max;       // maximo de lineas simultaneas EN PANTALLA
+	int kind;      // 0 = jugador (nombre azul + texto blanco), 1 = mensaje del SERVER (verde, sin remitente)
+	int chars;     // caracteres por linea antes de partir (config: max_caracteres_por_linea)
+	int maxlin;    // lineas maximas por ESTE mensaje (config: max_lineas_por_mensaje)
 }
 
 // Cola estatica cliente: OnRPC (4_World) encola; la UI (5_Mission) la drena por frame.

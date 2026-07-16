@@ -173,6 +173,7 @@ class ExorCfgPartyTerritorio
 	ref TStringArray whitelist_construible; // que SI se puede poner en territorio ajeno
 	ref TStringArray blacklist_construible; // que nunca se puede poner (ni el dueno)
 	bool despawn_mastil_sin_miembros = true;
+	int cooldown_reconstruir_mastil_minutos = 360;  // cada cuanto se puede mover/reconstruir el mastil (360 = 6h; 1440 = 1 dia; 0 = sin cooldown)
 
 	void ExorCfgPartyTerritorio()
 	{
@@ -256,6 +257,7 @@ class ExorCfgParty
 		territorio.radio_metros = 35;
 		territorio.permitir_construir_cerca = false;
 		territorio.despawn_mastil_sin_miembros = true;
+		territorio.cooldown_reconstruir_mastil_minutos = 360;   // 6 horas
 		territorio.whitelist_construible.Clear();
 		territorio.whitelist_construible.Insert("LandMineTrap");
 		territorio.whitelist_construible.Insert("ClaymoreMine");
@@ -401,9 +403,11 @@ class ExorCfgChat
 	bool habilitado = true;          // master on/off del chat custom
 	int radio_zona_metros = 50;      // alcance del canal ZONA (proximity)
 	int duracion_segundos = 25;      // cuanto dura cada linea en pantalla
-	int max_lineas = 9;              // maximo de lineas simultaneas (la mas vieja se va)
+	int max_lineas = 9;              // maximo de lineas simultaneas EN PANTALLA (la mas vieja se va)
 	int cooldown_segundos = 2;       // anti-spam: minimo entre mensajes (0 = sin limite)
 	bool bloquear_repetidos = true;  // anti-spam: bloquear el MISMO mensaje seguido
+	int max_caracteres_por_linea = 55; // ancho de linea (= el de antes): al pasarse, el mensaje BAJA a la siguiente linea en vez de cortarse
+	int max_lineas_por_mensaje = 3;    // cuantas lineas puede ocupar UN mensaje largo (el resto se trunca con "…")
 
 	void SetDefaults()
 	{
@@ -413,6 +417,8 @@ class ExorCfgChat
 		max_lineas = 9;
 		cooldown_segundos = 2;
 		bloquear_repetidos = true;
+		max_caracteres_por_linea = 55;
+		max_lineas_por_mensaje = 3;
 	}
 }
 

@@ -86,7 +86,14 @@ class ExorVO_Ammo
 			return;
 
 		string tipo = mag.GetType();
+		int maxA = mag.GetAmmoMax();
+		if (maxA <= 0)
+			return;
 
+		// Solo participan las pilas PARCIALES (0 < ammo < max). Las pilas LLENAS NO se
+		// tocan nunca: no se pueden fusionar y mutarlas solo genera manipulacion de
+		// inventario server-side inutil (= mas ventana de desync). Menos churn = menos
+		// riesgo de "balas fantasma hasta reloguear".
 		array<EntityAI> items = new array<EntityAI>;
 		player.GetInventory().EnumerateInventory(InventoryTraversalType.PREORDER, items);
 
@@ -102,15 +109,38 @@ class ExorVO_Ammo
 				continue;
 			if (IsInHands(other))
 				continue;
+			int cnt = other.GetAmmoCount();
+			if (cnt <= 0 || cnt >= maxA)	// vacia o LLENA: no participa
+				continue;
 			pilas.Insert(other);
-			total = total + other.GetAmmoCount();
+			total = total + cnt;
 		}
 
 		if (pilas.Count() < 2)
 			return;
 
-		int maxA = mag.GetAmmoMax();
+		// Consolidar SOLO si de verdad REDUCE la cantidad de pilas. Si las parciales ya
+		// estan en el minimo posible (ej. 60+40 con max 80 = 2 pilas si o si), no se toca
+		// nada: evita mutar el inventario sin ganancia (y su desync asociado).
+		int minPiles = (total + maxA - 1) / maxA;
+		if (minPiles >= pilas.Count())
+			return;
+
 		int antes = pilas.Count();
+
+		// Contenedores padre afectados: hay que forzar su re-sincronizacion tras
+		// borrar/reescribir pilas. Sin esto, si el jugador tiene el contenedor ABIERTO
+		// (chaleco, mochila, o una TUMBA/barril que esta looteando), la vista del cliente
+		// queda stale y "las balas se desaparecen" hasta reloguear (el server siempre
+		// quedo correcto -> por eso reaparecen).
+		array<EntityAI> padres = new array<EntityAI>;
+		for (i = 0; i < pilas.Count(); i++)
+		{
+			EntityAI pad = pilas.Get(i).GetHierarchyParent();
+			if (pad && padres.Find(pad) == -1)
+				padres.Insert(pad);
+		}
+
 		for (i = 0; i < pilas.Count(); i++)
 		{
 			Magazine pila = pilas.Get(i);
@@ -123,10 +153,20 @@ class ExorVO_Ammo
 			if (poner > maxA)
 				poner = maxA;
 			pila.ServerSetAmmoCount(poner);
+			pila.SetSynchDirty();   // replicar el nuevo conteo al cliente
 			total = total - poner;
 		}
 
-		Print(string.Format("%1 Auto-stack: %2 consolidado de %3 pilas", ExorStorageConstants.LOG, tipo, antes));
+		// forzar que los contenedores padre (y el player) re-sincronicen su cargo
+		// (slots vaciados) hacia el cliente.
+		for (i = 0; i < padres.Count(); i++)
+		{
+			if (padres.Get(i))
+				padres.Get(i).SetSynchDirty();
+		}
+		player.SetSynchDirty();
+
+		Print(string.Format("%1 Auto-stack: %2 consolidado %3 -> %4 pilas", ExorStorageConstants.LOG, tipo, antes, minPiles));
 	}
 
 	// Diferido: el movimiento de inventario termina de forma asincronica

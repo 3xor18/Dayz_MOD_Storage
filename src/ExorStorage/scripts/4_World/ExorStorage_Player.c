@@ -485,6 +485,7 @@ modded class PlayerBase
 		bool isImprov   = st.Contains("improvis") || am.Contains("improvis");
 		bool isMine     = !isClaymore && st.Contains("mine");
 		bool isGrenade  = (Grenade_Base.Cast(m_ExorKfSource) != null) || am.Contains("grenade") || (am.Contains("40mm") && am.Contains("explo"));
+		bool isTrap     = st.Contains("beartrap") || st.Contains("bear_trap");	// trampa de osos (killer = la trampa, no-jugador -> antes no salia en el killfeed)
 
 		// ---- muerte AMBIENTAL (sin asesino): "X murio por <cause>" ----
 		// Prioridad: el gas gana a todo (granada toxica de mano o de lanzagranadas = "gas").
@@ -493,6 +494,7 @@ modded class PlayerBase
 		else if (isClaymore)  cause = "un Claymore";
 		else if (isImprov)    cause = "un explosivo improvisado";
 		else if (isMine)      cause = "una mina";
+		else if (isTrap)      cause = "una trampa de osos";
 
 		// caida de altura: el daño llega con ammo "FallDamage" (sin entidad atacante)
 		if (cause == "" && am.Contains("fall"))
@@ -621,7 +623,16 @@ modded class PlayerBase
 				ExorBroadcastKillfeed(dto3);
 			}
 		}
-		// else: muerte por infectado/animal/otro con atacante no-jugador -> ni stats ni killfeed
+		else
+		{
+			// muerte por infectado/animal/otro con atacante NO-jugador -> ni stats ni killfeed.
+			// DIAG (temporal): loguear source+ammo+killer real para afinar la clasificacion
+			// (asi si una trampa/animal deberia salir y no sale, vemos su classname exacto).
+			string killerT = "null";
+			if (killer)
+				killerT = killer.GetType();
+			Print(string.Format("%1 muerte sin categoria (no killfeed): source='%2' ammo='%3' killer='%4'", ExorStorageConstants.LOG, st, am, killerT));
+		}
 	}
 
 	// Manda el evento a TODOS los clientes (cada uno lo recibe en su propio PlayerBase).

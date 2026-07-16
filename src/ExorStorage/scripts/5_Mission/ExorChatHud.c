@@ -1,17 +1,29 @@
 // ============================================================================
 // 3xor_Vanilla_Optimization - Chat custom (cliente)
-// Panel transparente abajo-izquierda: lineas "[canal] nombre: mensaje" con el
-// NOMBRE en azul + negrita y el MENSAJE en blanco. Cada linea dura X seg (config)
-// y se va; la mas nueva abajo. Posicion en pixeles absolutos (como el killfeed).
-// El input reusa la caja vanilla (ChatInputMenu) pero el envio lo interceptamos
-// para rutearlo por nuestro sistema con el canal elegido (tecla ".").
+// Panel transparente abajo-izquierda. Mensajes de JUGADOR: "[canal] nombre: texto"
+// (nombre azul, texto blanco). Mensajes del SERVER (kind=1): texto VERDE, SIN
+// remitente. Los mensajes largos se PARTEN en hasta 3 lineas (misma cant. de
+// caracteres por linea); las lineas de continuacion van indentadas y con un
+// espacio de grupo un poco menor para que se lean como el MISMO comentario.
+// El input reusa la caja vanilla (ChatInputMenu) pero el envio lo interceptamos.
 // ============================================================================
 class ExorChatEntry
 {
 	string name;
 	string text;
 	int channel;
+	int kind;        // 0 = jugador, 1 = server (verde, sin remitente)
 	int expireMs;
+	ref TStringArray lines;   // el texto ya partido en <= MAX_LINES trozos
+}
+
+// Una linea VISUAL ya lista para pintar (segmentos con su color + X de arranque).
+class ExorChatVisLine
+{
+	ref TStringArray segs;
+	ref array<int> cols;
+	float startX;
+	bool isHeader;   // 1ra linea (arriba) de su entrada -> arriba de ella va el gap de grupo
 }
 
 class ExorChatHud
@@ -21,11 +33,16 @@ class ExorChatHud
 	protected ref array<TextWidget> m_Segs;
 	protected ref array<ref ExorChatEntry> m_Entries;
 
-	const int ROWS = 9;
-	const int SEGS = 4;
+	const int ROWS = 9;          // slots de linea VISUAL disponibles
+	const int SEGS = 4;          // segmentos de texto por slot
+	const int MAX_LINES = 3;     // fallback: maximo de lineas por mensaje (si el DTO viene sin config)
+	const int MAX_CHARS = 55;    // fallback: caracteres por linea (si el DTO viene sin config)
 	const float LEFT_M = 18;     // margen izquierdo
-	const float BOTTOM_M = 150;  // separacion del borde inferior (arriba del hotbar/stamina)
-	const float LINE_H = 32;     // alto de cada linea
+	const float CONT_INDENT = 0; // sin indent: la continuacion arranca alineada (una linea mas abajo, estilo chat)
+	const float BOTTOM_M = 150;  // separacion del borde inferior
+	const float LINE_H = 30;     // alto de anclaje de cada linea
+	const float CONT_STEP = 27;  // separacion vertical entre lineas del MISMO mensaje (juntas)
+	const float MSG_STEP = 44;   // separacion vertical entre mensajes DISTINTOS (mas aire para agrupar)
 
 	void Create()
 	{
@@ -46,6 +63,76 @@ class ExorChatHud
 		m_Entries = new array<ref ExorChatEntry>;
 	}
 
+	// Parte 'text' en <= maxLines trozos cortando en espacios. La PRIMERA linea usa
+	// 'firstMax' caracteres y las SIGUIENTES 'restMax' (asi, en mensajes con prefijo
+	// "[G] nombre: ", la 1ra linea descuenta ese prefijo y TODAS las lineas quedan del
+	// mismo ancho total que un mensaje del server sin prefijo). Si sobra, la ultima "…".
+	static TStringArray WrapText(string text, int firstMax, int restMax, int maxLines)
+	{
+		TStringArray res = new TStringArray;
+		int n = text.Length();
+		if (n == 0)
+		{
+			res.Insert("");
+			return res;
+		}
+		int start = 0;
+		while (start < n && res.Count() < maxLines)
+		{
+			int lim;
+			if (res.Count() == 0)
+				lim = firstMax;
+			else
+				lim = restMax;
+			if (lim < 6)
+				lim = 6;
+
+			int remaining = n - start;
+			if (remaining <= lim)
+			{
+				res.Insert(text.Substring(start, remaining));
+				start = n;
+				break;
+			}
+			// buscar el ultimo espacio dentro de la ventana [start, start+lim]
+			int breakAt = -1;
+			int i;
+			for (i = start + lim; i > start; i--)
+			{
+				if (text.Substring(i, 1) == " ")
+				{
+					breakAt = i;
+					break;
+				}
+			}
+			int lineLen;
+			int nextStart;
+			if (breakAt <= start)	// palabra mas larga que la linea -> corte duro
+			{
+				lineLen = lim;
+				nextStart = start + lim;
+			}
+			else
+			{
+				lineLen = breakAt - start;
+				nextStart = breakAt + 1;	// saltar el espacio
+			}
+			res.Insert(text.Substring(start, lineLen));
+			start = nextStart;
+		}
+		// quedo texto sin mostrar (mas de maxLines) -> marcar con "…"
+		if (start < n && res.Count() > 0)
+		{
+			string last = res.Get(res.Count() - 1);
+			if (last.Length() > 1)
+				last = last.Substring(0, last.Length() - 1);
+			res.Set(res.Count() - 1, last + "…");
+		}
+		if (res.Count() == 0)
+			res.Insert(text);
+		return res;
+	}
+
 	void Add(ExorChatMsg dto)
 	{
 		if (!m_Root || !dto)
@@ -55,6 +142,22 @@ class ExorChatHud
 		e.name = dto.name;
 		e.text = dto.text;
 		e.channel = dto.channel;
+		e.kind = dto.kind;
+		// ancho de linea y max de lineas vienen de la config (chat.json), por mensaje.
+		// Fallback a los defaults si el server manda 0 (compat con DTOs viejos).
+		int chars = dto.chars;
+		if (chars <= 0)
+			chars = MAX_CHARS;
+		int maxlin = dto.maxlin;
+		if (maxlin <= 0)
+			maxlin = MAX_LINES;
+		if (maxlin > ROWS)
+			maxlin = ROWS;
+		// FORMATO UNIFORME player y server: el TEXTO se parte a 'chars' caracteres por
+		// linea (todas las lineas igual) y hasta 'maxlin' lineas. El prefijo "[G] nombre:"
+		// del jugador queda ANTES del texto en la 1ra linea (no se descuenta): asi ambos
+		// tipos usan el mismo maximo de caracteres por linea y el mismo maximo de lineas.
+		e.lines = WrapText(dto.text, chars, chars, maxlin);
 		int dur = dto.dur;
 		if (dur <= 0)
 			dur = 20;
@@ -106,92 +209,133 @@ class ExorChatHud
 			Render();
 	}
 
+	// Arma la lista de lineas VISUALES (de abajo hacia arriba): por cada entrada, de
+	// la mas nueva a la mas vieja, sus lineas en orden inverso (ultima abajo, header
+	// arriba). Se corta al llenar los ROWS slots.
+	array<ref ExorChatVisLine> BuildVisLines()
+	{
+		int cBlue  = ARGB(255, 90, 150, 255);   // nombre
+		int cWhite = ARGB(255, 240, 240, 240);  // texto jugador
+		int cGreen = ARGB(255, 80, 230, 90);    // texto del SERVER
+		int cTagG  = ARGB(255, 150, 150, 165);  // tag global
+		int cTagZ  = ARGB(255, 90, 220, 120);   // tag zona
+
+		array<ref ExorChatVisLine> vis = new array<ref ExorChatVisLine>;
+		int ei;
+		for (ei = 0; ei < m_Entries.Count() && vis.Count() < ROWS; ei++)
+		{
+			ExorChatEntry e = m_Entries.Get(ei);
+			int nl = e.lines.Count();
+			int li;
+			for (li = nl - 1; li >= 0 && vis.Count() < ROWS; li--)
+			{
+				ExorChatVisLine v = new ExorChatVisLine();
+				v.segs = new TStringArray;
+				v.cols = new array<int>;
+				v.isHeader = (li == 0);
+
+				if (li == 0)
+				{
+					if (e.kind == 1)
+					{
+						// SERVER: verde, sin remitente
+						v.startX = LEFT_M;
+						v.segs.Insert(e.lines.Get(0)); v.cols.Insert(cGreen);
+					}
+					else
+					{
+						// JUGADOR: [tag] nombre: texto
+						string tag = "[G] ";
+						int tagCol = cTagG;
+						if (e.channel == 1) { tag = "[Z] "; tagCol = cTagZ; }
+						v.startX = LEFT_M;
+						v.segs.Insert(tag);            v.cols.Insert(tagCol);
+						v.segs.Insert(e.name);         v.cols.Insert(cBlue);
+						v.segs.Insert(": ");           v.cols.Insert(cWhite);
+						v.segs.Insert(e.lines.Get(0)); v.cols.Insert(cWhite);
+					}
+				}
+				else
+				{
+					// linea de continuacion: indentada, mismo color del cuerpo
+					int bodyCol = cWhite;
+					if (e.kind == 1)
+						bodyCol = cGreen;
+					v.startX = LEFT_M + CONT_INDENT;
+					v.segs.Insert(e.lines.Get(li)); v.cols.Insert(bodyCol);
+				}
+				vis.Insert(v);
+			}
+		}
+		return vis;
+	}
+
 	void Render()
 	{
 		float sw, sh;
 		m_Root.GetScreenSize(sw, sh);
 
-		int i;
-		for (i = 0; i < ROWS; i++)
+		array<ref ExorChatVisLine> vis = BuildVisLines();
+
+		// posicionar de abajo hacia arriba con espaciado acumulado (gap de grupo entre
+		// mensajes distintos: se agrega DESPUES de pintar la header de una entrada).
+		float yUp = BOTTOM_M;
+		int slot;
+		for (slot = 0; slot < ROWS; slot++)
 		{
-			if (i < m_Entries.Count())
-				RenderRow(i, m_Entries.Get(i), sh);
+			if (slot < vis.Count())
+			{
+				ExorChatVisLine v = vis.Get(slot);
+				float y = sh - yUp - LINE_H;
+				PaintSlot(slot, v, y);
+				// paso chico dentro del MISMO mensaje (lineas juntas); paso grande al pasar
+				// a un mensaje distinto (la header de una entrada -> arriba va otro mensaje).
+				if (v.isHeader)
+					yUp = yUp + MSG_STEP;
+				else
+					yUp = yUp + CONT_STEP;
+			}
 			else
-				HideRow(i);
+			{
+				HideSlot(slot);
+			}
 		}
 	}
 
-	void HideRow(int row)
+	void PaintSlot(int slot, ExorChatVisLine v, float y)
 	{
+		int count = v.segs.Count();
+		float x = v.startX;
 		int j;
-		for (j = 0; j < SEGS; j++)
-		{
-			if (m_Segs.Get(row * SEGS + j))
-				m_Segs.Get(row * SEGS + j).Show(false);
-		}
-	}
-
-	void RenderRow(int row, ExorChatEntry e, float screenH)
-	{
-		int cBlue = ARGB(255, 90, 150, 255);    // nombre (azul)
-		int cWhite = ARGB(255, 240, 240, 240);  // mensaje (blanco)
-		int cTagG = ARGB(255, 150, 150, 165);   // tag global (gris)
-		int cTagZ = ARGB(255, 90, 220, 120);    // tag zona (verde)
-
-		string tag = "[G] ";
-		int tagCol = cTagG;
-		if (e.channel == 1)
-		{
-			tag = "[Z] ";
-			tagCol = cTagZ;
-		}
-
-		TStringArray txt = new TStringArray;
-		array<int> col = new array<int>;
-		txt.Insert(tag);       col.Insert(tagCol);
-		txt.Insert(e.name);    col.Insert(cBlue);
-		txt.Insert(": ");      col.Insert(cWhite);
-		txt.Insert(e.text);    col.Insert(cWhite);
-
-		int count = txt.Count();
-
-		// pass 1: texto/color, medir anchos
-		array<int> widths = new array<int>;
-		int j;
-		TextWidget seg;
 		int w, h;
 		for (j = 0; j < SEGS; j++)
 		{
-			seg = m_Segs.Get(row * SEGS + j);
+			TextWidget seg = m_Segs.Get(slot * SEGS + j);
 			if (!seg)
-			{
-				widths.Insert(0);
 				continue;
-			}
 			if (j < count)
 			{
-				seg.SetText(txt.Get(j));
-				seg.SetColor(col.Get(j));
+				seg.SetText(v.segs.Get(j));
+				seg.SetColor(v.cols.Get(j));
 				seg.Show(true);
+				seg.SetPos(x, y);
 				seg.GetTextSize(w, h);
-				widths.Insert(w);
+				x = x + w;
 			}
 			else
 			{
 				seg.Show(false);
-				widths.Insert(0);
 			}
 		}
+	}
 
-		// pass 2: posicionar de izq a der; la fila 0 (mas nueva) abajo del todo
-		float x = LEFT_M;
-		float y = screenH - BOTTOM_M - ((row + 1) * LINE_H);
-		for (j = 0; j < count; j++)
+	void HideSlot(int slot)
+	{
+		int j;
+		for (j = 0; j < SEGS; j++)
 		{
-			seg = m_Segs.Get(row * SEGS + j);
-			if (seg)
-				seg.SetPos(x, y);
-			x = x + widths.Get(j);
+			if (m_Segs.Get(slot * SEGS + j))
+				m_Segs.Get(slot * SEGS + j).Show(false);
 		}
 	}
 }

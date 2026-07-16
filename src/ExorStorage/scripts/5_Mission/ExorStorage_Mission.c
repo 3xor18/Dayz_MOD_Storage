@@ -26,12 +26,21 @@ modded class MissionServer
 		ExorAnticheat.Start();	// anti-cheat heuristico: tick de watchlist (~1 Hz) + detector por kill
 		ExorKoth.Start();	// KOTH: eventos de captura con recompensa (si koth.json activar=true)
 		ExorCofre.Start();	// COFRE: zonas de apertura de cofres por horario (si cofre.json activado=true)
+		ExorServerMsg.Start();	// mensajes automaticos del server al chat (mensajes.json: repetibles + agendados)
 
 		// OJO: este compilador no acepta expresiones partidas en varias lineas (ni ternarios)
 		Print(string.Format("%1 %2 v%3 inicializado", ExorStorageConstants.LOG, ExorStorageConstants.MOD_NAME, ExorStorageConstants.MOD_VERSION));
 		Print(string.Format("%1 virtualizar_segundos=%2 auto_cerrar_segundos=%3 multiplicador_comida=%4", ExorStorageConstants.LOG, cfg.storage.virtualizar_segundos, cfg.storage.auto_cerrar_segundos, cfg.storage.multiplicador_comida));
 		Print(string.Format("%1 vehiculos_dormir=%2 dormir_minutos=%3 despertar_metros=%4", ExorStorageConstants.LOG, cfg.vehiculos.vehiculos_dormir, cfg.vehiculos.vehiculos_dormir_minutos, cfg.vehiculos.vehiculos_despertar_metros));
 		Print(string.Format("%1 auto_stack=%2 spawn_municion=%3 tipos registrados", ExorStorageConstants.LOG, cfg.municion.auto_stack, cfg.municion.spawn_municion.Count()));
+	}
+
+	// Monitor de rendimiento (diagnostico): mide FPS/peor-frame por intervalo. Costo:
+	// 2 sumas por frame. Loguea 1 linea cada 30s. Ver ExorPerfMonitor.c.
+	override void OnUpdate(float timeslice)
+	{
+		super.OnUpdate(timeslice);
+		ExorPerfMonitor.Feed(timeslice);
 	}
 
 	// Al APAGAR el server: virtualizar todos los barriles/bodybags con contenido, asi

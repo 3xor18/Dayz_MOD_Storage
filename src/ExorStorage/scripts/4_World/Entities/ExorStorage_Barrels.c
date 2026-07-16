@@ -488,12 +488,24 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		// erraba; al abrir ya estan asentados -> aca SI se borran, antes de recrearlos del JSON.
 		// Se hace UNA sola vez (flag): los drops son un fenomeno del CARGADO, no de cada apertura
 		// -> asi nunca borramos un bolso/loot que el player deje tirado al lado a proposito.
+		// El spill de "invalid location" es un fenomeno del ARRANQUE del server (DayZ
+		// tira los anidados al cargar el mundo). Por eso esta limpieza SOLO corre si la
+		// 1ra apertura ocurre poco despues del arranque. Si el barril se abre por 1ra vez
+		// horas despues (durante un PvP en un town), NO se barre el piso: antes borrabamos
+		// cualquier item suelto de tipo coincidente a 10m -> se comia un arma que un player
+		// acababa de tirar al lado (bug: VSS despawneado en PvP). GetGame().GetTime() = ms
+		// desde el arranque de la mision; los spills reales ya se limpiaron en el reconcile
+		// de carga + su reintento a los 8s, muy dentro de esta ventana.
+		int floorCleanWindowMs = 300000;	// 5 min tras el arranque
 		if (!m_ExorFloorCleaned)
 		{
 			m_ExorFloorCleaned = true;
-			int dropped = ExorCleanDroppedNearby();
-			if (dropped > 0)
-				Print(string.Format("%1 Barril %2: %3 items del piso (invalid location de DayZ) borrados antes de restaurar", ExorStorageConstants.LOG, ExorGetID(), dropped));
+			if (GetGame().GetTime() < floorCleanWindowMs)
+			{
+				int dropped = ExorCleanDroppedNearby();
+				if (dropped > 0)
+					Print(string.Format("%1 Barril %2: %3 items del piso (invalid location de DayZ) borrados antes de restaurar", ExorStorageConstants.LOG, ExorGetID(), dropped));
+			}
 		}
 
 		// armar EN LA POSICION DEL BARRIL (NO bajo tierra). Crear los items a -1000m hacia

@@ -417,6 +417,28 @@ class ExorTerritoryClient
 		s_Cache = c;
 	}
 
+	// true si 'pos' cae dentro del radio de un mastil de MI PROPIO territorio
+	// (zona con mine=true). Lo usan las acciones de miembro del mastil para NO
+	// mostrarse en mastiles AJENOS (bug: "Administrar/Invitar" salia en cualquier
+	// mastil si estabas en algun grupo, aunque no fuera el tuyo).
+	static bool IsOwnMastNear(vector pos)
+	{
+		if (!s_Cache)
+			return false;
+		int i;
+		for (i = 0; i < s_Cache.zones.Count(); i++)
+		{
+			ExorTerritoryZone z = s_Cache.zones.Get(i);
+			if (!z.mine)
+				continue;
+			float dx = pos[0] - z.x;
+			float dz = pos[2] - z.z;
+			if (Math.Sqrt(dx * dx + dz * dz) <= z.radius)
+				return true;
+		}
+		return false;
+	}
+
 	// Mismo orden de reglas que el server, con el cache de zonas.
 	static bool CanPlaceClient(vector pos, string itemType)
 	{
