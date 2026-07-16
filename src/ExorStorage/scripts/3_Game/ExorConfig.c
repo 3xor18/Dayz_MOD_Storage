@@ -486,12 +486,19 @@ class ExorCfgBodyCadaver
 	bool habilitado = true;         // master on/off de TODO el modulo de la lapida
 	int delay_segundos = 1;         // demora entre la muerte y la aparicion de la lapida
 	int duracion_minutos = 120;     // cuanto dura la lapida (2h). Sobrevive reinicio.
-	// OBSOLETOS: las tumbas ya NO se virtualizan (virtualizar perdia el loot; el loot queda
-	// siempre como entidades reales toda la vida de la tumba). Se conservan por compatibilidad
-	// de config pero el codigo los IGNORA para las bolsas de cadaver.
-	float acercar_metros = 10;      // (obsoleto)
-	float alejar_metros = 10;       // (obsoleto)
-	int virtualizar_minutos = 0;    // (obsoleto - 0 = nunca virtualizar)
+	// VIRTUALIZACION (baja entidades sin perder loot): la tumba saca su loot a disco cuando
+	// NADIE vivo esta a <alejar_metros por virtualizar_minutos, y lo RESTAURA al ABRIRLA o
+	// al acercarse un player a <acercar_metros. El restore al abrir es SINCRONO (como el
+	// barril) -> el player nunca ve la tumba vacia. acercar < alejar = histeresis (banda
+	// muerta) para que no virtualice/restaure en loop con alguien merodeando cerca.
+	// virtualizar_minutos = 0 -> nunca virtualiza (loot siempre real toda la vida de la tumba).
+	float acercar_metros = 10;      // restaurar cuando un player vivo entra a este radio (+ Open() al abrir)
+	float alejar_metros = 20;       // virtualizar solo si TODOS estan mas lejos que esto
+	int virtualizar_minutos = 2;    // minutos sin nadie cerca antes de virtualizar (0 = off)
+	// FORENSE: un JSON por tumba (muerto/pos/fecha/items/looteadores) en tumbas\.
+	bool forense_habilitado = true;         // escribir el JSON forense por tumba
+	bool forense_registrar_looteadores = true; // registrar quien saca cada item de la tumba
+	int  forense_retener_dias = 3;          // cada arranque borra los JSON de tumbas mas viejos que esto
 
 	void SetDefaults()
 	{
@@ -500,8 +507,11 @@ class ExorCfgBodyCadaver
 		delay_segundos = 1;
 		duracion_minutos = 120;
 		acercar_metros = 10;
-		alejar_metros = 10;
-		virtualizar_minutos = 0;
+		alejar_metros = 20;
+		virtualizar_minutos = 2;
+		forense_habilitado = true;
+		forense_registrar_looteadores = true;
+		forense_retener_dias = 3;
 	}
 }
 

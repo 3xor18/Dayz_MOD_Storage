@@ -59,6 +59,29 @@ modded class ItemBase
 		if (pb)
 			ExorAntiRaid.OnPickupInEnemyTerritory(pb, this);
 	}
+
+	// FORENSE de tumbas: si este item SALIO de una tumba y fue a un JUGADOR, registrar
+	// quien lo looteo en el JSON de esa tumba. Gate barato (bool + cast) para no lagear;
+	// el I/O solo ocurre en un loot real de tumba. Se puede apagar con forense_registrar_
+	// looteadores=false en bodycadaver.json.
+	override void EEItemLocationChanged(notnull InventoryLocation oldLoc, notnull InventoryLocation newLoc)
+	{
+		super.EEItemLocationChanged(oldLoc, newLoc);
+		if (!GetGame() || !GetGame().IsServer())
+			return;
+		if (!GetExorConfig().bodycadaver.forense_registrar_looteadores)
+			return;
+		EntityAI oldParent = oldLoc.GetParent();
+		if (!oldParent)
+			return;
+		Exor_BodyBag tumba = Exor_BodyBag.Cast(oldParent);
+		if (!tumba)
+			return;	// no salio de una tumba -> nada
+		PlayerBase looter = PlayerBase.Cast(GetHierarchyRootPlayer());
+		if (!looter || !looter.GetIdentity())
+			return;	// no fue a un jugador (ej. al piso) -> no es loot
+		ExorTumbaForense.Looteo(tumba.ExorGetID(), GetType(), looter.GetIdentity().GetName(), looter.GetIdentity().GetPlainId());
+	}
 }
 
 // ============================================================================

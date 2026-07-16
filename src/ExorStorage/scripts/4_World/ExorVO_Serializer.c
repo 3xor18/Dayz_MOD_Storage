@@ -419,5 +419,7 @@ class ExorVO_Serializer
 			MakeDirectory(ExorStorageConstants.CONFIG_DIR);
 		if (!FileExist(ExorStorageConstants.STORAGE_DIR))
 			MakeDirectory(ExorStorageConstants.STORAGE_DIR);
+		if (!FileExist(ExorStorageConstants.BODYBAG_DIR))
+			MakeDirectory(ExorStorageConstants.BODYBAG_DIR);	// virtualizacion de tumbas
 	}
 }

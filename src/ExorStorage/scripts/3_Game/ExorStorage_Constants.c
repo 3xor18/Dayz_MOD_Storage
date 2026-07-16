@@ -57,6 +57,9 @@ class ExorStorageConstants
 	// Datos de virtualizacion del contenido de bolsas de cadaver
 	static const string BODYBAG_DIR = "$profile:3xorVanillaOptimization\\bodybags";
 
+	// Un JSON forense por tumba (muerto/pos/fecha/items/looteadores). Se limpia por retencion.
+	static const string TUMBAS_DIR = "$profile:3xorVanillaOptimization\\tumbas";
+
 	// Log de auditoria del server (1 archivo por dia: audit_YYYY-MM-DD.txt, auto-purga)
 	static const string AUDITLOG_DIR = "$profile:3xorVanillaOptimization\\ServerAuditLog";
 

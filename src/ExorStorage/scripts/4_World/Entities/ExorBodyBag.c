@@ -100,26 +100,28 @@ class Exor_BodyBag extends Container_Base
 		m_ExorLastNearMs = GetGame().GetTime();
 	}
 
-	int ExorCargoCount()
+	// items reales que tiene la bolsa AHORA = ropa en los slots de equipo (attachments) +
+	// cargo directo. La mayor parte del loot del muerto vive en los slots (vest/back/body/...),
+	// NO en el cargo, asi que contar solo el cargo daba 0 y rompia el guard de virtualizar.
+	int ExorContentCount()
 	{
 		GameInventory inv = GetInventory();
 		if (!inv)
 			return 0;
+		int n = inv.AttachmentCount();
 		CargoBase cargo = inv.GetCargo();
-		if (!cargo)
-			return 0;
-		return cargo.GetItemCount();
+		if (cargo)
+			n += cargo.GetItemCount();
+		return n;
 	}
 
-	// ------------------------- tick lento (5s): TTL -------------------------
-	// IMPORTANTE: las TUMBAS ya NO se virtualizan. Virtualizar sacaba el loot a disco
-	// tras 5 min sin nadie a <10m y el camino de restauracion no lo devolvia a tiempo
-	// (0 restauraciones en produccion sobre 270 virtualizaciones) -> las tumbas quedaban
-	// VACIAS y se perdian las armas/gear. Una tumba vive pocos minutos (duracion_minutos)
-	// y guarda el loot de UN jugador: el costo de tenerlo real es trivial y evita el
-	// round-trip fragil que ademas degrada las armas. El loot queda SIEMPRE como
-	// entidades reales durante toda la vida de la tumba.
-	void ExorBagTick(int nowMs)
+	// ------------------------- tick (5s): TTL + virtualizar/restaurar por distancia -------------------------
+	// Baja entidades sin perder loot: virtualiza (loot a disco) cuando NADIE vivo esta a
+	// <alejar_metros por virtualizar_minutos, y restaura al acercarse un player a <acercar_
+	// metros (backup del restore-on-open, que es lo confiable). El fix del bug historico
+	// (0 restauraciones -> tumbas vacias) es el DOBLE trigger: proximidad (aca) + Open()
+	// SINCRONO al abrir. acercar < alejar = histeresis para no thrashear.
+	void ExorBagTick(int nowMs, array<Man> players)
 	{
 		ExorCfgBodyCadaver cfg = GetExorConfig().bodycadaver;
 
@@ -137,19 +139,48 @@ class Exor_BodyBag extends Container_Base
 			}
 		}
 
-		// RECUPERACION: una tumba que quedo virtualizada por una version anterior (JSON en
-		// disco) se realiza AHORA, sin depender de que un player se acerque -> devuelve el
-		// loot que estaba atrapado en disco.
+		// YA virtualizada: restaurar si un player vivo se acerca (backup del restore-on-open).
 		if (ExorIsVirtualized())
-			ExorRestore();
+		{
+			if (ExorPlayerNear(players, cfg.acercar_metros))
+				ExorRestore();
+			return;
+		}
+
+		// NO virtualizada: virtualizar si esta activo y hace virtualizar_minutos que no hay
+		// nadie vivo a <alejar_metros. Solo si tiene loot real (si no, no hay nada que sacar).
+		if (cfg.virtualizar_minutos > 0)
+		{
+			bool near = ExorPlayerNear(players, cfg.alejar_metros);
+			if (near)
+				m_ExorLastNearMs = nowMs;
+			else if (nowMs - m_ExorLastNearMs >= cfg.virtualizar_minutos * 60000 && ExorContentCount() > 0)
+				ExorVirtualize();
+		}
 	}
 
-	// ------------------------- tick rapido (5s): recuperar loot legacy -------------------------
-	// Las tumbas ya no duermen/virtualizan. Solo sirve para recuperar de inmediato una
-	// tumba que quedo virtualizada por una version anterior (devuelve su loot a mundo).
-	void ExorBagWake()
+	// hay algun player VIVO dentro de 'radius' de la tumba?
+	bool ExorPlayerNear(array<Man> players, float radius)
 	{
-		if (ExorIsVirtualized())
+		if (!players)
+			return false;
+		vector p = GetPosition();
+		int i;
+		for (i = 0; i < players.Count(); i++)
+		{
+			PlayerBase pb = PlayerBase.Cast(players.Get(i));
+			if (pb && pb.IsAlive() && vector.Distance(pb.GetPosition(), p) <= radius)
+				return true;
+		}
+		return false;
+	}
+
+	// RESTORE-ON-OPEN (confiable, sincrono): cuando un player abre la tumba, recrea el loot
+	// del JSON ANTES de que vea el cargo -> nunca ve la tumba vacia (mismo patron del barril).
+	override void Open()
+	{
+		super.Open();
+		if (GetGame() && GetGame().IsServer() && ExorIsVirtualized())
 			ExorRestore();
 	}
 
@@ -159,21 +190,55 @@ class Exor_BodyBag extends Container_Base
 		f.id = ExorGetID();
 		f.owner_type = GetType();
 
-		CargoBase cargo = GetInventory().GetCargo();
+		GameInventory inv = GetInventory();
 		array<EntityAI> toDelete = new array<EntityAI>;
 		int i;
-		for (i = 0; i < cargo.GetItemCount(); i++)
+
+		// 1) SLOTS DE EQUIPO (ropa: vest/back/body/legs/feet/headgear...). Aca vive la mayor
+		//    parte del loot del muerto; cada prenda con su cargo anidado (CaptureItem recursa).
+		for (i = 0; i < inv.AttachmentCount(); i++)
 		{
-			EntityAI it = cargo.GetItem(i);
-			if (it)
+			EntityAI att = inv.GetAttachmentFromIndex(i);
+			if (att)
 			{
-				f.items.Insert(ExorVO_Serializer.CaptureItem(it));
-				toDelete.Insert(it);
+				f.items.Insert(ExorVO_Serializer.CaptureItem(att));
+				toDelete.Insert(att);
 			}
 		}
 
-		// ANTI-DUPE: escribir el JSON ANTES de borrar (crash-safe)
-		JsonFileLoader<ExorVO_ContainerFile>.JsonSaveFile(ExorGetStoragePath(), f);
+		// 2) CARGO directo de la bolsa (armas movidas al morir / sobrante reubicado).
+		CargoBase cargo = inv.GetCargo();
+		if (cargo)
+		{
+			for (i = 0; i < cargo.GetItemCount(); i++)
+			{
+				EntityAI it = cargo.GetItem(i);
+				if (it)
+				{
+					f.items.Insert(ExorVO_Serializer.CaptureItem(it));
+					toDelete.Insert(it);
+				}
+			}
+		}
+
+		if (f.items.Count() == 0)
+			return;	// nada real que virtualizar
+
+		// El dir bodybags\ DEBE existir o JsonSaveFile falla en SILENCIO (este era el bug
+		// historico: se borraba el loot sin haberlo guardado -> tumbas vacias, 0 restauraciones).
+		if (!FileExist(ExorStorageConstants.BODYBAG_DIR))
+			MakeDirectory(ExorStorageConstants.BODYBAG_DIR);
+
+		// ANTI-DUPE + ANTI-PERDIDA: escribir el JSON ANTES de borrar, y borrar SOLO si el
+		// archivo quedo realmente escrito. Si el save fallo por lo que sea, dejamos el loot
+		// como entidades reales (no se pierde nada) y no marcamos virtualizado.
+		string path = ExorGetStoragePath();
+		JsonFileLoader<ExorVO_ContainerFile>.JsonSaveFile(path, f);
+		if (!FileExist(path))
+		{
+			Print(string.Format("%1 ERROR: BodyBag %2 no se pudo escribir el JSON -> NO virtualizo (loot intacto como entidades)", ExorStorageConstants.LOG, ExorGetID()));
+			return;
+		}
 		for (i = 0; i < toDelete.Count(); i++)
 			GetGame().ObjectDelete(toDelete.Get(i));
 
@@ -188,19 +253,17 @@ class Exor_BodyBag extends Container_Base
 		if (!FileExist(path))
 			return;
 
-		// ANTI-DUPE: si la bolsa YA tiene items reales en el cargo (la persistencia los
-		// cargo tras un crash/reinicio con un save previo a la virtualizacion), esos son
-		// la verdad -> DESCARTAR el JSON, no restaurar encima (si no, se duplican: cargo
-		// real + lo que el engine tiro al piso por "invalid location").
-		CargoBase rc = null;
-		if (GetInventory())
-			rc = GetInventory().GetCargo();
-		if (rc && rc.GetItemCount() > 0)
+		// ANTI-DUPE: si la bolsa YA tiene items reales (ropa en slots + cargo) porque la
+		// persistencia los cargo tras un crash/reinicio con un save previo a la virtualizacion,
+		// esos son la verdad -> DESCARTAR el JSON, no restaurar encima (si no, se duplican).
+		// Cuenta attachments+cargo (la ropa vive en los slots, no en el cargo).
+		int real = ExorContentCount();
+		if (real > 0)
 		{
 			DeleteFile(path);
 			m_ExorVirtualizedSync = false;
 			SetSynchDirty();
-			Print(string.Format("%1 BodyBag %2: tenia %3 items reales -> JSON descartado (anti-dupe)", ExorStorageConstants.LOG, ExorGetID(), rc.GetItemCount()));
+			Print(string.Format("%1 BodyBag %2: tenia %3 items reales -> JSON descartado (anti-dupe)", ExorStorageConstants.LOG, ExorGetID(), real));
 			return;
 		}
 

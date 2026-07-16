@@ -168,7 +168,7 @@ class ExorVO_Manager
 				snapBudget--;
 		}
 
-		// --- Bolsas de cadaver: TTL + virtualizar por lejania ---
+		// --- Bolsas de cadaver: TTL + virtualizar/restaurar por distancia (reusa 'players') ---
 		for (i = m_BodyBags.Count() - 1; i >= 0; i--)
 		{
 			Exor_BodyBag bag = m_BodyBags.Get(i);
@@ -177,7 +177,7 @@ class ExorVO_Manager
 				m_BodyBags.Remove(i);
 				continue;
 			}
-			bag.ExorBagTick(now);
+			bag.ExorBagTick(now, players);
 		}
 	}
 
@@ -246,19 +246,8 @@ class ExorVO_Manager
 	// ------------------------- tick rapido (5s): despertar -------------------------
 	void WakeTick()
 	{
-		int b;
-		// Bolsas de cadaver: des-virtualizar cuando un player vivo se acerca
-		for (b = m_BodyBags.Count() - 1; b >= 0; b--)
-		{
-			Exor_BodyBag bag = m_BodyBags.Get(b);
-			if (!bag)
-			{
-				m_BodyBags.Remove(b);
-				continue;
-			}
-			bag.ExorBagWake();
-		}
-
+		// Las bolsas de cadaver ya NO se tocan aca: su virtualizar/restaurar por distancia
+		// corre en el BarrelTick (5s, que ya tiene la lista de players) + Open() al abrir.
 		ExorCfgVehiculos veh = GetExorConfig().vehiculos;
 		if (!veh.vehiculos_dormir)
 			return;

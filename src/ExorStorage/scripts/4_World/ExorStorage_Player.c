@@ -314,6 +314,15 @@ modded class PlayerBase
 		m_ExorKfSource = source;
 		m_ExorKfAmmo = ammo;	// para clasificar muerte por gas/mina/claymore/explosivo improvisado
 
+		// forense de la tumba: cachear la identidad AHORA (el player esta vivo). En muertes
+		// por explosivo/granada GetIdentity() ya es null en EEKilled -> sin este cache el
+		// "muerto" quedaria "?". Se cachea en cada hit (barato) mientras la identidad es valida.
+		if (GetIdentity())
+		{
+			m_ExorCachedName = GetIdentity().GetName();
+			m_ExorCachedSid = GetIdentity().GetPlainId();
+		}
+
 		// anti-cheat: god mode (recibe impactos reales seguidos sin perder vida). Solo
 		// actua si el vigilado esta en la watchlist -> sale al toque para el resto.
 		ExorAnticheat.OnWatchedHit(this, source);
@@ -344,6 +353,10 @@ modded class PlayerBase
 	}
 
 	protected bool m_ExorDeathDone;   // guard: killfeed+tumba UNA sola vez por muerte
+	protected string m_ExorDeathName; // forense de la tumba: quien murio (capturado con la identidad viva)
+	protected string m_ExorDeathSid;
+	protected string m_ExorCachedName; // ultima identidad valida (cache de EEHitBy) para muertes por explosivo
+	protected string m_ExorCachedSid;
 
 	// Al morir: killfeed + programar la bolsa de cadaver.
 	// GUARD: una granada/explosion dispara EEKilled ~11 veces en el mismo instante (cada
@@ -370,6 +383,22 @@ modded class PlayerBase
 		ExorCfgBodyCadaver cfg = GetExorConfig().bodycadaver;
 		if (!cfg.habilitado)
 			return;
+
+		// forense: capturar quien murio. GetIdentity() vale para muertes normales; en muertes
+		// por explosivo/granada ya es null aca -> fallback al cache de EEHitBy (ultima identidad
+		// viva). Un dummy del VPP admin no tiene identidad ni cache -> queda "?" (correcto).
+		m_ExorDeathName = "?";
+		m_ExorDeathSid = "";
+		if (GetIdentity())
+		{
+			m_ExorDeathName = GetIdentity().GetName();
+			m_ExorDeathSid = GetIdentity().GetPlainId();
+		}
+		else if (m_ExorCachedSid != "")
+		{
+			m_ExorDeathName = m_ExorCachedName;
+			m_ExorDeathSid = m_ExorCachedSid;
+		}
 
 		// Con el cuerpo INTACTO: la ROPA se copia (capturar+recrear, cae en sus slots)
 		// y las ARMAS se guardan para MOVER la entidad real (copiar un arma pierde el
@@ -418,6 +447,8 @@ modded class PlayerBase
 		Exor_BodyBag bag = Exor_BodyBag.SpawnFromLoot(GetPosition(), m_ExorDeathLoot, m_ExorDeathWeapons);
 		if (!bag)
 			return;
+		// forense: registrar la tumba (muerto/pos/fecha/items) en tumbas\<id>.json
+		ExorTumbaForense.Registrar(bag.ExorGetID(), bag.GetPosition(), m_ExorDeathName, m_ExorDeathSid, ExorTimeUtil.NowMinutes(), m_ExorDeathLoot);
 		// Ya es seguro borrar el cuerpo en el acto: las armas se RECREARON en la bolsa (no se
 		// movio la entidad real), asi que borrar el cuerpo no afecta el loot de la bolsa.
 		GetGame().ObjectDelete(this);
