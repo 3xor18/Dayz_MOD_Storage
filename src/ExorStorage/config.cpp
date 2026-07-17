@@ -9,7 +9,7 @@ class CfgPatches
 {
 	class ExorStorage
 	{
-		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight"};
+		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_Fridge", "Exor_Refrigerador_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight"};
 		weapons[] = {};
 		requiredVersion = 0.1;
 		// DZ_Gear_Camping = TerritoryFlag/Kit + SeaChest. DZ_Characters_Backpacks =
@@ -129,6 +129,73 @@ class CfgVehicles
 		displayName = "3xor Barrel 500 (empaquetado)";
 		descriptionShort = "Barril 3xor de 500 slots empaquetado. Tenelo en las manos y usa 'Desplegar barril' para colocarlo.";
 		hiddenSelectionsTextures[] = {"ExorStorage\data\exor_barrel_500_co.paa"};
+	};
+
+	// ==================================================================
+	//  REFRIGERADOR retro (МОСКВА) - mueble de guardado SOLO comida/bebida/agua.
+	//  Hereda la maquinaria del barril 3xor (virtualizacion, empaque, abrir/cerrar
+	//  con animacion de puerta, indestructible, anti-candado). El filtro comida,
+	//  la puerta animada y la logica de BATERIA van en ExorStorage_Fridge.c.
+	//
+	//  BATERIA: slot de CarBattery. Con bateria cargada -> conserva comida + luz
+	//  (+ la bateria se descarga con el tiempo). Sin bateria -> abre/cierra igual
+	//  pero NO conserva (la comida se pudre normal) y sin luz.
+	// ==================================================================
+	class Exor_Fridge: Exor_Barrel_500
+	{
+		scope = 2;
+		displayName = "Refrigerador";
+		descriptionShort = "Guarda comida, bebida y agua. Con una bateria de coche puesta conserva la comida y no se pudre. Vacio y cerrado se puede empaquetar.";
+		// Modelo real de la nevera retro (FBX->p3d en Object Builder; textura via
+		// fridge.rvmat embebido + fridge_co.paa como base).
+		model = "\ExorStorage\data\models\fridge\fridge.p3d";
+		hiddenSelections[] = {};	// usa su propio rvmat, no la retextura camo del barril
+		// Slot de BATERIA DE COCHE (aparece en la UI del contenedor, como en la referencia).
+		attachments[] = {"CarBattery"};
+		class Cargo
+		{
+			itemsCargoSize[] = {10, 12};	// 120 slots
+			openable = 0;
+			allowOwnedCargoManipulation = 1;
+		};
+		// El slot CarBattery ya existe en vanilla; solo lo habilitamos como attachment.
+		// ANIMACION PUERTA: define el source "Lid" como controlable por codigo
+		// (SetAnimationPhase("Lid",...) en ExorStorage_Fridge.c). Sin este bloque el
+		// source no existe y la puerta no gira. animPeriod = giro suave de 0.5s.
+		// El model.cfg liga este source a la rotacion de "Cube.004" sobre "lid_axis".
+		class AnimationSources
+		{
+			class Lid
+			{
+				source = "user";
+				initPhase = 0;		// arranca CERRADA
+				animPeriod = 0.5;	// 0.5s de giro suave
+			};
+		};
+	};
+
+	// Refrigerador EMPAQUETADO: se coloca con HOLOGRAMA (placement vanilla). El
+	// holograma usa el modelo del empacado -> mostramos la nevera real.
+	class Exor_Refrigerador_Packed: Exor_Barrel_Packed_Base
+	{
+		scope = 2;
+		displayName = "Refrigerador";
+		descriptionShort = "Setealo en tu base y guarda la comida. Necesita una bateria de coche para conservar.";
+		// Modelo del empacado/HOLOGRAMA = fridge_packed.p3d (CON punto bbox invisible abajo)
+		// para que el holograma de colocacion NO se vea enterrado (el user pidio "subirlo").
+		// TRADE-OFF: el empacado-parado (tras "Empaquetar") puede flotar (el pack usa
+		// PLACE_ON_SURFACE=bounding). El desplegado usa fridge.p3d (sin bbox) y apoya bien.
+		// FIX REAL pendiente: modelo "caja" (mueble_empacado.glb) como empacado + codigo
+		// de holograma que muestre el refri (necesita Blender para GLB->FBX).
+		model = "\ExorStorage\data\models\fridge\fridge_packed.p3d";
+		hiddenSelections[] = {};
+		// Holograma de colocacion (igual que el barril vanilla): sin esto el ghost
+		// puede quedar SIEMPRE rojo y no dejar colocar.
+		hologramMaterial = "barrel";
+		hologramMaterialPath = "dz\gear\containers\data";
+		slopeTolerance = 0.2;
+		yawPitchRollLimit[] = {45, 45, 45};
+		carveNavmesh = 1;
 	};
 
 	// ------------------------------------------------------------------
