@@ -52,6 +52,7 @@ class CfgMods
 class CfgVehicles
 {
 	class Barrel_ColorBase;	// externa (DZ_Gear_Containers)
+	class Container_Base;	// externa (DZ_Gear_Containers) - base del refrigerador openable
 	class Inventory_Base;	// externa (DZ_Data)
 
 	// ------------------------------------------------------------------
@@ -141,7 +142,12 @@ class CfgVehicles
 	//  (+ la bateria se descarga con el tiempo). Sin bateria -> abre/cierra igual
 	//  pero NO conserva (la comida se pudre normal) y sin luz.
 	// ==================================================================
-	class Exor_Fridge: Exor_Barrel_500
+	// ------------------------------------------------------------------
+	//  REFRIGERADOR (contenedor abrible estilo MMG). Ya NO hereda del barril
+	//  (su virtualizacion/auto-cierre/cooldown rompian el abrir/cerrar); ahora
+	//  es un Container_Base LIMPIO. Ver ExorStorage_Fridge.c.
+	// ------------------------------------------------------------------
+	class Exor_Fridge: Container_Base
 	{
 		scope = 2;
 		displayName = "Refrigerador";
@@ -149,8 +155,16 @@ class CfgVehicles
 		// Modelo real de la nevera retro (FBX->p3d en Object Builder; textura via
 		// fridge.rvmat embebido + fridge_co.paa como base).
 		model = "\ExorStorage\data\models\fridge\fridge.p3d";
-		hiddenSelections[] = {};	// usa su propio rvmat, no la retextura camo del barril
-		// Slot de BATERIA DE COCHE (aparece en la UI del contenedor, como en la referencia).
+		hiddenSelections[] = {};
+		rotationFlags = 17;
+		// COLISION SOLIDA (como MMG): physLayer "item_large" + peso -> el jugador
+		// NO la atraviesa. La FORMA de colision sale de la caja del Geometry LOD.
+		weight = 45000;
+		itemBehaviour = 0;			// mueble pesado (no se lleva en la mano)
+		physLayer = "item_large";
+		itemIsOpenable = 1;
+		carveNavmesh = 1;
+		// Slot de BATERIA DE COCHE (aparece en la UI del contenedor).
 		attachments[] = {"CarBattery"};
 		class Cargo
 		{
@@ -158,11 +172,9 @@ class CfgVehicles
 			openable = 0;
 			allowOwnedCargoManipulation = 1;
 		};
-		// El slot CarBattery ya existe en vanilla; solo lo habilitamos como attachment.
-		// ANIMACION PUERTA: define el source "Lid" como controlable por codigo
-		// (SetAnimationPhase("Lid",...) en ExorStorage_Fridge.c). Sin este bloque el
-		// source no existe y la puerta no gira. animPeriod = giro suave de 0.5s.
-		// El model.cfg liga este source a la rotacion de "Cube.004" sobre "lid_axis".
+		// ANIMACION PUERTA: source "Lid" controlable por codigo
+		// (SetAnimationPhase("Lid",...) en ExorStorage_Fridge.c). El model.cfg liga
+		// este source a la rotacion de la seleccion "lid" sobre "lid_axis".
 		class AnimationSources
 		{
 			class Lid
@@ -170,6 +182,23 @@ class CfgVehicles
 				source = "user";
 				initPhase = 0;		// arranca CERRADA
 				animPeriod = 0.5;	// 0.5s de giro suave
+			};
+		};
+		// Indestructible por codigo (SetAllowDamage(false)); DamageSystem minimo
+		// para que el motor no se queje de health.
+		class DamageSystem
+		{
+			class GlobalHealth
+			{
+				class Health
+				{
+					hitpoints = 5000;
+					healthLevels[] =
+					{
+						{1.0, {}},
+						{0.0, {}}
+					};
+				};
 			};
 		};
 	};

@@ -9,6 +9,8 @@ modded class ActionConstructor
 
 		actions.Insert(ExorActionPackBarrel);
 		actions.Insert(ExorActionDeployBarrel);
+		actions.Insert(ExorActionOpenCloseFridge);
+		actions.Insert(ExorActionPackFridge);
 		actions.Insert(ExorActionFlipVehicle);
 		actions.Insert(ExorActionOpenInvite);
 		actions.Insert(ExorActionJoinGroup);

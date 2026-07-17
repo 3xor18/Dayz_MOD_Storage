@@ -1,93 +1,60 @@
 // ============================================================================
-// 3xorStorage - REFRIGERADOR retro (МОСКВА)
+// 3xorStorage - REFRIGERADOR (contenedor abrible estilo "openable container")
 // ----------------------------------------------------------------------------
-// Mueble de guardado que hereda de Exor_Barrel_Base -> reusa GRATIS toda la
-// maquinaria del barril 3xor (virtualizacion "JSON en vivo", registro en
-// ExorVO_Manager, abrir/cerrar tapa, auto-cerrado, empaque, indestructibilidad,
-// anti-candado). Cambia:
-//   - FILTRO de cargo: SOLO comida / bebida / agua (Edible_Base).
-//   - PUERTA animada: source "Lid" ligado a la seleccion "lid" sobre "lid_axis"
-//     (ver model.cfg). Abre/cierra SIEMPRE, con o sin bateria.
-//   - BATERIA de coche (attachment "CarBattery"): con bateria cargada -> conserva
-//     la comida + (a futuro) luz; la bateria se DESCARGA con el tiempo. Sin
-//     bateria o descargada -> la comida se pudre normal y no hay luz.
-//   - Empaque -> "Exor_Refrigerador_Packed" (se coloca con HOLOGRAMA).
+// REESCRITO 17-jul con el patron de MMG Base Storage (Container_Base openable):
+// antes heredaba del BARRIL 3xor, pero su maquinaria (auto-cierre + virtualizacion
+// + cooldown anti-dupe) desincronizaba el abrir/cerrar y ocultaba el inventario.
+// Ahora es un Container_Base LIMPIO:
+//   - Estado abierto/cerrado propio (m_ExorFridgeOpen), net-sincronizado.
+//   - Open()/Close() bloquean/desbloquean el inventario (Lock/UnlockInventory) ->
+//     con la nevera CERRADA no se accede al cargo; ABIERTA si. Igual que MMG.
+//   - PUERTA animada: SetAnimationPhase("Lid", abierto?1:0) ligado a ESE estado.
+//   - FILTRO de cargo: solo comida/bebida/agua (Edible_Base) y solo si esta ABIERTA.
+//   - COLISION SOLIDA: via config (physLayer="item_large" + weight) + la caja del
+//     Geometry LOD del modelo. Ya NO se atraviesa.
+//   - BATERIA de coche (attachment "CarBattery"): con carga conserva la comida y se
+//     descarga con el tiempo. Empaca sin bateria.
+//   - Se COLOCA con holograma (item empacado) y se puede RE-EMPACAR (accion propia).
+// Persistencia: nativa de Container_Base (el cargo sobrevive reinicios) + guardamos
+// el estado abierto/cerrado.
 // ============================================================================
 
-class Exor_Fridge : Exor_Barrel_Base
+class Exor_Fridge : Container_Base
 {
+	// --- estado ABIERTO/CERRADO (net-sync propio, patron MMG) ---
+	protected bool		m_ExorFridgeOpen;		// true = puerta abierta / inventario accesible
+	protected bool		m_ExorDoorAnimApplied;	// ultimo estado aplicado a la animacion
+	protected bool		m_ExorDoorAnimInit;
+
 	// --- BATERIA / energia ---
 	protected ref Timer	m_ExorFridgeTimer;
 	protected bool		m_ExorPowered;			// true = bateria puesta y con carga
-
-	// --- PUERTA (animacion sincronizada, patron MMG/contenedor-abrible vanilla) ---
-	// Estado de la puerta REGISTRADO como net-sync propio. No dependemos del sync
-	// interno del barril: el server lo setea + SetSynchDirty(), y el CLIENTE lo
-	// recibe en OnVariablesSynchronized y anima. Asi la puerta gira para todos.
-	protected bool		m_ExorDoorOpen;
-	// Ultimo estado aplicado a la animacion. Evita RE-DISPARAR la animacion en cada
-	// OnVariablesSynchronized (el barril sincroniza otras vars seguido: virtualizacion,
-	// comida, etc.) -> sin esto la puerta re-animaba "abrir" aunque ya estuviera abierta.
-	protected bool		m_ExorDoorAnimApplied;
-	protected bool		m_ExorDoorAnimInit;		// true tras la 1ra aplicacion
+	protected const float	EXOR_FRIDGE_TICK = 30.0;	// cada cuanto tickea la bateria (s)
+	protected const float	EXOR_FRIDGE_DRAIN = 5.0;	// energia consumida por tick
 
 	void Exor_Fridge()
 	{
-		RegisterNetSyncVariableBool("m_ExorDoorOpen");
-	}
-	// cada cuanto tickea la logica de bateria/conservacion (segundos)
-	protected const float	EXOR_FRIDGE_TICK = 30.0;
-	// energia que consume la nevera por tick (unidades de energia de la CarBattery).
-	// La CarBattery vanilla arranca con bastante carga; ajustable tras testear.
-	protected const float	EXOR_FRIDGE_DRAIN = 5.0;
-
-	// FILTRO: el refrigerador SOLO acepta comida, bebida y agua en el CARGO.
-	// (La bateria NO pasa por aca: va al slot de attachment "CarBattery".)
-	override bool CanReceiveItemIntoCargo(EntityAI item)
-	{
-		if (item && !item.IsInherited(Edible_Base))
-			return false;
-		return super.CanReceiveItemIntoCargo(item);
-	}
-
-	// desplegado -> empacado (al empaquetarlo con la accion del barril, heredada)
-	override string ExorGetPackedType()
-	{
-		return "Exor_Refrigerador_Packed";
-	}
-
-	// ----- ANIMACION DE LA PUERTA (control explicito, estilo MMG) --------------
-	// La puerta (seleccion "lid") rota sobre "lid_axis" segun la fase del source
-	// "Lid": 0 = cerrada (angle0), 1 = abierta (angle1). Ver model.cfg.
-	// Lee el estado del net-sync var m_ExorDoorOpen -> mismo valor en server y
-	// cliente, se ejecuta en AMBOS lados (server: Open/Close; cliente: OnVarsSync).
-	void ExorUpdateDoor()
-	{
-		// Solo (re)aplicar cuando el estado CAMBIA respecto a lo ya aplicado. Sin este
-		// guard, cada sync re-llamaba SetAnimationPhase y la puerta re-animaba "abrir".
-		if (m_ExorDoorAnimInit && m_ExorDoorOpen == m_ExorDoorAnimApplied)
-			return;
-		m_ExorDoorAnimInit = true;
-		m_ExorDoorAnimApplied = m_ExorDoorOpen;
-
-		float phase = 0.0;
-		if (m_ExorDoorOpen)
-			phase = 1.0;
-		SetAnimationPhase("Lid", phase);
+		RegisterNetSyncVariableBool("m_ExorFridgeOpen");
 	}
 
 	override void EEInit()
 	{
 		super.EEInit();
-		m_ExorDoorOpen = IsOpen();	// sincroniza el estado inicial con el del contenedor
-		ExorUpdateDoor();	// al aparecer: puerta segun estado (recien desplegada = cerrada)
 
-		// Timer server-side de bateria/conservacion.
 		if (GetGame().IsServer())
 		{
+			SetAllowDamage(false);		// indestructible (consistente con el mod)
+			m_ExorFridgeOpen = false;	// arranca CERRADA
+			if (GetInventory())
+				GetInventory().LockInventory(HIDE_INV_FROM_SCRIPT);	// cerrada = sin acceso
+			SetSynchDirty();
+
+			// Timer server-side de bateria/conservacion.
 			m_ExorFridgeTimer = new Timer(CALL_CATEGORY_SYSTEM);
 			m_ExorFridgeTimer.Run(EXOR_FRIDGE_TICK, this, "ExorFridgeTick", null, true);
 		}
+
+		ExorUpdateDoor();	// puerta segun estado (cerrada al aparecer)
 	}
 
 	override void EEDelete(EntityAI parent)
@@ -97,41 +64,161 @@ class Exor_Fridge : Exor_Barrel_Base
 		super.EEDelete(parent);
 	}
 
-	// Abrir/cerrar corre en el SERVER: actualiza el estado, lo marca para sync y
-	// anima localmente (asi el jugador que la abre la ve al instante).
+	// ---------------------- ABRIR / CERRAR (patron MMG) ------------------------
 	override void Open()
 	{
-		super.Open();
-		m_ExorDoorOpen = true;
-		SetSynchDirty();		// empuja m_ExorDoorOpen a los clientes
+		m_ExorFridgeOpen = true;
+		SetSynchDirty();		// empuja el estado a los clientes
+		if (GetInventory())
+			GetInventory().UnlockInventory(HIDE_INV_FROM_SCRIPT);	// abierta = accesible
 		ExorUpdateDoor();
 	}
 
 	override void Close()
 	{
-		super.Close();
-		m_ExorDoorOpen = false;
+		m_ExorFridgeOpen = false;
 		SetSynchDirty();
+		if (GetInventory())
+			GetInventory().LockInventory(HIDE_INV_FROM_SCRIPT);
 		ExorUpdateDoor();
 	}
 
-	// En el CLIENTE la puerta se actualiza al recibir m_ExorDoorOpen sincronizado.
+	override bool IsOpen()
+	{
+		return m_ExorFridgeOpen;
+	}
+
+	// En el CLIENTE el estado llega por sync -> reflejar la puerta.
 	override void OnVariablesSynchronized()
 	{
 		super.OnVariablesSynchronized();
 		ExorUpdateDoor();
 	}
 
-	// ----- LOGICA DE BATERIA ---------------------------------------------------
-	// Devuelve la CarBattery puesta (o null). Su energia vive en el
-	// ComponentEnergyManager (GetCompEM()).
+	// Anima la puerta (seleccion "lid" sobre "lid_axis"; ver model.cfg). Solo
+	// (re)aplica cuando el estado CAMBIA (evita re-animar en cada sync).
+	void ExorUpdateDoor()
+	{
+		bool open = IsOpen();
+		if (m_ExorDoorAnimInit && open == m_ExorDoorAnimApplied)
+			return;
+		m_ExorDoorAnimInit = true;
+		m_ExorDoorAnimApplied = open;
+
+		float phase = 0.0;
+		if (open)
+			phase = 1.0;
+		SetAnimationPhase("Lid", phase);
+	}
+
+	// ---------------------- FILTRO DE CARGO ------------------------------------
+	// Solo comida/bebida/agua (Edible_Base) y SOLO con la nevera abierta.
+	override bool CanReceiveItemIntoCargo(EntityAI item)
+	{
+		if (!IsOpen())
+			return false;
+		if (item && !item.IsInherited(Edible_Base))
+			return false;
+		return super.CanReceiveItemIntoCargo(item);
+	}
+
+	override bool CanReleaseCargo(EntityAI cargo)
+	{
+		return IsOpen();
+	}
+
+	// La nevera desplegada NO se levanta a la mano ni entra en otro contenedor
+	// (es un mueble colocado; para moverla se RE-EMPACA con la accion propia).
+	override bool CanPutInCargo(EntityAI parent)
+	{
+		return false;
+	}
+
+	override bool CanPutIntoHands(EntityAI parent)
+	{
+		return false;
+	}
+
+	override bool IsHeavyBehaviour()
+	{
+		return true;
+	}
+
+	override bool IsTwoHandedBehaviour()
+	{
+		return true;
+	}
+
+	// ---------------------- PERSISTENCIA del estado ----------------------------
+	override void OnStoreSave(ParamsWriteContext ctx)
+	{
+		super.OnStoreSave(ctx);
+		ctx.Write(m_ExorFridgeOpen);
+	}
+
+	override bool OnStoreLoad(ParamsReadContext ctx, int version)
+	{
+		if (!super.OnStoreLoad(ctx, version))
+			return false;
+		if (!ctx.Read(m_ExorFridgeOpen))
+			return false;
+		return true;
+	}
+
+	override void AfterStoreLoad()
+	{
+		super.AfterStoreLoad();
+		// reflejar el estado guardado tras cargar (bloqueo de inventario + puerta)
+		if (GetInventory())
+		{
+			if (m_ExorFridgeOpen)
+				GetInventory().UnlockInventory(HIDE_INV_FROM_SCRIPT);
+			else
+				GetInventory().LockInventory(HIDE_INV_FROM_SCRIPT);
+		}
+		SetSynchDirty();
+		ExorUpdateDoor();
+	}
+
+	// ---------------------- ACCIONES -------------------------------------------
+	override void SetActions()
+	{
+		super.SetActions();
+		AddAction(ExorActionOpenCloseFridge);
+		AddAction(ExorActionPackFridge);
+	}
+
+	// ---------------------- RE-EMPAQUE -----------------------------------------
+	// La nevera se puede empaquetar si esta CERRADA, sana y VACIA (sin comida ni
+	// bateria). Lo usa ExorActionPackFridge.
+	bool ExorCanBePacked()
+	{
+		if (IsOpen())
+			return false;
+		if (IsDamageDestroyed())
+			return false;
+		if (GetInventory())
+		{
+			CargoBase cargo = GetInventory().GetCargo();
+			if (cargo && cargo.GetItemCount() > 0)
+				return false;
+			if (GetInventory().AttachmentCount() > 0)	// bateria puesta
+				return false;
+		}
+		return true;
+	}
+
+	string ExorGetPackedType()
+	{
+		return "Exor_Refrigerador_Packed";
+	}
+
+	// ---------------------- LOGICA DE BATERIA ----------------------------------
 	protected CarBattery ExorGetBattery()
 	{
 		return CarBattery.Cast(FindAttachmentBySlotName("CarBattery"));
 	}
 
-	// Tick server: mira si hay bateria con carga -> "powered". Si esta powered,
-	// descarga la bateria y conserva la comida.
 	void ExorFridgeTick()
 	{
 		if (!GetGame().IsServer())
@@ -146,7 +233,6 @@ class Exor_Fridge : Exor_Barrel_Base
 			if (energy > 0)
 			{
 				powered = true;
-				// descarga: consume energia por tick (no baja de 0)
 				float left = energy - EXOR_FRIDGE_DRAIN;
 				if (left < 0)
 					left = 0;
@@ -158,17 +244,10 @@ class Exor_Fridge : Exor_Barrel_Base
 
 		if (powered)
 			ExorPreserveCargoFood();
-		// TODO(luz): cuando el modelo tenga una seleccion "light" emisiva, prenderla
-		// aca segun 'powered' (SetEmissive / hidden selection). Fase 2.
 	}
 
-	// Conserva la comida del cargo mientras hay bateria.
-	// FASE 1 (segura, compila): mantiene la comida SECA (SetWet 0) -> el motor de
-	// DayZ pudre mucho mas lento la comida seca+fria. NO congela del todo la
-	// pudricion todavia.
-	// FASE 2 (pendiente, requiere el source vanilla de Edible_Base): resetear el
-	// progreso de decay para que NO avance a ROTTEN mientras esta powered, y cubrir
-	// tambien la comida VIRTUALIZADA (el barril virtualiza el cargo).
+	// Conserva la comida del cargo mientras hay bateria (FASE 1: la mantiene seca,
+	// el motor pudre mucho mas lento la comida seca+fria).
 	protected void ExorPreserveCargoFood()
 	{
 		CargoBase cargo = GetInventory().GetCargo();
