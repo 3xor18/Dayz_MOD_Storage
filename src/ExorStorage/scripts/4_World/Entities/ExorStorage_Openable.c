@@ -155,7 +155,7 @@ class Exor_OpenableStorage : Container_Base
 	}
 
 	// Anima la puerta segun el estado. Solo (re)aplica cuando CAMBIA (evita re-animar
-	// en cada sync). El source lo da ExorGetDoorAnimSource() (default "Lid").
+	// en cada sync). Aplica la fase via ExorApplyDoorPhase (overridable para 2+ puertas).
 	void ExorUpdateDoorAnim()
 	{
 		bool open = IsOpen();
@@ -166,7 +166,59 @@ class Exor_OpenableStorage : Container_Base
 		float phase = 0.0;
 		if (open)
 			phase = 1.0;
+		ExorApplyDoorPhase(phase);
+	}
+
+	// Aplica la fase de animacion a la(s) puerta(s). Default: UNA puerta con el source de
+	// ExorGetDoorAnimSource(). Un mueble de 2+ puertas lo overridea y setea cada source.
+	void ExorApplyDoorPhase(float phase)
+	{
 		SetAnimationPhase(ExorGetDoorAnimSource(), phase);
+	}
+
+	// ======================= COLOCACION (compartida por todos los muebles) =======================
+	// La llaman los items empacados en OnPlacementComplete. Crea el mueble ESTATICO
+	// (create_physics=false, no se asienta/hunde) y apoya su base sobre la superficie REAL
+	// bajo el punto de colocacion (terreno O piso de base) via raycast que IGNORA el
+	// holograma del preview (si no, el raycast lo golpea a el). baseOffset = offset
+	// origen->patas del modelo (calibrar in-game por mueble: se hunde -> subir; flota -> bajar).
+	static EntityAI ExorDeployFurniture(Man player, string type, vector position, vector orientation, float baseOffset, float health)
+	{
+		if (!GetGame().IsServer())
+			return null;
+
+		PlayerBase pb = PlayerBase.Cast(player);
+		Object ignoreObj = pb;
+		if (pb)
+		{
+			Hologram holo = pb.GetHologramServer();
+			if (holo && holo.GetProjectionEntity())
+				ignoreObj = holo.GetProjectionEntity();
+		}
+
+		vector rayStart = Vector(position[0], position[1] + 2.5, position[2]);
+		vector rayEnd   = Vector(position[0], position[1] - 2.5, position[2]);
+		vector hitPos, hitNorm;
+		int hitComp;
+		float surfaceY;
+		if (DayZPhysics.RaycastRV(rayStart, rayEnd, hitPos, hitNorm, hitComp, null, null, ignoreObj, true, false))
+			surfaceY = hitPos[1];
+		else
+			surfaceY = GetGame().SurfaceY(position[0], position[2]);
+
+		vector pos = position;
+		pos[1] = surfaceY - baseOffset;
+
+		EntityAI e = EntityAI.Cast(GetGame().CreateObject(type, pos, false, false, false));
+		if (!e)
+		{
+			Print("[3xorStorage] ERROR: no se pudo crear " + type + " al colocar el mueble");
+			return null;
+		}
+		e.SetPosition(pos);
+		e.SetOrientation(orientation);
+		e.SetHealth01("", "", health);
+		return e;
 	}
 
 	// ======================= FILTRO / REGLAS DE CARGO =======================

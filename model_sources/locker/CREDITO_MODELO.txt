@@ -1,0 +1,2 @@
+objetos FBX: Locker_Equip_01_body, locker_Equip_01_L_Door, locker_Equip_01_R_Door
+Modelo: Locker Equipment (locker de equipo 2 puertas). Ver licencia en modelos-3d-descargados-set-mod.

@@ -193,47 +193,12 @@ class Exor_Refrigerador_Packed : ItemBase
 		if (!GetGame().IsServer())
 			return;
 
-		// Colocacion: crear el objeto y apoyar su BASE (origen del modelo, Y=0) EXACTO
-		// sobre la superficie del terreno. El holograma reportaba una Y por debajo del
-		// piso (por el punto bbox del modelo empacado) -> la nevera se hundia. Forzamos
-		// Y = altura del terreno en ese XZ. create_local=false -> objeto persistente.
-		// RAYCAST a la superficie REAL bajo el punto de colocacion (piso de base O terreno).
-		// IMPORTANTE: ignorar el HOLOGRAMA del preview (sigue ahi al setear) -> si no, el
-		// raycast lo golpea a el en vez del piso (en el pasto daba +1.5m). Fallback: SurfaceY.
-		PlayerBase pb = PlayerBase.Cast(player);
-		Object ignoreObj = pb;
-		if (pb)
-		{
-			Hologram holo = pb.GetHologramServer();
-			if (holo && holo.GetProjectionEntity())
-				ignoreObj = holo.GetProjectionEntity();
-		}
-		vector rayStart = Vector(position[0], position[1] + 2.5, position[2]);
-		vector rayEnd   = Vector(position[0], position[1] - 2.5, position[2]);
-		vector hitPos, hitNorm;
-		int hitComp;
-		float surfaceY;
-		if (DayZPhysics.RaycastRV(rayStart, rayEnd, hitPos, hitNorm, hitComp, null, null, ignoreObj, true, false))
-			surfaceY = hitPos[1];
-		else
-			surfaceY = GetGame().SurfaceY(position[0], position[2]);
-
-		// Offset entre el origen del modelo y sus patas (calibrado in-game). Se resta para
-		// apoyar las patas justo sobre la superficie del raycast.
-		float baseOffset = 0.65;
-		vector pos = position;
-		pos[1] = surfaceY - baseOffset;
-
-		// create_physics=FALSE -> ESTATICO (no se asienta). Colision del jugador = geometria.
-		EntityAI fridge = EntityAI.Cast(GetGame().CreateObject("Exor_Fridge", pos, false, false, false));
+		// Colocacion compartida: mueble estatico + base sobre la superficie real (raycast
+		// que ignora el holograma). baseOffset 0.65 = calibrado in-game para la nevera.
+		EntityAI fridge = Exor_OpenableStorage.ExorDeployFurniture(player, "Exor_Fridge", position, orientation, 0.65, GetHealth01("", ""));
 		if (!fridge)
-		{
-			Print("[3xorStorage] ERROR: no se pudo crear Exor_Fridge al setear el refrigerador");
 			return;
-		}
-		fridge.SetPosition(pos);
-		fridge.SetOrientation(orientation);
-		fridge.SetHealth01("", "", GetHealth01("", ""));
+		Print("[3xorStorage] Refrigerador seteado en " + fridge.GetPosition().ToString());
 		Delete();
 	}
 }

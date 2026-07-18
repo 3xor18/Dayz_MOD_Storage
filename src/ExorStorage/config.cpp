@@ -9,7 +9,7 @@ class CfgPatches
 {
 	class ExorStorage
 	{
-		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_OpenableStorage", "Exor_Fridge", "Exor_Refrigerador_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight"};
+		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_OpenableStorage", "Exor_Fridge", "Exor_Refrigerador_Packed", "Exor_Locker", "Exor_Locker_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight"};
 		weapons[] = {};
 		requiredVersion = 0.1;
 		// DZ_Gear_Camping = TerritoryFlag/Kit + SeaChest. DZ_Characters_Backpacks =
@@ -222,6 +222,58 @@ class CfgVehicles
 		hiddenSelections[] = {};
 		// Holograma de colocacion (igual que el barril vanilla): sin esto el ghost
 		// puede quedar SIEMPRE rojo y no dejar colocar.
+		hologramMaterial = "barrel";
+		hologramMaterialPath = "dz\gear\containers\data";
+		slopeTolerance = 0.2;
+		yawPitchRollLimit[] = {45, 45, 45};
+		carveNavmesh = 1;
+	};
+
+	// ------------------------------------------------------------------
+	//  LOCKER de equipo (2 puertas). Guarda ropa/armas/gear (NO comida).
+	//  Hereda de Exor_OpenableStorage. Ver ExorStorage_Locker.c.
+	// ------------------------------------------------------------------
+	class Exor_Locker: Exor_OpenableStorage
+	{
+		scope = 2;
+		displayName = "Locker de Equipo";
+		descriptionShort = "Armario de 2 puertas. Guarda ropa, armas y equipo (no comida). Vacio y cerrado se empaqueta con un destornillador.";
+		model = "\ExorStorage\data\models\locker\locker.p3d";
+		hiddenSelections[] = {};
+		class Cargo
+		{
+			itemsCargoSize[] = {10, 50};	// 500 slots
+			openable = 0;
+			allowOwnedCargoManipulation = 1;
+		};
+		// DOS puertas: sources L_Door y R_Door (el model.cfg liga cada uno a su seleccion).
+		class AnimationSources
+		{
+			class L_Door
+			{
+				source = "user";
+				initPhase = 0;
+				animPeriod = 0.5;
+			};
+			class R_Door
+			{
+				source = "user";
+				initPhase = 0;
+				animPeriod = 0.5;
+			};
+		};
+	};
+
+	// Locker EMPAQUETADO: se coloca con HOLOGRAMA. Usa locker_packed.p3d = SOLO el LOD
+	// visual (sin Geometry LOD) -> el holograma NO tiene colision y no se cancela al colocar
+	// (el deployado locker.p3d si tiene colision).
+	class Exor_Locker_Packed: Exor_Barrel_Packed_Base
+	{
+		scope = 2;
+		displayName = "Locker de Equipo";
+		descriptionShort = "Setealo en tu base para guardar ropa, armas y equipo.";
+		model = "\ExorStorage\data\models\locker\locker_packed.p3d";
+		hiddenSelections[] = {};
 		hologramMaterial = "barrel";
 		hologramMaterialPath = "dz\gear\containers\data";
 		slopeTolerance = 0.2;
