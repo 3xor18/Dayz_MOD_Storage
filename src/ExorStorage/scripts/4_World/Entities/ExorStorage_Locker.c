@@ -12,6 +12,10 @@ class Exor_Locker : Exor_OpenableStorage
 {
 	override string ExorGetPackedType() { return "Exor_Locker_Packed"; }
 
+	// Virtualizar TAMBIEN la ropa/gear de los slots de equipo (attachments) al cerrar/
+	// alejarse: se guardan en JSON y se sacan del mundo (0 carga con 55 players).
+	override bool ExorVirtualizeAttachments() { return true; }
+
 	// Guarda ropa/armas/gear; NO comida (Edible_Base) ni bebida/agua (Bottle_Base).
 	override bool ExorCanStore(EntityAI item)
 	{

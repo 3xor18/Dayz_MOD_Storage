@@ -29,9 +29,9 @@ class ExorCfgStorage
 	// mientras haya alguien a menos de cerrar_distancia_metros, el barril queda abierto;
 	// recien se cierra auto_cerrar_segundos DESPUES de que el jugador se aleja. Asi nunca
 	// se cierra mientras lo estas usando (aunque te quedes ordenando tu inventario).
-	int auto_cerrar_segundos = 10;       // se cierra a los Xs de que NO haya nadie cerca (0 = off)
-	int virtualizar_segundos = 10;       // virtualiza a los Xs de cerrado (0 = off)
-	float cerrar_distancia_metros = 5.0; // radio para considerar "hay un jugador usando el barril"
+	int auto_cerrar_segundos = 5;        // se cierra a los Xs de que NO haya nadie cerca (0 = off)
+	int virtualizar_segundos = 5;        // virtualiza a los Xs de cerrado (0 = off) -> total ~10s
+	float cerrar_distancia_metros = 10.0; // radio para considerar "hay un jugador cerca" (aleja 10m = se va)
 	float multiplicador_comida = 2.0;
 	bool permitir_ropa_con_items = true;
 	ref TStringArray blacklist;
@@ -49,9 +49,9 @@ class ExorCfgStorage
 	void SetDefaults()
 	{
 		version = 1;
-		auto_cerrar_segundos = 10;
-		virtualizar_segundos = 10;
-		cerrar_distancia_metros = 5.0;
+		auto_cerrar_segundos = 5;
+		virtualizar_segundos = 5;
+		cerrar_distancia_metros = 10.0;
 		multiplicador_comida = 2.0;
 		permitir_ropa_con_items = true;
 		cooldown_abrir_segundos = 3;

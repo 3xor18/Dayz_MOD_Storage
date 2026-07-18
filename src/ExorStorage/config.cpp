@@ -9,7 +9,7 @@ class CfgPatches
 {
 	class ExorStorage
 	{
-		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_OpenableStorage", "Exor_Fridge", "Exor_Refrigerador_Packed", "Exor_Locker", "Exor_Locker_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight"};
+		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_OpenableStorage", "Exor_Fridge", "Exor_Refrigerador_Packed", "Exor_Locker", "Exor_Locker_Packed", "Exor_MuebleArmas", "Exor_MuebleArmas_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight"};
 		weapons[] = {};
 		requiredVersion = 0.1;
 		// DZ_Gear_Camping = TerritoryFlag/Kit + SeaChest. DZ_Characters_Backpacks =
@@ -287,6 +287,67 @@ class CfgVehicles
 	};
 
 	// ------------------------------------------------------------------
+	//  MUEBLE DE ARMAS (gun cabinet): 1 puerta con ventana + 2 cajones, los
+	//  tres animados. 300 slots de cargo. Mostrara las armas en el estante
+	//  (proxies) - se agrega en la fase de proxies. Ver ExorStorage_GunCab.c.
+	// ------------------------------------------------------------------
+	class Exor_MuebleArmas: Exor_OpenableStorage
+	{
+		scope = 2;
+		displayName = "Mueble de Armas";
+		descriptionShort = "Vitrina para armas: puerta con ventana + 2 cajones. Guarda armas y equipo. Vacio y cerrado se empaqueta con un destornillador.";
+		model = "\ExorStorage\data\models\guncab\guncab.p3d";
+		hiddenSelections[] = {};
+		// 8 SLOTS DE ARMAS (como los slots de la tumba): el player cuelga sus armas.
+		// Los slots Exor_Gun1..8 estan en CfgSlots; las armas (Rifle_Base/Pistol_Base)
+		// aceptan estos slots via inventorySlot (patch en CfgWeapons). Solo accesibles
+		// con el mueble ABIERTO (el openable oculta el inventario cerrado).
+		attachments[] = {"Exor_Gun1", "Exor_Gun2", "Exor_Gun3", "Exor_Gun4", "Exor_Gun5", "Exor_Gun6", "Exor_Gun7", "Exor_Gun8"};
+		class Cargo
+		{
+			itemsCargoSize[] = {15, 20};	// 300 slots
+			openable = 0;
+			allowOwnedCargoManipulation = 1;
+		};
+		// TRES partes moviles: puerta principal (rotacion) + 2 cajones (traslacion).
+		class AnimationSources
+		{
+			class MainDoor
+			{
+				source = "user";
+				initPhase = 0;
+				animPeriod = 0.6;
+			};
+			class Drawer01
+			{
+				source = "user";
+				initPhase = 0;
+				animPeriod = 0.5;
+			};
+			class Drawer02
+			{
+				source = "user";
+				initPhase = 0;
+				animPeriod = 0.5;
+			};
+		};
+	};
+
+	class Exor_MuebleArmas_Packed: Exor_Barrel_Packed_Base
+	{
+		scope = 2;
+		displayName = "Mueble de Armas";
+		descriptionShort = "Setealo en tu base para guardar y exhibir tus armas.";
+		model = "\ExorStorage\data\models\guncab\guncab_packed.p3d";
+		hiddenSelections[] = {};
+		hologramMaterial = "barrel";
+		hologramMaterialPath = "dz\gear\containers\data";
+		slopeTolerance = 0.2;
+		yawPitchRollLimit[] = {45, 45, 45};
+		carveNavmesh = 1;
+	};
+
+	// ------------------------------------------------------------------
 	//  Bolsa de cadaver: al morir, el cuerpo se convierte en este contenedor
 	//  con todo el loot. Hereda de SeaChest (carriable en manos + cargo +
 	//  persistencia). El loot/virtualizacion/TTL los maneja ExorBodyBag.c.
@@ -511,4 +572,41 @@ class CfgMagazines
 	class Ammo_ImprovisedBolt_1: Ammunition_Base { count = 100; };
 	class Ammo_ImprovisedBolt_2: Ammunition_Base { count = 100; };
 	class Ammo_CupidsBolt: Ammunition_Base { count = 100; };
+};
+
+// ============================================================================
+//  SLOTS DE ARMAS del Mueble de Armas (Exor_Gun1..8). Cada slot acepta cualquier
+//  arma. Se muestran como attachments en la UI del mueble (solo abierto).
+// ============================================================================
+class CfgSlots
+{
+	class Slot_Exor_Gun1 { name = "Exor_Gun1"; displayName = "Arma 1"; ghostIcon = "missing"; selection = "Exor_Gun1"; };
+	class Slot_Exor_Gun2 { name = "Exor_Gun2"; displayName = "Arma 2"; ghostIcon = "missing"; selection = "Exor_Gun2"; };
+	class Slot_Exor_Gun3 { name = "Exor_Gun3"; displayName = "Arma 3"; ghostIcon = "missing"; selection = "Exor_Gun3"; };
+	class Slot_Exor_Gun4 { name = "Exor_Gun4"; displayName = "Arma 4"; ghostIcon = "missing"; selection = "Exor_Gun4"; };
+	class Slot_Exor_Gun5 { name = "Exor_Gun5"; displayName = "Arma 5"; ghostIcon = "missing"; selection = "Exor_Gun5"; };
+	class Slot_Exor_Gun6 { name = "Exor_Gun6"; displayName = "Arma 6"; ghostIcon = "missing"; selection = "Exor_Gun6"; };
+	class Slot_Exor_Gun7 { name = "Exor_Gun7"; displayName = "Arma 7"; ghostIcon = "missing"; selection = "Exor_Gun7"; };
+	class Slot_Exor_Gun8 { name = "Exor_Gun8"; displayName = "Arma 8"; ghostIcon = "missing"; selection = "Exor_Gun8"; };
+};
+
+// Habilitar que TODAS las armas (rifles + pistolas) puedan colgarse en los 8 slots.
+// REGLAS CRITICAS (ver crash+bug 18-jul):
+//  1) DECLARAR la clase padre en el merge (`: RifleCore`), sino el motor resetea la
+//     herencia y CRASHEA (RifleCore-> vacio).
+//  2) USAR `+=` NO `=`: `=` BORRA los inventorySlot vanilla {Shoulder, Melee} del arma
+//     -> el player NO puede ponerse el arma al hombro. `+=` conserva los del player y
+//     solo AGREGA los slots del mueble. NUNCA romper mecanicas del personaje.
+class CfgWeapons
+{
+	class RifleCore;
+	class PistolCore;
+	class Rifle_Base: RifleCore
+	{
+		inventorySlot[] += {"Exor_Gun1", "Exor_Gun2", "Exor_Gun3", "Exor_Gun4", "Exor_Gun5", "Exor_Gun6", "Exor_Gun7", "Exor_Gun8"};
+	};
+	class Pistol_Base: PistolCore
+	{
+		inventorySlot[] += {"Exor_Gun1", "Exor_Gun2", "Exor_Gun3", "Exor_Gun4", "Exor_Gun5", "Exor_Gun6", "Exor_Gun7", "Exor_Gun8"};
+	};
 };

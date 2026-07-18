@@ -47,6 +47,9 @@ class Exor_OpenableStorage : Container_Base
 	bool ExorCanStore(EntityAI item) { return true; }
 	// tipo del item empacado (para re-empaquetar). "" = no empaquetable.
 	string ExorGetPackedType() { return ""; }
+	// virtualizar TAMBIEN los attachments (ej armas en slots del mueble, ropa en el
+	// locker). Default FALSE (barril/nevera: la nevera NO virtualiza su bateria).
+	bool ExorVirtualizeAttachments() { return false; }
 
 	void ExorDbg(string ev)
 	{
@@ -161,12 +164,35 @@ class Exor_OpenableStorage : Container_Base
 		bool open = IsOpen();
 		if (m_DoorAnimInit && open == m_DoorAnimApplied)
 			return;
+		bool wasInit = m_DoorAnimInit;
 		m_DoorAnimInit = true;
 		m_DoorAnimApplied = open;
 		float phase = 0.0;
 		if (open)
 			phase = 1.0;
 		ExorApplyDoorPhase(phase);
+		// SONIDO de abrir/cerrar: solo en toggles REALES (no en el spawn inicial) y en
+		// clientes (el sonido es local; en clientes cercanos suena via OnVariablesSynchronized).
+		if (wasInit && !GetGame().IsDedicatedServer())
+			ExorPlayOpenCloseSound(open);
+	}
+
+	// Sound sets (vanilla). Overridable por subclase si se quiere otro sonido.
+	string ExorGetOpenSoundSet()  { return "Barrel_Open_SoundSet"; }
+	string ExorGetCloseSoundSet() { return "Barrel_Close_SoundSet"; }
+
+	void ExorPlayOpenCloseSound(bool open)
+	{
+		string ss;
+		if (open)
+			ss = ExorGetOpenSoundSet();
+		else
+			ss = ExorGetCloseSoundSet();
+		if (ss == "")
+			return;
+		EffectSound snd = SEffectManager.PlaySoundOnObject(ss, this);
+		if (snd)
+			snd.SetAutodestroy(true);
 	}
 
 	// Aplica la fase de animacion a la(s) puerta(s). Default: UNA puerta con el source de
@@ -262,6 +288,11 @@ class Exor_OpenableStorage : Container_Base
 	override bool IsHeavyBehaviour() { return true; }
 	override bool IsTwoHandedBehaviour() { return true; }
 
+	// Ocultar cargo Y slots de attachment cuando el mueble esta CERRADO (solo se ven abierto).
+	override bool CanDisplayCargo() { return IsOpen(); }
+	override bool CanDisplayAttachmentSlot(int slot_id) { return IsOpen(); }
+	override bool CanDisplayAnyAttachmentSlot() { return IsOpen(); }
+
 	// ======================= ACCIONES =======================
 	override void SetActions()
 	{
@@ -287,6 +318,9 @@ class Exor_OpenableStorage : Container_Base
 		{
 			CargoBase cargo = GetInventory().GetCargo();
 			if (cargo && cargo.GetItemCount() > 0)	// comida real adentro
+				return false;
+			// attachments (armas/ropa en slots) bloquean el empaque para no perderlos
+			if (ExorVirtualizeAttachments() && GetInventory().AttachmentCount() > 0)
 				return false;
 		}
 		return true;
@@ -350,7 +384,17 @@ class Exor_OpenableStorage : Container_Base
 			if (it)
 				f.items.Insert(ExorVO_Serializer.CaptureItem(it));
 		}
-		if (f.items.Count() == 0)
+		// attachments (ej armas en los slots del mueble, ropa en el locker) si la subclase lo pide
+		if (ExorVirtualizeAttachments())
+		{
+			for (i = 0; i < inv.AttachmentCount(); i++)
+			{
+				EntityAI att = inv.GetAttachmentFromIndex(i);
+				if (att)
+					f.att.Insert(ExorVO_Serializer.CaptureItem(att));
+			}
+		}
+		if (f.items.Count() == 0 && f.att.Count() == 0)
 		{
 			if (FileExist(ExorGetStoragePath()))
 				DeleteFile(ExorGetStoragePath());
@@ -379,6 +423,16 @@ class Exor_OpenableStorage : Container_Base
 			EntityAI it = cargo.GetItem(i);
 			if (it)
 				toDelete.Insert(it);
+		}
+		// attachments (armas/ropa en slots) si la subclase lo pide
+		if (ExorVirtualizeAttachments())
+		{
+			for (i = 0; i < inv.AttachmentCount(); i++)
+			{
+				EntityAI att = inv.GetAttachmentFromIndex(i);
+				if (att)
+					toDelete.Insert(att);
+			}
 		}
 
 		// solo reescribir si el player cambio algo (dirty); si no, el JSON ya es la verdad.
@@ -447,6 +501,12 @@ class Exor_OpenableStorage : Container_Base
 
 		vector hidden = GetPosition();
 		m_ExorRestoring = true;
+		// attachments PRIMERO (armas/ropa a sus slots), luego el cargo
+		if (f.att)
+		{
+			for (int a = 0; a < f.att.Count(); a++)
+				ExorVO_Serializer.RestoreItem(f.att.Get(a), this, hidden, this, true);
+		}
 		ExorVO_Serializer.RestoreItemsBigFirst(f.items, this, hidden);
 		m_ExorRestoring = false;
 
@@ -475,21 +535,32 @@ class Exor_OpenableStorage : Container_Base
 		GameInventory inv = GetInventory();
 		if (inv)
 		{
+			array<EntityAI> stale = new array<EntityAI>;
+			int s;
 			CargoBase cargo = inv.GetCargo();
 			if (cargo)
 			{
-				array<EntityAI> stale = new array<EntityAI>;
-				int s;
 				for (s = 0; s < cargo.GetItemCount(); s++)
 				{
 					EntityAI se = cargo.GetItem(s);
 					if (se)
 						stale.Insert(se);
 				}
-				cleared = stale.Count();
-				for (s = 0; s < cleared; s++)
-					GetGame().ObjectDelete(stale.Get(s));
 			}
+			// ANTI-DUPE: si virtualizamos attachments, tambien borrar los que el engine
+			// recreo nativamente al cargar (sino quedan en el mundo Y en el JSON = dupe).
+			if (ExorVirtualizeAttachments())
+			{
+				for (s = 0; s < inv.AttachmentCount(); s++)
+				{
+					EntityAI ae = inv.GetAttachmentFromIndex(s);
+					if (ae)
+						stale.Insert(ae);
+				}
+			}
+			cleared = stale.Count();
+			for (s = 0; s < cleared; s++)
+				GetGame().ObjectDelete(stale.Get(s));
 		}
 
 		int dropped = 0;
@@ -618,7 +689,9 @@ class Exor_OpenableStorage : Container_Base
 			return false;
 		if (now - m_ExorLastInteractMs < virtMs)
 			return false;
-		if (ExorCargoCount() == 0)
+		// nada que virtualizar? (cargo vacio Y -si aplica- sin attachments)
+		bool hasAtt = ExorVirtualizeAttachments() && GetInventory() && GetInventory().AttachmentCount() > 0;
+		if (ExorCargoCount() == 0 && !hasAtt)
 			return false;
 		if (!ExorCanVirtualizeNow())	// la subclase puede vetar (ej: nevera sin bateria con comida)
 			return false;
@@ -652,6 +725,28 @@ class Exor_OpenableStorage : Container_Base
 	{
 		super.EECargoOut(item);
 		if (GetGame() && GetGame().IsServer() && !m_ExorRestoring)
+		{
+			m_ExorLastInteractMs = GetGame().GetTime();
+			m_ExorSnapDirty = true;
+		}
+	}
+
+	// Attachments (armas/ropa en slots): marcar dirty para que el snapshot los guarde
+	// ANTES de virtualizar (sino se borrarian del mundo sin quedar en el JSON = perdida).
+	override void EEItemAttached(EntityAI item, string slot_name)
+	{
+		super.EEItemAttached(item, slot_name);
+		if (ExorVirtualizeAttachments() && GetGame() && GetGame().IsServer() && !m_ExorRestoring)
+		{
+			m_ExorLastInteractMs = GetGame().GetTime();
+			m_ExorSnapDirty = true;
+		}
+	}
+
+	override void EEItemDetached(EntityAI item, string slot_name)
+	{
+		super.EEItemDetached(item, slot_name);
+		if (ExorVirtualizeAttachments() && GetGame() && GetGame().IsServer() && !m_ExorRestoring)
 		{
 			m_ExorLastInteractMs = GetGame().GetTime();
 			m_ExorSnapDirty = true;

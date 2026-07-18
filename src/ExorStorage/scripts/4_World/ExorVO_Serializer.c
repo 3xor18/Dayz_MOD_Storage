@@ -34,10 +34,12 @@ class ExorVO_ContainerFile
 	string id;
 	string owner_type;
 	ref array<ref ExorVO_ItemData> items;
+	ref array<ref ExorVO_ItemData> att;	// attachments virtualizados (ej armas en slots del mueble)
 
 	void ExorVO_ContainerFile()
 	{
 		items = new array<ref ExorVO_ItemData>;
+		att = new array<ref ExorVO_ItemData>;
 	}
 }
 
