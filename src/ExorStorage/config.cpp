@@ -240,6 +240,11 @@ class CfgVehicles
 		descriptionShort = "Armario de 2 puertas. Guarda ropa, armas y equipo (no comida). Vacio y cerrado se empaqueta con un destornillador.";
 		model = "\ExorStorage\data\models\locker\locker.p3d";
 		hiddenSelections[] = {};
+		// SLOTS DE EQUIPO (como el cuerpo/tumba): el player puede COLGAR su ropa/gear
+		// como attachments (casco, chaleco, mochila, pantalon, botas, etc.) ademas del
+		// cargo. Solo accesibles con el locker ABIERTO (el openable bloquea el inventario
+		// cerrado). Cada slot solo acepta su tipo (el motor filtra).
+		attachments[] = {"Headgear", "Mask", "Eyewear", "Gloves", "Armband", "Vest", "Body", "Hips", "Back", "Legs", "Feet", "Shoulder", "Melee"};
 		class Cargo
 		{
 			itemsCargoSize[] = {10, 50};	// 500 slots
