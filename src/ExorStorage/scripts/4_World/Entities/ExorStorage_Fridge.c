@@ -22,11 +22,10 @@
 class Exor_Fridge : Exor_OpenableStorage
 {
 	// --- BATERIA / energia ---
-	protected ref Timer	m_ExorFridgeTimer;
-	protected bool		m_ExorPowered;		// true = bateria puesta y con carga
-	protected bool		m_ExorPoweredPrev;	// para detectar el cambio powered->unpowered
-	protected const float	EXOR_FRIDGE_TICK = 60.0;	// tick de bateria (s)
-	protected const float	EXOR_FRIDGE_DAYS = 3.0;		// una bateria LLENA dura ~3 dias
+	protected bool		m_ExorPowered;			// true = bateria puesta y con carga
+	protected bool		m_ExorPoweredPrev;		// para detectar el cambio powered->unpowered
+	protected int		m_ExorLastBatteryMs;	// ultimo tick de bateria (throttle)
+	protected const int	EXOR_FRIDGE_BATTERY_MS = 60000;	// procesar bateria cada 60s
 	// temperatura "fria pero NO congelada" que se pone a la comida al restaurarla con bateria
 	protected const float	EXOR_FRIDGE_COLD_TEMP = 3.0;
 
@@ -48,23 +47,6 @@ class Exor_Fridge : Exor_OpenableStorage
 		if (m_ExorPowered)
 			return true;
 		return !ExorHasPerishableFood();
-	}
-
-	override void EEInit()
-	{
-		super.EEInit();
-		if (GetGame().IsServer())
-		{
-			m_ExorFridgeTimer = new Timer(CALL_CATEGORY_SYSTEM);
-			m_ExorFridgeTimer.Run(EXOR_FRIDGE_TICK, this, "ExorFridgeTick", null, true);
-		}
-	}
-
-	override void EEDelete(EntityAI parent)
-	{
-		if (m_ExorFridgeTimer)
-			m_ExorFridgeTimer.Stop();
-		super.EEDelete(parent);
 	}
 
 	// La lee Edible_Base::CanProcessDecay() -> la comida real dentro de una nevera
@@ -98,10 +80,20 @@ class Exor_Fridge : Exor_OpenableStorage
 		return false;
 	}
 
-	void ExorFridgeTick()
+	// Logica de bateria. La llama el MANAGER en su tick central (cada 5s); throttleamos
+	// a cada 60s. Drenaje calculado por el TIEMPO REAL transcurrido -> exacto sin importar
+	// la cadencia. Los dias que dura una bateria llena salen del config (nevera_bateria_dias).
+	override void ExorPeriodicTick(int now)
 	{
 		if (!GetGame().IsServer())
 			return;
+		// throttle: correr esto cada ~60s (el manager llama cada 5s)
+		if (m_ExorLastBatteryMs != 0 && now - m_ExorLastBatteryMs < EXOR_FRIDGE_BATTERY_MS)
+			return;
+		float elapsedSec = EXOR_FRIDGE_BATTERY_MS / 1000.0;
+		if (m_ExorLastBatteryMs != 0)
+			elapsedSec = (now - m_ExorLastBatteryMs) / 1000.0;
+		m_ExorLastBatteryMs = now;
 
 		CarBattery battery = ExorGetBattery();
 		bool powered = false;
@@ -112,13 +104,17 @@ class Exor_Fridge : Exor_OpenableStorage
 			if (energy > 0)
 			{
 				powered = true;
-				// Drenaje para que una bateria LLENA dure EXOR_FRIDGE_DAYS (usa su max real).
-				float maxEnergy = battery.GetCompEM().GetEnergyMax();
-				float drain = maxEnergy * EXOR_FRIDGE_TICK / (EXOR_FRIDGE_DAYS * 86400.0);
-				float left = energy - drain;
-				if (left < 0)
-					left = 0;
-				battery.GetCompEM().SetEnergy(left);
+				float days = GetExorConfig().storage.nevera_bateria_dias;
+				if (days > 0)	// 0 = la bateria no se descarga
+				{
+					// una bateria LLENA (max real) dura 'days' dias -> drenaje por seg transcurrido.
+					float maxEnergy = battery.GetCompEM().GetEnergyMax();
+					float drain = maxEnergy * elapsedSec / (days * 86400.0);
+					float left = energy - drain;
+					if (left < 0)
+						left = 0;
+					battery.GetCompEM().SetEnergy(left);
+				}
 			}
 		}
 

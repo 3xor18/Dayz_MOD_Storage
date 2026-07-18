@@ -36,6 +36,10 @@ class ExorCfgStorage
 	bool permitir_ropa_con_items = true;
 	ref TStringArray blacklist;
 	int cooldown_abrir_segundos = 3;  // 0 = sin cooldown
+	// NEVERA: dias que tarda en descargarse una bateria de coche LLENA puesta en el
+	// refrigerador. Con bateria cargada la comida se conserva; al agotarse se pudre.
+	// 0 = la bateria no se descarga nunca.
+	float nevera_bateria_dias = 3.0;
 
 	void ExorCfgStorage()
 	{
@@ -51,6 +55,7 @@ class ExorCfgStorage
 		multiplicador_comida = 2.0;
 		permitir_ropa_con_items = true;
 		cooldown_abrir_segundos = 3;
+		nevera_bateria_dias = 3.0;
 		blacklist.Clear();
 	}
 }

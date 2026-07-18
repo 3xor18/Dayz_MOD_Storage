@@ -215,6 +215,10 @@ class ExorVO_Manager
 				budget--;
 			if (didSnapF)
 				snapBudget--;
+			// logica periodica de la subclase (ej: bateria de la nevera). Centralizado
+			// aca en vez de un timer por-nevera -> escala a muchas neveras sin cientos
+			// de timers. La nevera throttlea internamente (cada ~60s).
+			fur.ExorPeriodicTick(now);
 		}
 
 		// --- Bolsas de cadaver: TTL + virtualizar/restaurar por distancia (reusa 'players') ---

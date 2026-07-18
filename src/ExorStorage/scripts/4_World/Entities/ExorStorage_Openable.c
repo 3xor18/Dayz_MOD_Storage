@@ -580,6 +580,11 @@ class Exor_OpenableStorage : Container_Base
 	// (asi se pudre real con el motor vanilla, sin bookkeeping de tiempo virtualizado).
 	bool ExorCanVirtualizeNow() { return true; }
 
+	// hook: logica periodica de la subclase (ej: descarga de bateria de la nevera). La
+	// llama el MANAGER en su tick central (no un timer por-entidad -> escala a muchas
+	// neveras). 'now' = GetGame().GetTime() en ms. La subclase throttlea lo que necesite.
+	void ExorPeriodicTick(int now) {}
+
 	// ======================= dirty tracking del cargo =======================
 	override void EECargoIn(EntityAI item)
 	{
