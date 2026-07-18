@@ -1,7 +1,7 @@
 // ============================================================================
-// 3xorStorage - Accion: Empaquetar refrigerador (nevera desplegada -> item caja)
-// Solo con la nevera CERRADA, sana y VACIA (sin comida ni bateria). Espejo de
-// ExorActionPackBarrel pero para Exor_Fridge (Container_Base, ya no barril).
+// 3xorStorage - Accion: Empaquetar mueble abrible (desplegado -> item caja)
+// Requisitos: mueble CERRADO, sano y VACIO + un DESTORNILLADOR en la mano.
+// Generico para cualquier Exor_OpenableStorage (nevera y muebles futuros).
 // ============================================================================
 
 class ExorActionPackFridgeCB : ActionContinuousBaseCB
@@ -20,11 +20,13 @@ class ExorActionPackFridge : ActionContinuousBase
 		m_CommandUID = DayZPlayerConstants.CMD_ACTIONFB_INTERACT;
 		m_FullBody = true;
 		m_StanceMask = DayZPlayerConstants.STANCEMASK_ERECT | DayZPlayerConstants.STANCEMASK_CROUCH;
-		m_Text = "Empaquetar refrigerador";
+		m_Text = "Empaquetar mueble";
 	}
 
 	override void CreateConditionComponents()
 	{
+		// La accion vive en el destornillador (ver ExorFridge_Screwdriver.c) -> el item
+		// en mano YA es el destornillador. Sin condicion extra de item.
 		m_ConditionItem = new CCINone;
 		m_ConditionTarget = new CCTNonRuined(UAMaxDistances.DEFAULT);
 	}
@@ -36,42 +38,59 @@ class ExorActionPackFridge : ActionContinuousBase
 
 	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
 	{
-		Exor_Fridge fridge = Exor_Fridge.Cast(target.GetObject());
-		if (!fridge)
+		// destornillador en la mano
+		if (!item || !item.IsInherited(Screwdriver))
 			return false;
 
-		return fridge.ExorCanBePacked();
+		Exor_OpenableStorage fur = Exor_OpenableStorage.Cast(target.GetObject());
+		if (!fur)
+			return false;
+
+		return fur.ExorCanBePacked();
 	}
 
 	override void OnFinishProgressServer(ActionData action_data)
 	{
-		Exor_Fridge fridge = Exor_Fridge.Cast(action_data.m_Target.GetObject());
-		if (!fridge)
+		Exor_OpenableStorage fur = Exor_OpenableStorage.Cast(action_data.m_Target.GetObject());
+		if (!fur)
 			return;
 
 		// Re-validar en server al terminar (pudo cambiar durante la accion)
-		if (!fridge.ExorCanBePacked())
+		if (!fur.ExorCanBePacked())
 			return;
 
-		string packedType = fridge.ExorGetPackedType();
+		string packedType = fur.ExorGetPackedType();
 		if (packedType == "")
 			return;
 
-		vector pos = fridge.GetPosition();
-		vector ori = fridge.GetOrientation();
-		float health = fridge.GetHealth01("", "");
+		vector pos = fur.GetPosition();
+		vector ori = fur.GetOrientation();
+		float health = fur.GetHealth01("", "");
+
+		// soltar los attachments (ej bateria) al piso para NO perderlos al borrar el mueble
+		GameInventory finv = fur.GetInventory();
+		if (finv)
+		{
+			int a;
+			for (a = finv.AttachmentCount() - 1; a >= 0; a--)
+			{
+				EntityAI att = finv.GetAttachmentFromIndex(a);
+				if (att)
+					finv.DropEntity(InventoryMode.SERVER, fur, att);
+			}
+		}
 
 		EntityAI packed = EntityAI.Cast(GetGame().CreateObjectEx(packedType, pos, ECE_PLACE_ON_SURFACE));
 		if (!packed)
 		{
-			Print("[3xorStorage] ERROR: no se pudo crear " + packedType + " al empaquetar la nevera");
+			Print("[3xorStorage] ERROR: no se pudo crear " + packedType + " al empaquetar el mueble");
 			return;
 		}
 
 		packed.SetOrientation(ori);
 		packed.SetHealth01("", "", health);
 
-		GetGame().ObjectDelete(fridge);
-		Print("[3xorStorage] Refrigerador empaquetado -> " + packedType + " en " + pos.ToString());
+		GetGame().ObjectDelete(fur);
+		Print("[3xorStorage] Mueble empaquetado -> " + packedType + " en " + pos.ToString());
 	}
 }

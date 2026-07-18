@@ -9,12 +9,14 @@ class ExorVO_Manager
 	static ref ExorVO_Manager s_Instance;
 
 	ref array<Exor_Barrel_Base> m_Barrels;
+	ref array<Exor_OpenableStorage> m_Openables;	// muebles abribles (nevera, etc.)
 	ref array<CarScript> m_Vehicles;
 	ref array<Exor_BodyBag> m_BodyBags;
 
 	void ExorVO_Manager()
 	{
 		m_Barrels = new array<Exor_Barrel_Base>;
+		m_Openables = new array<Exor_OpenableStorage>;
 		m_Vehicles = new array<CarScript>;
 		m_BodyBags = new array<Exor_BodyBag>;
 	}
@@ -55,6 +57,20 @@ class ExorVO_Manager
 		{
 			Get().m_Barrels.Remove(idx);
 		}
+	}
+
+	// --- muebles abribles (nevera, etc.): mismo trato que los barriles ---
+	static void RegisterOpenable(Exor_OpenableStorage f)
+	{
+		if (Get().m_Openables.Find(f) == -1)
+			Get().m_Openables.Insert(f);
+	}
+
+	static void UnregisterOpenable(Exor_OpenableStorage f)
+	{
+		int idx = Get().m_Openables.Find(f);
+		if (idx != -1)
+			Get().m_Openables.Remove(idx);
 	}
 
 	// DEBUG: cuantos barriles estan ABIERTOS ahora mismo (para diagnosticar el bug de
@@ -116,6 +132,16 @@ class ExorVO_Manager
 				virt++;
 			}
 		}
+		// muebles abribles (nevera, etc.): igual que los barriles al apagar
+		for (i = 0; i < m.m_Openables.Count(); i++)
+		{
+			Exor_OpenableStorage fur = m.m_Openables.Get(i);
+			if (fur && !fur.ExorIsVirtualized() && fur.ExorCargoCount() > 0)
+			{
+				fur.ExorVirtualize();
+				virt++;
+			}
+		}
 		// Las bolsas de cadaver NO se virtualizan (virtualizar perdia el loot). Su cargo es
 		// top-level (no anidado en un barril), asi que persiste bien como entidades reales
 		// via la persistencia normal del contenedor -> nada que hacer al apagar.
@@ -165,6 +191,29 @@ class ExorVO_Manager
 			if (barrel.ExorTick(now, cfg.storage, budget > 0, snapBudget > 0, players, didSnap))
 				budget--;
 			if (didSnap)
+				snapBudget--;
+		}
+
+		// --- Muebles abribles (nevera, etc.): MISMA logica y presupuesto que el barril ---
+		for (i = m_Openables.Count() - 1; i >= 0; i--)
+		{
+			Exor_OpenableStorage fur = m_Openables.Get(i);
+			if (!fur)
+			{
+				m_Openables.Remove(i);
+				continue;
+			}
+			if (fur.ExorNeedsReconcile())
+			{
+				if (reconcileBudget <= 0)
+					continue;
+				fur.ExorReconcileNow();
+				reconcileBudget--;
+			}
+			bool didSnapF;
+			if (fur.ExorTick(now, cfg.storage, budget > 0, snapBudget > 0, players, didSnapF))
+				budget--;
+			if (didSnapF)
 				snapBudget--;
 		}
 

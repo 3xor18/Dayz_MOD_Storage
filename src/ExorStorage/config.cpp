@@ -9,7 +9,7 @@ class CfgPatches
 {
 	class ExorStorage
 	{
-		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_Fridge", "Exor_Refrigerador_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight"};
+		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_OpenableStorage", "Exor_Fridge", "Exor_Refrigerador_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight"};
 		weapons[] = {};
 		requiredVersion = 0.1;
 		// DZ_Gear_Camping = TerritoryFlag/Kit + SeaChest. DZ_Characters_Backpacks =
@@ -143,47 +143,21 @@ class CfgVehicles
 	//  pero NO conserva (la comida se pudre normal) y sin luz.
 	// ==================================================================
 	// ------------------------------------------------------------------
-	//  REFRIGERADOR (contenedor abrible estilo MMG). Ya NO hereda del barril
-	//  (su virtualizacion/auto-cierre/cooldown rompian el abrir/cerrar); ahora
-	//  es un Container_Base LIMPIO. Ver ExorStorage_Fridge.c.
+	//  MUEBLE ABRIBLE + VIRTUALIZABLE (base reutilizable). Container_Base con
+	//  abrir/cerrar limpio (MMG) + virtualizacion (barril) + colision solida.
+	//  Los muebles (nevera y futuros) heredan de aca. Ver ExorStorage_Openable.c.
 	// ------------------------------------------------------------------
-	class Exor_Fridge: Container_Base
+	class Exor_OpenableStorage: Container_Base
 	{
-		scope = 2;
-		displayName = "Refrigerador";
-		descriptionShort = "Guarda comida, bebida y agua. Con una bateria de coche puesta conserva la comida y no se pudre. Vacio y cerrado se puede empaquetar.";
-		// Modelo real de la nevera retro (FBX->p3d en Object Builder; textura via
-		// fridge.rvmat embebido + fridge_co.paa como base).
-		model = "\ExorStorage\data\models\fridge\fridge.p3d";
-		hiddenSelections[] = {};
+		scope = 0;
 		rotationFlags = 17;
-		// COLISION SOLIDA (como MMG): physLayer "item_large" + peso -> el jugador
-		// NO la atraviesa. La FORMA de colision sale de la caja del Geometry LOD.
+		// COLISION SOLIDA (como MMG): physLayer "item_large" + peso -> el jugador NO
+		// lo atraviesa. La FORMA de colision sale de la caja del Geometry LOD del modelo.
 		weight = 45000;
 		itemBehaviour = 0;			// mueble pesado (no se lleva en la mano)
 		physLayer = "item_large";
 		itemIsOpenable = 1;
 		carveNavmesh = 1;
-		// Slot de BATERIA DE COCHE (aparece en la UI del contenedor).
-		attachments[] = {"CarBattery"};
-		class Cargo
-		{
-			itemsCargoSize[] = {10, 12};	// 120 slots
-			openable = 0;
-			allowOwnedCargoManipulation = 1;
-		};
-		// ANIMACION PUERTA: source "Lid" controlable por codigo
-		// (SetAnimationPhase("Lid",...) en ExorStorage_Fridge.c). El model.cfg liga
-		// este source a la rotacion de la seleccion "lid" sobre "lid_axis".
-		class AnimationSources
-		{
-			class Lid
-			{
-				source = "user";
-				initPhase = 0;		// arranca CERRADA
-				animPeriod = 0.5;	// 0.5s de giro suave
-			};
-		};
 		// Indestructible por codigo (SetAllowDamage(false)); DamageSystem minimo
 		// para que el motor no se queje de health.
 		class DamageSystem
@@ -199,6 +173,34 @@ class CfgVehicles
 						{0.0, {}}
 					};
 				};
+			};
+		};
+	};
+
+	class Exor_Fridge: Exor_OpenableStorage
+	{
+		scope = 2;
+		displayName = "Refrigerador";
+		descriptionShort = "Guarda comida, bebida y agua. Con una bateria de coche puesta (dura ~3 dias) conserva la comida y no se pudre. Vacio y cerrado se empaqueta con un destornillador.";
+		model = "\ExorStorage\data\models\fridge\fridge.p3d";
+		hiddenSelections[] = {};
+		// Slot de BATERIA DE COCHE (aparece en la UI del contenedor).
+		attachments[] = {"CarBattery"};
+		class Cargo
+		{
+			itemsCargoSize[] = {10, 12};	// 120 slots
+			openable = 0;
+			allowOwnedCargoManipulation = 1;
+		};
+		// ANIMACION PUERTA: source "Lid" controlable por codigo. El model.cfg liga
+		// este source a la rotacion de la seleccion "lid" sobre "lid_axis".
+		class AnimationSources
+		{
+			class Lid
+			{
+				source = "user";
+				initPhase = 0;		// arranca CERRADA
+				animPeriod = 0.5;	// 0.5s de giro suave
 			};
 		};
 	};

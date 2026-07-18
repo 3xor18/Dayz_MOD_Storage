@@ -30,11 +30,11 @@ class ExorActionOpenCloseFridge : ActionInteractBase
 		if (!target)
 			return false;
 
-		Exor_Fridge fridge = Exor_Fridge.Cast(target.GetObject());
-		if (!fridge)
+		Exor_OpenableStorage fur = Exor_OpenableStorage.Cast(target.GetObject());
+		if (!fur)
 			return false;
 
-		if (fridge.IsOpen())
+		if (fur.IsOpen())
 			m_Text = "Cerrar";
 		else
 			m_Text = "Abrir";
@@ -45,13 +45,13 @@ class ExorActionOpenCloseFridge : ActionInteractBase
 	// El toggle corre en el SERVER (Open/Close net-sincroniza a los clientes).
 	override void OnStartServer(ActionData action_data)
 	{
-		Exor_Fridge fridge = Exor_Fridge.Cast(action_data.m_Target.GetObject());
-		if (!fridge)
+		Exor_OpenableStorage fur = Exor_OpenableStorage.Cast(action_data.m_Target.GetObject());
+		if (!fur)
 			return;
 
-		if (fridge.IsOpen())
-			fridge.Close();
+		if (fur.IsOpen())
+			fur.Close();
 		else
-			fridge.Open();
+			fur.Open();
 	}
 }

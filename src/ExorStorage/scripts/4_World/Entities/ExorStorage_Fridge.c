@@ -1,60 +1,63 @@
 // ============================================================================
-// 3xorStorage - REFRIGERADOR (contenedor abrible estilo "openable container")
+// 3xorStorage - REFRIGERADOR
 // ----------------------------------------------------------------------------
-// REESCRITO 17-jul con el patron de MMG Base Storage (Container_Base openable):
-// antes heredaba del BARRIL 3xor, pero su maquinaria (auto-cierre + virtualizacion
-// + cooldown anti-dupe) desincronizaba el abrir/cerrar y ocultaba el inventario.
-// Ahora es un Container_Base LIMPIO:
-//   - Estado abierto/cerrado propio (m_ExorFridgeOpen), net-sincronizado.
-//   - Open()/Close() bloquean/desbloquean el inventario (Lock/UnlockInventory) ->
-//     con la nevera CERRADA no se accede al cargo; ABIERTA si. Igual que MMG.
-//   - PUERTA animada: SetAnimationPhase("Lid", abierto?1:0) ligado a ESE estado.
-//   - FILTRO de cargo: solo comida/bebida/agua (Edible_Base) y solo si esta ABIERTA.
-//   - COLISION SOLIDA: via config (physLayer="item_large" + weight) + la caja del
-//     Geometry LOD del modelo. Ya NO se atraviesa.
-//   - BATERIA de coche (attachment "CarBattery"): con carga conserva la comida y se
-//     descarga con el tiempo. Empaca sin bateria.
-//   - Se COLOCA con holograma (item empacado) y se puede RE-EMPACAR (accion propia).
-// Persistencia: nativa de Container_Base (el cargo sobrevive reinicios) + guardamos
-// el estado abierto/cerrado.
+// Subclase FINA de Exor_OpenableStorage (mueble abrible + virtualizable). Solo
+// agrega lo propio de una nevera:
+//   - FILTRO: comida (Edible_Base) + agua/bebidas (Bottle_Base).
+//   - BATERIA de coche (attachment "CarBattery"): una bateria LLENA dura ~3 dias.
+//   - CONSERVACION por energia (optimizada, sin lag para 55 players):
+//       * CON bateria  -> la comida se VIRTUALIZA (sale del mundo = 0 costo) y NO
+//         se pudre (ni real -CanProcessDecay- ni virtualizada -no existe-).
+//         Al restaurarla aparece FRIA (no congelada).
+//       * SIN bateria  -> la comida perecedera se deja REAL (no se virtualiza) y
+//         se pudre normal con el motor vanilla. Si la bateria se agota mientras
+//         estaba virtualizada, se restaura para que empiece a pudrirse.
+//     Agua/bebidas (no se pudren) se virtualizan siempre.
+//   - Se COLOCA con holograma (item empacado) y se RE-EMPACA vacia + con un
+//     destornillador en la mano (ver ExorActionPackFridge).
+// La logica de abrir/cerrar, animacion de puerta, virtualizacion, persistencia,
+// colision e indestructibilidad vienen de Exor_OpenableStorage.
 // ============================================================================
 
-class Exor_Fridge : Container_Base
+class Exor_Fridge : Exor_OpenableStorage
 {
-	// --- estado ABIERTO/CERRADO (net-sync propio, patron MMG) ---
-	protected bool		m_ExorFridgeOpen;		// true = puerta abierta / inventario accesible
-	protected bool		m_ExorDoorAnimApplied;	// ultimo estado aplicado a la animacion
-	protected bool		m_ExorDoorAnimInit;
-
 	// --- BATERIA / energia ---
 	protected ref Timer	m_ExorFridgeTimer;
-	protected bool		m_ExorPowered;			// true = bateria puesta y con carga
-	protected const float	EXOR_FRIDGE_TICK = 30.0;	// cada cuanto tickea la bateria (s)
-	protected const float	EXOR_FRIDGE_DRAIN = 5.0;	// energia consumida por tick
+	protected bool		m_ExorPowered;		// true = bateria puesta y con carga
+	protected bool		m_ExorPoweredPrev;	// para detectar el cambio powered->unpowered
+	protected const float	EXOR_FRIDGE_TICK = 60.0;	// tick de bateria (s)
+	protected const float	EXOR_FRIDGE_DAYS = 3.0;		// una bateria LLENA dura ~3 dias
+	// temperatura "fria pero NO congelada" que se pone a la comida al restaurarla con bateria
+	protected const float	EXOR_FRIDGE_COLD_TEMP = 3.0;
 
-	void Exor_Fridge()
+	// --- hooks de la base ---
+	override string ExorGetDoorAnimSource()	{ return "Lid"; }
+	override string ExorGetPackedType()		{ return "Exor_Refrigerador_Packed"; }
+
+	// FILTRO: comida (vegetales, carnes, latas, sodas = Edible_Base) + agua
+	// (cantimplora, botella, water pouch, olla = Bottle_Base, NO heredan Edible_Base).
+	override bool ExorCanStore(EntityAI item)
 	{
-		RegisterNetSyncVariableBool("m_ExorFridgeOpen");
+		return item.IsInherited(Edible_Base) || item.IsInherited(Bottle_Base);
+	}
+
+	// VIRTUALIZAR: con bateria siempre; sin bateria solo si NO hay comida perecedera
+	// (para dejarla real y que se pudra). Agua/bebidas no cuentan (no se pudren).
+	override bool ExorCanVirtualizeNow()
+	{
+		if (m_ExorPowered)
+			return true;
+		return !ExorHasPerishableFood();
 	}
 
 	override void EEInit()
 	{
 		super.EEInit();
-
 		if (GetGame().IsServer())
 		{
-			SetAllowDamage(false);		// indestructible (consistente con el mod)
-			m_ExorFridgeOpen = false;	// arranca CERRADA
-			if (GetInventory())
-				GetInventory().LockInventory(HIDE_INV_FROM_SCRIPT);	// cerrada = sin acceso
-			SetSynchDirty();
-
-			// Timer server-side de bateria/conservacion.
 			m_ExorFridgeTimer = new Timer(CALL_CATEGORY_SYSTEM);
 			m_ExorFridgeTimer.Run(EXOR_FRIDGE_TICK, this, "ExorFridgeTick", null, true);
 		}
-
-		ExorUpdateDoor();	// puerta segun estado (cerrada al aparecer)
 	}
 
 	override void EEDelete(EntityAI parent)
@@ -64,159 +67,35 @@ class Exor_Fridge : Container_Base
 		super.EEDelete(parent);
 	}
 
-	// ---------------------- ABRIR / CERRAR (patron MMG) ------------------------
-	override void Open()
+	// La lee Edible_Base::CanProcessDecay() -> la comida real dentro de una nevera
+	// con energia NO se pudre.
+	bool ExorIsPowered()
 	{
-		m_ExorFridgeOpen = true;
-		SetSynchDirty();		// empuja el estado a los clientes
-		if (GetInventory())
-			GetInventory().UnlockInventory(HIDE_INV_FROM_SCRIPT);	// abierta = accesible
-		ExorUpdateDoor();
+		return m_ExorPowered;
 	}
 
-	override void Close()
-	{
-		m_ExorFridgeOpen = false;
-		SetSynchDirty();
-		if (GetInventory())
-			GetInventory().LockInventory(HIDE_INV_FROM_SCRIPT);
-		ExorUpdateDoor();
-	}
-
-	override bool IsOpen()
-	{
-		return m_ExorFridgeOpen;
-	}
-
-	// En el CLIENTE el estado llega por sync -> reflejar la puerta.
-	override void OnVariablesSynchronized()
-	{
-		super.OnVariablesSynchronized();
-		ExorUpdateDoor();
-	}
-
-	// Anima la puerta (seleccion "lid" sobre "lid_axis"; ver model.cfg). Solo
-	// (re)aplica cuando el estado CAMBIA (evita re-animar en cada sync).
-	void ExorUpdateDoor()
-	{
-		bool open = IsOpen();
-		if (m_ExorDoorAnimInit && open == m_ExorDoorAnimApplied)
-			return;
-		m_ExorDoorAnimInit = true;
-		m_ExorDoorAnimApplied = open;
-
-		float phase = 0.0;
-		if (open)
-			phase = 1.0;
-		SetAnimationPhase("Lid", phase);
-	}
-
-	// ---------------------- FILTRO DE CARGO ------------------------------------
-	// Solo comida/bebida/agua (Edible_Base) y SOLO con la nevera abierta.
-	override bool CanReceiveItemIntoCargo(EntityAI item)
-	{
-		if (!IsOpen())
-			return false;
-		if (item && !item.IsInherited(Edible_Base))
-			return false;
-		return super.CanReceiveItemIntoCargo(item);
-	}
-
-	override bool CanReleaseCargo(EntityAI cargo)
-	{
-		return IsOpen();
-	}
-
-	// La nevera desplegada NO se levanta a la mano ni entra en otro contenedor
-	// (es un mueble colocado; para moverla se RE-EMPACA con la accion propia).
-	override bool CanPutInCargo(EntityAI parent)
-	{
-		return false;
-	}
-
-	override bool CanPutIntoHands(EntityAI parent)
-	{
-		return false;
-	}
-
-	override bool IsHeavyBehaviour()
-	{
-		return true;
-	}
-
-	override bool IsTwoHandedBehaviour()
-	{
-		return true;
-	}
-
-	// ---------------------- PERSISTENCIA del estado ----------------------------
-	override void OnStoreSave(ParamsWriteContext ctx)
-	{
-		super.OnStoreSave(ctx);
-		ctx.Write(m_ExorFridgeOpen);
-	}
-
-	override bool OnStoreLoad(ParamsReadContext ctx, int version)
-	{
-		if (!super.OnStoreLoad(ctx, version))
-			return false;
-		if (!ctx.Read(m_ExorFridgeOpen))
-			return false;
-		return true;
-	}
-
-	override void AfterStoreLoad()
-	{
-		super.AfterStoreLoad();
-		// reflejar el estado guardado tras cargar (bloqueo de inventario + puerta)
-		if (GetInventory())
-		{
-			if (m_ExorFridgeOpen)
-				GetInventory().UnlockInventory(HIDE_INV_FROM_SCRIPT);
-			else
-				GetInventory().LockInventory(HIDE_INV_FROM_SCRIPT);
-		}
-		SetSynchDirty();
-		ExorUpdateDoor();
-	}
-
-	// ---------------------- ACCIONES -------------------------------------------
-	override void SetActions()
-	{
-		super.SetActions();
-		AddAction(ExorActionOpenCloseFridge);
-		AddAction(ExorActionPackFridge);
-	}
-
-	// ---------------------- RE-EMPAQUE -----------------------------------------
-	// La nevera se puede empaquetar si esta CERRADA, sana y VACIA (sin comida ni
-	// bateria). Lo usa ExorActionPackFridge.
-	bool ExorCanBePacked()
-	{
-		if (IsOpen())
-			return false;
-		if (IsDamageDestroyed())
-			return false;
-		if (GetInventory())
-		{
-			CargoBase cargo = GetInventory().GetCargo();
-			if (cargo && cargo.GetItemCount() > 0)
-				return false;
-			if (GetInventory().AttachmentCount() > 0)	// bateria puesta
-				return false;
-		}
-		return true;
-	}
-
-	string ExorGetPackedType()
-	{
-		return "Exor_Refrigerador_Packed";
-	}
-
-	// ---------------------- LOGICA DE BATERIA ----------------------------------
 	protected CarBattery ExorGetBattery()
 	{
 		return CarBattery.Cast(FindAttachmentBySlotName("CarBattery"));
+	}
+
+	// hay comida perecedera (no podrida) en el cargo?
+	bool ExorHasPerishableFood()
+	{
+		GameInventory inv = GetInventory();
+		if (!inv)
+			return false;
+		CargoBase cargo = inv.GetCargo();
+		if (!cargo)
+			return false;
+		int i;
+		for (i = 0; i < cargo.GetItemCount(); i++)
+		{
+			Edible_Base food = Edible_Base.Cast(cargo.GetItem(i));
+			if (food && food.GetFoodStageType() != FoodStageType.ROTTEN)
+				return true;
+		}
+		return false;
 	}
 
 	void ExorFridgeTick()
@@ -233,7 +112,10 @@ class Exor_Fridge : Container_Base
 			if (energy > 0)
 			{
 				powered = true;
-				float left = energy - EXOR_FRIDGE_DRAIN;
+				// Drenaje para que una bateria LLENA dure EXOR_FRIDGE_DAYS (usa su max real).
+				float maxEnergy = battery.GetCompEM().GetEnergyMax();
+				float drain = maxEnergy * EXOR_FRIDGE_TICK / (EXOR_FRIDGE_DAYS * 86400.0);
+				float left = energy - drain;
 				if (left < 0)
 					left = 0;
 				battery.GetCompEM().SetEnergy(left);
@@ -242,33 +124,39 @@ class Exor_Fridge : Container_Base
 
 		m_ExorPowered = powered;
 
-		if (powered)
-			ExorPreserveCargoFood();
+		// Si la bateria se AGOTO mientras la comida estaba virtualizada, restaurarla para
+		// que se pudra real (si no, quedaria congelada fuera del mundo para siempre).
+		if (m_ExorPoweredPrev && !powered && ExorIsVirtualized())
+			ExorDoRestore();
+
+		m_ExorPoweredPrev = powered;
 	}
 
-	// Conserva la comida del cargo mientras hay bateria (FASE 1: la mantiene seca,
-	// el motor pudre mucho mas lento la comida seca+fria).
-	protected void ExorPreserveCargoFood()
+	// Al restaurar del JSON: si hay bateria, la comida aparece FRIA (no congelada).
+	// (Si no hay bateria la comida perecedera ni se virtualiza, asi que aca ya tiene
+	// bateria o es agua/bebida -> ponerla fria no molesta.)
+	override void ExorOnItemsRestored(ExorVO_ContainerFile f)
 	{
+		if (!GetGame().IsServer())
+			return;
+		if (!m_ExorPowered)
+			return;
+
 		CargoBase cargo = GetInventory().GetCargo();
 		if (!cargo)
 			return;
-
-		int count = cargo.GetItemCount();
-		for (int i = 0; i < count; i++)
+		int i;
+		for (i = 0; i < cargo.GetItemCount(); i++)
 		{
-			Edible_Base food = Edible_Base.Cast(cargo.GetItem(i));
-			if (food)
-				food.SetWet(0.0);
+			ItemBase it = ItemBase.Cast(cargo.GetItem(i));
+			if (it && it.GetTemperature() > EXOR_FRIDGE_COLD_TEMP)
+				it.SetTemperature(EXOR_FRIDGE_COLD_TEMP);
 		}
 	}
 }
 
 // ============================================================================
 //  Refrigerador EMPACADO (item transportable, se coloca con HOLOGRAMA)
-// ----------------------------------------------------------------------------
-//  Usa el sistema de PLACEMENT de DayZ: aparece un preview fantasma, elegis
-//  donde va y con hold se setea (como plantar una carpa).
 // ============================================================================
 class Exor_Refrigerador_Packed : ItemBase
 {
@@ -276,10 +164,9 @@ class Exor_Refrigerador_Packed : ItemBase
 	{
 		super.EEInit();
 		if (GetGame().IsServer())
-			SetAllowDamage(false);	// indestructible, consistente con el barril/mod
+			SetAllowDamage(false);	// indestructible, consistente con el mod
 	}
 
-	// Habilita el holograma de colocacion (preview de posicion).
 	override bool IsDeployable()
 	{
 		return true;
@@ -297,9 +184,6 @@ class Exor_Refrigerador_Packed : ItemBase
 		return "";
 	}
 
-	// Placement vanilla: HACEN FALTA LAS DOS acciones.
-	//   - ActionTogglePlaceObject: enciende el modo placing y muestra el ghost.
-	//   - ActionDeployObject: la colocacion en si (hold); exige IsPlacingLocal().
 	override void SetActions()
 	{
 		super.SetActions();
@@ -307,23 +191,53 @@ class Exor_Refrigerador_Packed : ItemBase
 		AddAction(ActionDeployObject);
 	}
 
-	// Al confirmar: crear el refri desplegado en la posicion/rotacion elegida y
-	// borrar la caja empacada. (Solo server.)
 	override void OnPlacementComplete(Man player, vector position = "0 0 0", vector orientation = "0 0 0")
 	{
 		super.OnPlacementComplete(player, position, orientation);
 		if (!GetGame().IsServer())
 			return;
 
-		EntityAI fridge = EntityAI.Cast(GetGame().CreateObjectEx("Exor_Fridge", position, ECE_PLACE_ON_SURFACE));
+		// Colocacion: crear el objeto y apoyar su BASE (origen del modelo, Y=0) EXACTO
+		// sobre la superficie del terreno. El holograma reportaba una Y por debajo del
+		// piso (por el punto bbox del modelo empacado) -> la nevera se hundia. Forzamos
+		// Y = altura del terreno en ese XZ. create_local=false -> objeto persistente.
+		// RAYCAST a la superficie REAL bajo el punto de colocacion (piso de base O terreno).
+		// IMPORTANTE: ignorar el HOLOGRAMA del preview (sigue ahi al setear) -> si no, el
+		// raycast lo golpea a el en vez del piso (en el pasto daba +1.5m). Fallback: SurfaceY.
+		PlayerBase pb = PlayerBase.Cast(player);
+		Object ignoreObj = pb;
+		if (pb)
+		{
+			Hologram holo = pb.GetHologramServer();
+			if (holo && holo.GetProjectionEntity())
+				ignoreObj = holo.GetProjectionEntity();
+		}
+		vector rayStart = Vector(position[0], position[1] + 2.5, position[2]);
+		vector rayEnd   = Vector(position[0], position[1] - 2.5, position[2]);
+		vector hitPos, hitNorm;
+		int hitComp;
+		float surfaceY;
+		if (DayZPhysics.RaycastRV(rayStart, rayEnd, hitPos, hitNorm, hitComp, null, null, ignoreObj, true, false))
+			surfaceY = hitPos[1];
+		else
+			surfaceY = GetGame().SurfaceY(position[0], position[2]);
+
+		// Offset entre el origen del modelo y sus patas (calibrado in-game). Se resta para
+		// apoyar las patas justo sobre la superficie del raycast.
+		float baseOffset = 0.65;
+		vector pos = position;
+		pos[1] = surfaceY - baseOffset;
+
+		// create_physics=FALSE -> ESTATICO (no se asienta). Colision del jugador = geometria.
+		EntityAI fridge = EntityAI.Cast(GetGame().CreateObject("Exor_Fridge", pos, false, false, false));
 		if (!fridge)
 		{
 			Print("[3xorStorage] ERROR: no se pudo crear Exor_Fridge al setear el refrigerador");
 			return;
 		}
+		fridge.SetPosition(pos);
 		fridge.SetOrientation(orientation);
-		fridge.SetHealth01("", "", GetHealth01("", ""));	// transfiere salud
-		Print("[3xorStorage] Refrigerador seteado en " + position.ToString());
-		Delete();	// borra la caja empacada
+		fridge.SetHealth01("", "", GetHealth01("", ""));
+		Delete();
 	}
 }
