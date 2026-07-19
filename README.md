@@ -82,6 +82,13 @@ Mide geometría y resultados con los eventos del motor para dar **indicios** (NU
 - **Virtualización** del contenido a disco (menos entidades), **auto-cierre**, **anti-dupe**, comida que dura más, mochilas/ropa con items adentro.
 - **Indestructible y no lockeable** (la defensa es la base, no el barril). Un barril en un **slot de barril de vehículo** acepta items; en el cargo suelto del auto, no.
 
+### Muebles abribles
+Contenedores con **puertas animadas** (abrir/cerrar), colisión sólida, virtualización del contenido (igual que el barril) y **empaque con destornillador** (vacíos y cerrados). Se colocan con **holograma del mueble** aunque en la mano se vean como una **caja de cartón** (estilo MMG, vía `projectionTypename`).
+- **Refrigerador** (`Exor_Fridge`): guarda comida/bebida. Con una **batería de auto o de camión** puesta conserva la comida (no se pudre); la de **camión dura el doble**. Al agotarse, la comida vuelve a pudrirse.
+- **Locker de equipo** (`Exor_Locker`) y **Locker Rojo** (`Exor_LockerRojo`): armario de **2 puertas**. Slots de equipo (casco, chaleco, mochila, etc.) + **11 slots de armas** (rifles/pistolas, aparte del cargo de cosas) + 500 slots de cargo.
+- **Límites por territorio** (todo *event-time*, cero costo por-frame): opcionalmente los muebles **solo se colocan dentro del radio de tu mástil**, con un **máximo por base**; no se puede **disolver/reubicar el mástil** con muebles cerca (hay que sacarlos primero); ni **fundar** una base donde ya hay más muebles que el máximo. Los avisos salen en **rojo** en el chat del mod.
+- **Looteo solo-miembros** (opcional): solo los miembros del territorio pueden abrir los muebles, salvo en las **ventanas horarias** configuradas (ej. horario de raid → cualquiera lootea) o para los **SteamIDs de staff** (bypass).
+
 ### Munición
 - **Stacks a 100** (solo balas sueltas/bolts/flechas), **auto-stack** al recoger, **cantidad aleatoria al spawnear** por tipo.
 
@@ -135,6 +142,13 @@ Columna **Valores** = qué puede tomar cada campo. `bool` = `true`/`false`. `int
 | `permitir_ropa_con_items` | `true` | bool | Permite guardar mochilas/ropa con items adentro. |
 | `blacklist` | `[]` | [string] classnames | Classnames que NO se pueden guardar en el barril. |
 | `cooldown_abrir_segundos` | `3` | int seg (`0`=sin cooldown) | Anti-dupe: espera mínima para reabrir el mismo barril. |
+| `nevera_bateria_dias` | `3.0` | float días (`0`=no se descarga) | Días que dura una **batería de auto** llena en el refrigerador conservando la comida. La de **camión dura el doble**. |
+| `setear_muebles_solo_cerca_mastil` | `false` | bool | Si `true`, los **muebles solo se colocan dentro del radio del mástil de tu grupo** (fuera de tu territorio, bloqueado con aviso rojo). |
+| `cantidad_maxima_muebles_por_base` | `10` | int (`0`=sin límite) | Máximo de muebles por base. Al llegar al tope, no deja colocar más; tampoco deja **fundar/reubicar** un mástil donde ya hay más muebles que el máximo. |
+| `solo_miembros_lotean_muebles` | `false` | bool | Si `true`, **solo los miembros del territorio** pueden abrir/lotear los muebles (salvo horario libre o SteamID de staff). |
+| `offset_horas` | `0` | int horas | Ajuste horario para `horario_looteo_libre` (el server corre en UTC). Ej: Chile = `-4` para configurar en hora local. |
+| `horario_looteo_libre` | `[]` | [{`dia`,`desde`,`hasta`}] | Ventanas (por día) donde el looteo solo-miembros queda **deshabilitado** (ej. horario de raid → cualquiera lootea). `dia` = `"lunes".."domingo"` o `"todos"`; `desde`/`hasta` = `"HH:MM"`. |
+| `bypass_lootear_steamids` | `[]` | [string] SteamIDs | **Staff**: estos SteamIDs **siempre** pueden abrir/lotear los muebles, ignorando `solo_miembros_lotean_muebles` y el horario. |
 
 ### `vehiculos.json` — sueño + cámara + inventario + daño
 | Parámetro | Default | Valores | Descripción |

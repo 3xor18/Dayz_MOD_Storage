@@ -208,22 +208,52 @@ class Exor_OpenableStorage : Container_Base
 	// bajo el punto de colocacion (terreno O piso de base) via raycast que IGNORA el
 	// holograma del preview (si no, el raycast lo golpea a el). baseOffset = offset
 	// origen->patas del modelo (calibrar in-game por mueble: se hunde -> subir; flota -> bajar).
+	// Limpia la proyeccion server-side del holograma (_Ghost de projectionTypename, creado con
+	// ECE_PLACE_ON_SURFACE = entidad real). Sin esto queda una "caja acostada" huerfana pickeable
+	// al lado (nuestro OnPlacementComplete borra el packed y el hologram no limpia su proyeccion).
+	// Se usa tanto al deployar OK como al BLOQUEAR (limite de muebles). 'keep' = el mueble deployado.
+	static void ExorSweepGhosts(PlayerBase pb, vector pos, EntityAI keep)
+	{
+		if (pb)
+		{
+			Hologram holo = pb.GetHologramServer();
+			if (holo && holo.GetProjectionEntity())
+				GetGame().ObjectDelete(holo.GetProjectionEntity());
+		}
+		// la ref del hologram suele venir ya nula -> barrer por POSICION cualquier _Ghost cercano
+		array<Object> objs = new array<Object>;
+		array<CargoBase> prx = new array<CargoBase>;
+		GetGame().GetObjectsAtPosition3D(pos, 4.0, objs, prx);
+		foreach (Object o : objs)
+		{
+			if (o && o != keep && o.GetType().Contains("_Ghost"))
+				GetGame().ObjectDelete(o);
+		}
+	}
+
 	static EntityAI ExorDeployFurniture(Man player, string type, vector position, vector orientation, float baseOffset, float health)
 	{
 		if (!GetGame().IsServer())
 			return null;
 
 		PlayerBase pb = PlayerBase.Cast(player);
+
+		// LIMITE DE MUEBLES / TERRITORIO (event-time): solo cerca del mastil + maximo por base.
+		// Si no se permite, avisar en rojo y NO deployar (el packed queda en la mano, no se borra).
+		string denyReason;
+		if (pb && !ExorMuebleRules.CanPlaceMueble(pb, position, denyReason))
+		{
+			ExorMuebleRules.SendRed(pb, denyReason);
+			ExorSweepGhosts(pb, position, null);	// no dejar la caja huerfana del holograma al bloquear
+			return null;
+		}
+
 		Object ignoreObj = pb;
-		EntityAI ghostProj = null;		// proyeccion del holograma (projectionTypename) a borrar despues
 		if (pb)
 		{
 			Hologram holo = pb.GetHologramServer();
 			if (holo && holo.GetProjectionEntity())
-			{
-				ghostProj = holo.GetProjectionEntity();
-				ignoreObj = ghostProj;
-			}
+				ignoreObj = holo.GetProjectionEntity();
 		}
 
 		vector rayStart = Vector(position[0], position[1] + 2.5, position[2]);
@@ -253,22 +283,7 @@ class Exor_OpenableStorage : Container_Base
 		e.SetOrientation(orientation);
 		dBodyDynamic(e, false);							// cuerpo ESTATICO: solido, no se simula ni se hunde
 		e.SetHealth01("", "", health);
-		// Borrar la proyeccion server-side del holograma (modelo _Ghost de projectionTypename,
-		// creado con ECE_PLACE_ON_SURFACE = entidad real). Si no, queda una "caja acostada"
-		// huerfana (item _Ghost pickeable) al lado del mueble: nuestro OnPlacementComplete borra
-		// el packed y el hologram no alcanza a limpiar su proyeccion.
-		if (ghostProj)
-			GetGame().ObjectDelete(ghostProj);
-		// La ref del hologram suele estar ya nula aca -> barremos por POSICION cualquier _Ghost
-		// huerfano cerca del punto de colocacion y lo borramos (no toca el mueble deployado 'e').
-		array<Object> nearbyObjs = new array<Object>;
-		array<CargoBase> nearbyProxy = new array<CargoBase>;
-		GetGame().GetObjectsAtPosition3D(pos, 4.0, nearbyObjs, nearbyProxy);
-		foreach (Object o : nearbyObjs)
-		{
-			if (o && o != e && o.GetType().Contains("_Ghost"))
-				GetGame().ObjectDelete(o);
-		}
+		ExorSweepGhosts(pb, pos, e);					// limpiar la proyeccion ghost (no dejar caja huerfana)
 		return e;
 	}
 

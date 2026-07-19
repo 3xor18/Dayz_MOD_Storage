@@ -58,7 +58,12 @@ class Exor_Fridge : Exor_OpenableStorage
 
 	protected CarBattery ExorGetBattery()
 	{
-		return CarBattery.Cast(FindAttachmentBySlotName("CarBattery"));
+		// Acepta bateria de AUTO (slot CarBattery) o de CAMION (slot TruckBattery).
+		// TruckBattery hereda CarBattery -> el Cast funciona para ambas.
+		CarBattery b = CarBattery.Cast(FindAttachmentBySlotName("CarBattery"));
+		if (!b)
+			b = CarBattery.Cast(FindAttachmentBySlotName("TruckBattery"));
+		return b;
 	}
 
 	// hay comida perecedera (no podrida) en el cargo?
@@ -105,6 +110,8 @@ class Exor_Fridge : Exor_OpenableStorage
 			{
 				powered = true;
 				float days = GetExorConfig().storage.nevera_bateria_dias;
+				if (battery.IsInherited(TruckBattery))
+					days = days * 2.0;	// bateria de CAMION dura el DOBLE que la de auto
 				if (days > 0)	// 0 = la bateria no se descarga
 				{
 					// una bateria LLENA (max real) dura 'days' dias -> drenaje por seg transcurrido.

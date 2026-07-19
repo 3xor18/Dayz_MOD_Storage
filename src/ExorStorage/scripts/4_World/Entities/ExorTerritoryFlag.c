@@ -377,6 +377,17 @@ modded class TerritoryFlag
 
 				float dist = vector.Distance(GetPosition(), liveMast.GetPosition());
 
+				// LIMITE #5 (event-time): no REUBICAR el mastil si quedan muebles cerca de la
+				// base ACTUAL (hay que sacarlos primero). Se borra el mastil nuevo, se conserva el viejo.
+				string reasonMove;
+				if (!ExorMuebleRules.CanRemoveMast(liveMast.GetPosition(), reasonMove))
+				{
+					ExorMuebleRules.SendRed(placer, reasonMove);
+					ExorMarkDisbanding();
+					GetGame().ObjectDelete(this);
+					return;
+				}
+
 				liveMast.ExorMarkDisbanding();		// quitar el mastil viejo SIN disolver el party
 				GetGame().ObjectDelete(liveMast);
 
@@ -442,6 +453,18 @@ modded class TerritoryFlag
 			ExorScheduleWhiteFlagExpiry();
 			Print(string.Format("%1 mastil REPARADO para grupo %2 (se habia perdido; re-ligado a bandera nueva)", ExorStorageConstants.LOG, existing.id));
 			placer.MessageImportant("Tu mástil se había perdido: se reconstruyó y quedó ligado a tu party.");
+			return;
+		}
+
+		// LIMITE #6 (event-time): no FUNDAR territorio si hay MAS muebles que el maximo
+		// cerca del mastil nuevo. Se borra el mastil con el patron seguro (ExorMarkDisbanding
+		// + ObjectDelete), igual que el bloqueo por cooldown de arriba (NO disuelve nada).
+		string reasonNewMast;
+		if (!ExorMuebleRules.CanPlaceMast(GetPosition(), reasonNewMast))
+		{
+			ExorMuebleRules.SendRed(placer, reasonNewMast);
+			ExorMarkDisbanding();
+			GetGame().ObjectDelete(this);
 			return;
 		}
 

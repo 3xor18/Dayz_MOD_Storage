@@ -92,5 +92,7 @@ class ExorStorageConstants
 	// reconcile es lo CARO del arranque tras un crash (GetObjectsAtPosition 12m por barril
 	// que quedo sin virtualizar). Repartirlo evita un hitch al cargar bases con muchos
 	// barriles. Los untouched reconcilian de a poco; el que un player abra reconcilia ya.
-	static const int MAX_RECONCILE_PER_TICK = 5;
+	static const int MAX_RECONCILE_PER_TICK = 3;	// bajado 5->3: el floor scan (12m) es lo mas caro;
+	// repartirlo en mas ticks suaviza el hitch post-arranque (~125ms->~75ms). Loot-safe: el que un
+	// player abra reconcilia YA (ExorRestoreIfNeeded); los untouched se ponen al dia de a poco.
 }

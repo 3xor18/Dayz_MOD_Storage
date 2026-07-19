@@ -666,6 +666,17 @@ class ExorGroupManager
 
 		if (g.IsOwner(sid))
 		{
+			// No permitir ELIMINAR el territorio si quedan muebles seteados cerca del mastil:
+			// hay que sacarlos todos primero (chequeo event-time, solo aca).
+			if (!(g.mast_x == 0 && g.mast_z == 0))
+			{
+				string reasonDel;
+				if (!ExorMuebleRules.CanRemoveMast(Vector(g.mast_x, 0, g.mast_z), reasonDel))
+				{
+					ExorMuebleRules.SendRed(player, reasonDel);
+					return;
+				}
+			}
 			DisbandGroup(g, "El lider disolvio el party.", sid);
 			return;
 		}

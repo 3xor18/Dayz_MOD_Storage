@@ -50,8 +50,19 @@ class ExorActionOpenCloseFridge : ActionInteractBase
 			return;
 
 		if (fur.IsOpen())
+		{
 			fur.Close();
-		else
-			fur.Open();
+			return;
+		}
+
+		// ABRIR = LOTEAR: si "solo miembros lotean" esta activo y NO es horario libre (raid),
+		// solo los miembros del territorio pueden abrirlo. Si no, aviso rojo y no abre.
+		string denyReason;
+		if (!ExorMuebleRules.CanLootMueble(action_data.m_Player, fur, denyReason))
+		{
+			ExorMuebleRules.SendRed(action_data.m_Player, denyReason);
+			return;
+		}
+		fur.Open();
 	}
 }

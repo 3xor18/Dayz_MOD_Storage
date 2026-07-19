@@ -184,8 +184,9 @@ class CfgVehicles
 		descriptionShort = "Guarda comida, bebida y agua. Con una bateria de coche puesta (dura ~3 dias) conserva la comida y no se pudre. Vacio y cerrado se empaqueta con un destornillador.";
 		model = "\ExorStorage\data\models\fridge\fridge.p3d";
 		hiddenSelections[] = {};
-		// Slot de BATERIA DE COCHE (aparece en la UI del contenedor).
-		attachments[] = {"CarBattery"};
+		// Slot de BATERIA DE AUTO o de CAMION (aparece en la UI del contenedor).
+		// La de camion dura el DOBLE (ver ExorStorage_Fridge.c ExorPeriodicTick).
+		attachments[] = {"CarBattery", "TruckBattery"};
 		class Cargo
 		{
 			itemsCargoSize[] = {10, 12};	// 120 slots
@@ -248,7 +249,9 @@ class CfgVehicles
 		// como attachments (casco, chaleco, mochila, pantalon, botas, etc.) ademas del
 		// cargo. Solo accesibles con el locker ABIERTO (el openable bloquea el inventario
 		// cerrado). Cada slot solo acepta su tipo (el motor filtra).
-		attachments[] = {"Headgear", "Mask", "Eyewear", "Gloves", "Armband", "Vest", "Body", "Hips", "Back", "Legs", "Feet", "Shoulder", "Melee"};
+		// Slots de equipo + HILERA DE 8 ARMAS (Exor_Gun1..8, en CfgSlots; las armas los
+		// aceptan via el patch CfgWeapons +=). Guardar armas aparte del cargo de cosas.
+		attachments[] = {"Headgear", "Mask", "Eyewear", "Gloves", "Armband", "Vest", "Body", "Hips", "Back", "Legs", "Feet", "Shoulder", "Melee", "Exor_Gun1", "Exor_Gun2", "Exor_Gun3", "Exor_Gun4", "Exor_Gun5", "Exor_Gun6", "Exor_Gun7", "Exor_Gun8", "Exor_Gun9", "Exor_Gun10", "Exor_Gun11"};
 		class Cargo
 		{
 			itemsCargoSize[] = {10, 50};	// 500 slots
@@ -312,7 +315,9 @@ class CfgVehicles
 		descriptionShort = "Armario scifi de 2 puertas. Guarda ropa, armas y equipo (no comida). Vacio y cerrado se empaqueta con un destornillador.";
 		model = "\ExorStorage\data\models\locker_rojo\locker_rojo.p3d";
 		hiddenSelections[] = {};
-		attachments[] = {"Headgear", "Mask", "Eyewear", "Gloves", "Armband", "Vest", "Body", "Hips", "Back", "Legs", "Feet", "Shoulder", "Melee"};
+		// Slots de equipo + HILERA DE 8 ARMAS (Exor_Gun1..8, en CfgSlots; las armas los
+		// aceptan via el patch CfgWeapons +=). Guardar armas aparte del cargo de cosas.
+		attachments[] = {"Headgear", "Mask", "Eyewear", "Gloves", "Armband", "Vest", "Body", "Hips", "Back", "Legs", "Feet", "Shoulder", "Melee", "Exor_Gun1", "Exor_Gun2", "Exor_Gun3", "Exor_Gun4", "Exor_Gun5", "Exor_Gun6", "Exor_Gun7", "Exor_Gun8", "Exor_Gun9", "Exor_Gun10", "Exor_Gun11"};
 		class Cargo
 		{
 			itemsCargoSize[] = {10, 50};	// 500 slots
@@ -452,7 +457,9 @@ class CfgVehicles
 		// SLOTS DEL EQUIPO DEL PLAYER: al lootear la bolsa se ve igual que un
 		// cadaver (chaleco/mochila/bolsillos con sus items, cada uno en su slot).
 		// Al morir, la ropa puesta se recrea en estos slots (ExorBodyBag.c).
-		attachments[] = {"Headgear", "Mask", "Eyewear", "Gloves", "Armband", "Vest", "Body", "Hips", "Back", "Legs", "Feet", "Shoulder", "Melee"};
+		// Slots de equipo + HILERA DE 8 ARMAS (Exor_Gun1..8, en CfgSlots; las armas los
+		// aceptan via el patch CfgWeapons +=). Guardar armas aparte del cargo de cosas.
+		attachments[] = {"Headgear", "Mask", "Eyewear", "Gloves", "Armband", "Vest", "Body", "Hips", "Back", "Legs", "Feet", "Shoulder", "Melee", "Exor_Gun1", "Exor_Gun2", "Exor_Gun3", "Exor_Gun4", "Exor_Gun5", "Exor_Gun6", "Exor_Gun7", "Exor_Gun8", "Exor_Gun9", "Exor_Gun10", "Exor_Gun11"};
 		class Cargo
 		{
 			// Grande (300) para que SIEMPRE entre todo el loot del muerto + el sobrante
@@ -672,6 +679,9 @@ class CfgSlots
 	class Slot_Exor_Gun6 { name = "Exor_Gun6"; displayName = "Arma 6"; ghostIcon = "missing"; selection = "Exor_Gun6"; };
 	class Slot_Exor_Gun7 { name = "Exor_Gun7"; displayName = "Arma 7"; ghostIcon = "missing"; selection = "Exor_Gun7"; };
 	class Slot_Exor_Gun8 { name = "Exor_Gun8"; displayName = "Arma 8"; ghostIcon = "missing"; selection = "Exor_Gun8"; };
+	class Slot_Exor_Gun9 { name = "Exor_Gun9"; displayName = "Arma 9"; ghostIcon = "missing"; selection = "Exor_Gun9"; };
+	class Slot_Exor_Gun10 { name = "Exor_Gun10"; displayName = "Arma 10"; ghostIcon = "missing"; selection = "Exor_Gun10"; };
+	class Slot_Exor_Gun11 { name = "Exor_Gun11"; displayName = "Arma 11"; ghostIcon = "missing"; selection = "Exor_Gun11"; };
 };
 
 // Habilitar que TODAS las armas (rifles + pistolas) puedan colgarse en los 8 slots.
@@ -687,11 +697,11 @@ class CfgWeapons
 	class PistolCore;
 	class Rifle_Base: RifleCore
 	{
-		inventorySlot[] += {"Exor_Gun1", "Exor_Gun2", "Exor_Gun3", "Exor_Gun4", "Exor_Gun5", "Exor_Gun6", "Exor_Gun7", "Exor_Gun8"};
+		inventorySlot[] += {"Exor_Gun1", "Exor_Gun2", "Exor_Gun3", "Exor_Gun4", "Exor_Gun5", "Exor_Gun6", "Exor_Gun7", "Exor_Gun8", "Exor_Gun9", "Exor_Gun10", "Exor_Gun11"};
 	};
 	class Pistol_Base: PistolCore
 	{
-		inventorySlot[] += {"Exor_Gun1", "Exor_Gun2", "Exor_Gun3", "Exor_Gun4", "Exor_Gun5", "Exor_Gun6", "Exor_Gun7", "Exor_Gun8"};
+		inventorySlot[] += {"Exor_Gun1", "Exor_Gun2", "Exor_Gun3", "Exor_Gun4", "Exor_Gun5", "Exor_Gun6", "Exor_Gun7", "Exor_Gun8", "Exor_Gun9", "Exor_Gun10", "Exor_Gun11"};
 	};
 };
 

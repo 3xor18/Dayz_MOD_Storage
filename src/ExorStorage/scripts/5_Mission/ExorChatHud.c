@@ -217,6 +217,7 @@ class ExorChatHud
 		int cBlue  = ARGB(255, 90, 150, 255);   // nombre
 		int cWhite = ARGB(255, 240, 240, 240);  // texto jugador
 		int cGreen = ARGB(255, 80, 230, 90);    // texto del SERVER
+		int cRed   = ARGB(255, 235, 70, 70);    // aviso/error (kind=2)
 		int cTagG  = ARGB(255, 150, 150, 165);  // tag global
 		int cTagZ  = ARGB(255, 90, 220, 120);   // tag zona
 
@@ -242,6 +243,12 @@ class ExorChatHud
 						v.startX = LEFT_M;
 						v.segs.Insert(e.lines.Get(0)); v.cols.Insert(cGreen);
 					}
+					else if (e.kind == 2)
+					{
+						// AVISO/ERROR: rojo, sin remitente
+						v.startX = LEFT_M;
+						v.segs.Insert(e.lines.Get(0)); v.cols.Insert(cRed);
+					}
 					else
 					{
 						// JUGADOR: [tag] nombre: texto
@@ -261,6 +268,8 @@ class ExorChatHud
 					int bodyCol = cWhite;
 					if (e.kind == 1)
 						bodyCol = cGreen;
+					else if (e.kind == 2)
+						bodyCol = cRed;
 					v.startX = LEFT_M + CONT_INDENT;
 					v.segs.Insert(e.lines.Get(li)); v.cols.Insert(bodyCol);
 				}

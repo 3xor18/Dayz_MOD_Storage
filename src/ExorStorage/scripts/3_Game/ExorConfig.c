@@ -18,6 +18,15 @@ class ExorMunicionSpawnRango
 // ----------------------------------------------------------------------------
 // storage.json
 // ----------------------------------------------------------------------------
+// Una ventana horaria (de un dia de la semana) donde el looteo solo-miembros queda
+// DESHABILITADO (ej: horario de raid -> cualquiera puede lotear los muebles).
+class ExorHorarioLibre
+{
+	string dia = "";      // "domingo".."sabado" (o "todos" para todos los dias)
+	string desde = "";    // "HH:MM" (inicio de la ventana)
+	string hasta = "";    // "HH:MM" (fin de la ventana)
+}
+
 class ExorCfgStorage
 {
 	int version = 1;
@@ -41,9 +50,23 @@ class ExorCfgStorage
 	// 0 = la bateria no se descarga nunca.
 	float nevera_bateria_dias = 3.0;
 
+	// ---- LIMITES DE MUEBLES / TERRITORIO (todo se chequea SOLO en eventos: colocar
+	// mueble, poner mastil, quitar mastil -> cero costo por-frame) ----
+	bool setear_muebles_solo_cerca_mastil = false;  // muebles solo se colocan dentro del radio del mastil de TU grupo
+	int cantidad_maxima_muebles_por_base = 10;       // maximo de muebles+barriles por base (0 = sin limite)
+	bool solo_miembros_lotean_muebles = false;       // solo miembros del territorio pueden abrir/lotear los muebles
+	int offset_horas = 0;                            // server corre en UTC; offset para el horario libre (ej Chile = -4)
+	// Ventanas (por dia) donde el looteo solo-miembros queda DESHABILITADO (ej: raid = cualquiera lootea)
+	ref array<ref ExorHorarioLibre> horario_looteo_libre;
+	// Whitelist de STAFF: estos steamids SIEMPRE pueden abrir/lotear los muebles, ignorando
+	// solo_miembros_lotean_muebles y el horario (para admins/moderadores).
+	ref TStringArray bypass_lootear_steamids;
+
 	void ExorCfgStorage()
 	{
 		blacklist = new TStringArray;
+		horario_looteo_libre = new array<ref ExorHorarioLibre>;
+		bypass_lootear_steamids = new TStringArray;
 	}
 
 	void SetDefaults()
@@ -56,7 +79,18 @@ class ExorCfgStorage
 		permitir_ropa_con_items = true;
 		cooldown_abrir_segundos = 3;
 		nevera_bateria_dias = 3.0;
+		setear_muebles_solo_cerca_mastil = false;
+		cantidad_maxima_muebles_por_base = 10;
+		solo_miembros_lotean_muebles = false;
+		offset_horas = 0;
 		blacklist.Clear();
+		if (horario_looteo_libre)
+			horario_looteo_libre.Clear();
+		if (bypass_lootear_steamids)
+		{
+			bypass_lootear_steamids.Clear();
+			bypass_lootear_steamids.Insert("76561198722396813");	// staff/admin por default (siempre puede lotear)
+		}
 	}
 }
 
