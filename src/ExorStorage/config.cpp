@@ -9,12 +9,12 @@ class CfgPatches
 {
 	class ExorStorage
 	{
-		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_OpenableStorage", "Exor_Fridge", "Exor_Refrigerador_Packed", "Exor_Locker", "Exor_Locker_Packed", "Exor_LockerRojo", "Exor_LockerRojo_Packed", "Exor_MuebleArmas", "Exor_MuebleArmas_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight"};
+		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_OpenableStorage", "Exor_Fridge", "Exor_Refrigerador_Packed", "Exor_Refrigerador_Ghost", "Exor_Locker", "Exor_Locker_Packed", "Exor_Locker_Ghost", "Exor_LockerRojo", "Exor_LockerRojo_Packed", "Exor_LockerRojo_Ghost", "Exor_MuebleArmas", "Exor_MuebleArmas_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight"};
 		weapons[] = {};
 		requiredVersion = 0.1;
 		// DZ_Gear_Camping = TerritoryFlag/Kit + SeaChest. DZ_Characters_Backpacks =
 		// GhillieSuit vanilla. DZ_Characters = modelo del cuerpo (bolsa de cadaver).
-		requiredAddons[] = {"DZ_Data", "DZ_Scripts", "DZ_Gear_Containers", "DZ_Weapons_Ammunition", "DZ_Gear_Camping", "DZ_Characters_Backpacks", "DZ_Characters", "DZ_Gear_Consumables"};
+		requiredAddons[] = {"DZ_Data", "DZ_Scripts", "DZ_Gear_Containers", "DZ_Weapons_Ammunition", "DZ_Gear_Camping", "DZ_Characters_Backpacks", "DZ_Characters", "DZ_Gear_Consumables", "DZ_Structures_Furniture"};
 	};
 };
 
@@ -207,26 +207,30 @@ class CfgVehicles
 
 	// Refrigerador EMPAQUETADO: se coloca con HOLOGRAMA (placement vanilla). El
 	// holograma usa el modelo del empacado -> mostramos la nevera real.
+	// EMPAQUETADO estilo MMG: caja de herramientas en mano, holograma = refri (ver
+	// Exor_LockerRojo_Packed para la explicacion del truco projectionTypename).
 	class Exor_Refrigerador_Packed: Exor_Barrel_Packed_Base
 	{
 		scope = 2;
 		displayName = "Refrigerador";
-		descriptionShort = "Setealo en tu base y guarda la comida. Necesita una bateria de coche para conservar.";
-		// Modelo del empacado/HOLOGRAMA = fridge_packed.p3d (CON punto bbox invisible abajo)
-		// para que el holograma de colocacion NO se vea enterrado (el user pidio "subirlo").
-		// TRADE-OFF: el empacado-parado (tras "Empaquetar") puede flotar (el pack usa
-		// PLACE_ON_SURFACE=bounding). El desplegado usa fridge.p3d (sin bbox) y apoya bien.
-		// FIX REAL pendiente: modelo "caja" (mueble_empacado.glb) como empacado + codigo
-		// de holograma que muestre el refri (necesita Blender para GLB->FBX).
+		descriptionShort = "Guarda comida, bebida y agua (necesita bateria de coche para conservar). Setealo en tu base. Guardalo con un destornillador.";
+		model = "DZ\structures\furniture\Cases\PaperBox\PaperBox_01_small_closed.p3d";	// caja de carton (item en mano)
+		projectionTypename = "Exor_Refrigerador_Ghost";	// holograma = modelo del refri
+		hiddenSelections[] = {};
+	};
+
+	// HOLOGRAMA del refri (solo proyeccion, scope=0). model = fridge_packed.p3d (LOD visual
+	// con punto bbox abajo -> holograma al ras). Props de holograma se leen de ESTA clase.
+	class Exor_Refrigerador_Ghost: Exor_Barrel_Packed_Base
+	{
+		scope = 1;	// protected: la crea el holograma por codigo, pero no aparece en menus
+		displayName = "Refrigerador";
 		model = "\ExorStorage\data\models\fridge\fridge_packed.p3d";
 		hiddenSelections[] = {};
-		// Holograma de colocacion (igual que el barril vanilla): sin esto el ghost
-		// puede quedar SIEMPRE rojo y no dejar colocar.
 		hologramMaterial = "barrel";
 		hologramMaterialPath = "dz\gear\containers\data";
 		slopeTolerance = 0.2;
 		yawPitchRollLimit[] = {45, 45, 45};
-		carveNavmesh = 1;
 	};
 
 	// ------------------------------------------------------------------
@@ -272,18 +276,29 @@ class CfgVehicles
 	// Locker EMPAQUETADO: se coloca con HOLOGRAMA. Usa locker_packed.p3d = SOLO el LOD
 	// visual (sin Geometry LOD) -> el holograma NO tiene colision y no se cancela al colocar
 	// (el deployado locker.p3d si tiene colision).
+	// EMPAQUETADO estilo MMG: caja de herramientas en mano, holograma = locker (ver
+	// Exor_LockerRojo_Packed para la explicacion del truco projectionTypename).
 	class Exor_Locker_Packed: Exor_Barrel_Packed_Base
 	{
 		scope = 2;
 		displayName = "Locker de Equipo";
-		descriptionShort = "Setealo en tu base para guardar ropa, armas y equipo.";
+		descriptionShort = "Armario de 2 puertas. Setealo en tu base para guardar ropa, armas y equipo. Guardalo con un destornillador.";
+		model = "DZ\structures\furniture\Cases\PaperBox\PaperBox_01_small_closed.p3d";	// caja de carton (item en mano)
+		projectionTypename = "Exor_Locker_Ghost";	// holograma = modelo del locker
+		hiddenSelections[] = {};
+	};
+
+	// HOLOGRAMA del locker (solo proyeccion, scope=0). model = locker_packed.p3d (LOD visual).
+	class Exor_Locker_Ghost: Exor_Barrel_Packed_Base
+	{
+		scope = 1;	// protected: la crea el holograma por codigo, pero no aparece en menus
+		displayName = "Locker de Equipo";
 		model = "\ExorStorage\data\models\locker\locker_packed.p3d";
 		hiddenSelections[] = {};
 		hologramMaterial = "barrel";
 		hologramMaterialPath = "dz\gear\containers\data";
 		slopeTolerance = 0.2;
 		yawPitchRollLimit[] = {45, 45, 45};
-		carveNavmesh = 1;
 	};
 
 	// ------------------------------------------------------------------
@@ -323,20 +338,33 @@ class CfgVehicles
 		};
 	};
 
+	// EMPAQUETADO estilo MMG: EN MANO/INVENTARIO se ve como una CAJA DE HERRAMIENTAS
+	// (item chico), pero el HOLOGRAMA de colocacion muestra el MUEBLE. El truco es
+	// projectionTypename: DayZ (Hologram.c) proyecta ESE tipo (el _Ghost con el modelo
+	// visual del mueble) en vez del modelo del item. Nombre/descripcion = del mueble.
 	class Exor_LockerRojo_Packed: Exor_Barrel_Packed_Base
 	{
 		scope = 2;
 		displayName = "Locker Rojo";
-		descriptionShort = "Setealo en tu base para guardar ropa, armas y equipo.";
-		// modelo empacado = SOLO LOD visual (sin geometry) -> el holograma no tiene colision
-		// y no se cancela al colocar (el deployado locker_rojo.p3d si tiene colision).
+		descriptionShort = "Armario scifi de 2 puertas. Setealo en tu base para guardar ropa, armas y equipo. Guardalo con un destornillador.";
+		model = "DZ\structures\furniture\Cases\PaperBox\PaperBox_01_small_closed.p3d";	// caja de carton (item en mano)
+		projectionTypename = "Exor_LockerRojo_Ghost";	// holograma = modelo del mueble
+		hiddenSelections[] = {};
+	};
+
+	// HOLOGRAMA del Locker Rojo (solo proyeccion, scope=0). model = LOD visual del mueble
+	// (sin geometry -> no se cancela al colocar). Las props de holograma se leen de ESTA clase
+	// (m_Projection.GetType()), no del item empacado.
+	class Exor_LockerRojo_Ghost: Exor_Barrel_Packed_Base
+	{
+		scope = 1;	// protected: la crea el holograma por codigo, pero no aparece en menus
+		displayName = "Locker Rojo";
 		model = "\ExorStorage\data\models\locker_rojo\locker_rojo_packed.p3d";
 		hiddenSelections[] = {};
 		hologramMaterial = "barrel";
 		hologramMaterialPath = "dz\gear\containers\data";
 		slopeTolerance = 0.2;
 		yawPitchRollLimit[] = {45, 45, 45};
-		carveNavmesh = 1;
 	};
 
 	// ------------------------------------------------------------------

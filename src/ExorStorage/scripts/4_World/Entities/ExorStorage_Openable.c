@@ -215,11 +215,15 @@ class Exor_OpenableStorage : Container_Base
 
 		PlayerBase pb = PlayerBase.Cast(player);
 		Object ignoreObj = pb;
+		EntityAI ghostProj = null;		// proyeccion del holograma (projectionTypename) a borrar despues
 		if (pb)
 		{
 			Hologram holo = pb.GetHologramServer();
 			if (holo && holo.GetProjectionEntity())
-				ignoreObj = holo.GetProjectionEntity();
+			{
+				ghostProj = holo.GetProjectionEntity();
+				ignoreObj = ghostProj;
+			}
 		}
 
 		vector rayStart = Vector(position[0], position[1] + 2.5, position[2]);
@@ -249,6 +253,22 @@ class Exor_OpenableStorage : Container_Base
 		e.SetOrientation(orientation);
 		dBodyDynamic(e, false);							// cuerpo ESTATICO: solido, no se simula ni se hunde
 		e.SetHealth01("", "", health);
+		// Borrar la proyeccion server-side del holograma (modelo _Ghost de projectionTypename,
+		// creado con ECE_PLACE_ON_SURFACE = entidad real). Si no, queda una "caja acostada"
+		// huerfana (item _Ghost pickeable) al lado del mueble: nuestro OnPlacementComplete borra
+		// el packed y el hologram no alcanza a limpiar su proyeccion.
+		if (ghostProj)
+			GetGame().ObjectDelete(ghostProj);
+		// La ref del hologram suele estar ya nula aca -> barremos por POSICION cualquier _Ghost
+		// huerfano cerca del punto de colocacion y lo borramos (no toca el mueble deployado 'e').
+		array<Object> nearbyObjs = new array<Object>;
+		array<CargoBase> nearbyProxy = new array<CargoBase>;
+		GetGame().GetObjectsAtPosition3D(pos, 4.0, nearbyObjs, nearbyProxy);
+		foreach (Object o : nearbyObjs)
+		{
+			if (o && o != e && o.GetType().Contains("_Ghost"))
+				GetGame().ObjectDelete(o);
+		}
 		return e;
 	}
 
