@@ -326,7 +326,7 @@ modded class TerritoryFlag
 		{
 			// Bandera persistida con grupo: re-sincronizar + reprogramar el fin
 			// de la proteccion de bandera blanca (o destrabar si ya vencio).
-			ExorTerritoryManager.Get().SyncToAll();
+			ExorTerritoryManager.Get().RequestSyncToAll();
 			SetSynchDirty();
 			ExorScheduleWhiteFlagExpiry();
 			// Re-aplicar la animacion de la tela para que coincida con el estado
@@ -405,7 +405,7 @@ modded class TerritoryFlag
 					placer.MessageImportant("Mástil movido a una base nueva (>100 m): protección de bandera blanca reiniciada.");
 				}
 				ExorGroupManager.Get().SaveGroup(existing);
-				ExorTerritoryManager.Get().SyncToAll();
+				ExorTerritoryManager.Get().RequestSyncToAll();
 				ExorScheduleWhiteFlagExpiry();
 				return;
 			}
@@ -437,7 +437,7 @@ modded class TerritoryFlag
 			m_ExorFlagRaised = true;
 			SetSynchDirty();
 			ExorGroupManager.Get().SaveGroup(existing);
-			ExorTerritoryManager.Get().SyncToAll();
+			ExorTerritoryManager.Get().RequestSyncToAll();
 			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorHangSavedFlag, 1500, false);
 			ExorScheduleWhiteFlagExpiry();
 			Print(string.Format("%1 mastil REPARADO para grupo %2 (se habia perdido; re-ligado a bandera nueva)", ExorStorageConstants.LOG, existing.id));
@@ -458,7 +458,7 @@ modded class TerritoryFlag
 		g.claim_min = nowmN;		// minuto de reclamo (herencia de bandera blanca al reconstruir)
 		g.last_build_min = nowmN;	// arranca el cooldown de reconstruccion
 		ExorGroupManager.Get().SaveGroup(g);
-		ExorTerritoryManager.Get().SyncToAll();
+		ExorTerritoryManager.Get().RequestSyncToAll();
 		// Bandera blanca (si esta activada): colgar Flag_White cuando el poste este listo.
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorEnsureWhiteFlag, 1500, false);
 		ExorScheduleWhiteFlagExpiry();	// destrabar el slot al terminar la proteccion
@@ -517,10 +517,11 @@ modded class TerritoryFlag
 		if (!GetGame().IsServer())
 			return;
 
-		// piso
+		// piso (radio 15m: el kit del mastil queda pegado a la bandera; 25m escaneaba un
+		// volumen grande innecesario en zonas pobladas, y este barrido corre 3x por evento)
 		array<Object> objects = new array<Object>;
 		array<CargoBase> cargos = new array<CargoBase>;
-		GetGame().GetObjectsAtPosition3D(GetPosition(), 25.0, objects, cargos);
+		GetGame().GetObjectsAtPosition3D(GetPosition(), 15.0, objects, cargos);
 		int i;
 		for (i = 0; i < objects.Count(); i++)
 		{
@@ -647,7 +648,7 @@ modded class TerritoryFlag
 		ExorScheduleWhiteFlagExpiry();
 		ExorReapplyFlagVisual();
 		SetSynchDirty();
-		ExorTerritoryManager.Get().SyncToAll();
+		ExorTerritoryManager.Get().RequestSyncToAll();
 	}
 
 	// Cuelga en el poste la bandera GUARDADA del grupo (mast_flag), o blanca si no hay ninguna

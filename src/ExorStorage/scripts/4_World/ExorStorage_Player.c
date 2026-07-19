@@ -14,10 +14,6 @@ modded class PlayerBase
 	// --- Killfeed (server): ultimo daño recibido, para saber arma/atacante al morir ---
 	protected EntityAI m_ExorKfSource;           // entidad que causo el ultimo daño (arma/atacante)
 	protected string m_ExorKfAmmo;               // tipo de municion/daño del ultimo golpe (clasifica gas/mina/explosivo)
-	protected ref ExorKillShot m_ExorKillShot;   // snapshot geometrico del ultimo impacto de un player (para el detector por kill, ambos vivos)
-
-	ExorKillShot ExorGetKillShot() { return m_ExorKillShot; }
-	void ExorSetKillShot(ExorKillShot s) { m_ExorKillShot = s; }
 
 	// --- Bolsa de cadaver (server): ropa copiada + armas/manos (entidades reales a mover) ---
 	protected ref array<ref ExorVO_ItemData> m_ExorDeathLoot;
@@ -323,23 +319,6 @@ modded class PlayerBase
 			m_ExorCachedSid = GetIdentity().GetPlainId();
 		}
 
-		// anti-cheat: god mode (recibe impactos reales seguidos sin perder vida). Solo
-		// actua si el vigilado esta en la watchlist -> sale al toque para el resto.
-		ExorAnticheat.OnWatchedHit(this, source);
-
-		// aim-track: registrar el impacto contra el engagement del ATACANTE (si esta vigilado).
-		// El filtro (vigilado/feature) lo hace OnHit -> para el resto sale con 1 lookup.
-		if (source)
-		{
-			PlayerBase aimAtk = PlayerBase.Cast(source.GetHierarchyRootPlayer());
-			if (aimAtk && aimAtk != this)
-			{
-				ExorAimTrack.OnHit(aimAtk, this, dmgZone, ammo, Math.Round(vector.Distance(aimAtk.GetPosition(), GetPosition())));
-				// snapshot geometrico para el detector por kill (geometria con AMBOS vivos, no post-muerte)
-				ExorAnticheat.CaptureKillShot(aimAtk, this, dmgZone);
-			}
-		}
-
 		// Combat-log (modelo de ZONA): si el daño viene de OTRO jugador, registrar una
 		// zona de combate en AMBOS extremos (victima y atacante) -> cubre PvP corto y largo.
 		// La deteccion al desloguearse es por PRESENCIA en la zona, no por intercambio de daño.
@@ -370,9 +349,6 @@ modded class PlayerBase
 			m_ExorDeathDone = true;
 			ExorBuildKillfeed(killer);
 			ExorScheduleBodyBag();
-			// aim-track: cerrar engagements del que murio + volcar el resumen de su vida
-			if (GetIdentity())
-				ExorAimTrack.OnPlayerGone(this, GetIdentity().GetPlainId());
 		}
 		super.EEKilled(killer);
 	}
@@ -600,15 +576,6 @@ modded class PlayerBase
 			// FORENSE anti-farmeo: registra el par killer->victima (por steamid, a prueba
 			// de cambio de nombre) y loguea al raidlog si supera el umbral en la ventana.
 			ExorKillFarm.OnKill(killerSid, killerName, victimSid, victimName, kp.GetPosition(), teamKill);
-
-			// anti-cheat: evaluar el kill (LOS/angulo/distancia) -> log si hay indicios.
-			// Se saltea para granadas/lanzagranadas: el explosivo no necesita LOS ni punteria
-			// (mataria detras de cobertura) -> daria falsos indicios.
-			if (grenWeapon == "")
-			{
-				ExorAnticheat.OnKill(kp, this, dist, weapon, ExorKfWeaponClass(kp));
-				ExorAimTrack.OnKill(kp, this, dist);	// aim-track: loguea el kill con la accuracy de la vida
-			}
 
 			// killfeed (si esta activo)
 			if (cfg.habilitado)

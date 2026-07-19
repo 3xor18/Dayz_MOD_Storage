@@ -67,18 +67,24 @@ class ExorPartyHud
 		if (p && live)
 		{
 			vector me = p.GetPosition();
+			// is_self LOCAL (ver ExorNameplates/ExorPartyLive): derivamos "soy yo" comparando
+			// el network ID del miembro con el de nuestro propio player, en vez de un flag
+			// serializado por receptor (el server ahora manda 1 solo payload por grupo).
+			int myLo, myHi;
+			p.GetNetworkID(myLo, myHi);
 			int i;
 			for (i = 0; i < live.members.Count() && shown < m_Names.Count(); i++)
 			{
 				ExorLiveMember m = live.members.Get(i);
-				if (m.is_self && !g.mostrar_propio)
+				bool selfM = (myLo != 0 || myHi != 0) && m.nid_low == myLo && m.nid_high == myHi;
+				if (selfM && !g.mostrar_propio)
 					continue;	// solo amigos (salvo que mostrar_propio este on)
-				float h = m.health;
+				float h = m.health / 100.0;	// vida viene cuantizada 0..100 -> pasar a 0..1
 				if (h < 0) h = 0;
 				if (h > 1) h = 1;
 
 				string txt = m.name;
-				if (!m.is_self && g.mostrar_distancia_miembros)
+				if (!selfM && g.mostrar_distancia_miembros)
 				{
 					int dist = Math.Round(vector.Distance(me, Vector(m.x, m.y, m.z)));
 					txt = txt + "  " + dist.ToString() + "m";

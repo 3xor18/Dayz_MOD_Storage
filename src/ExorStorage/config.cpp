@@ -293,11 +293,14 @@ class CfgVehicles
 	// ------------------------------------------------------------------
 	class Exor_MuebleArmas: Exor_OpenableStorage
 	{
-		scope = 2;
+		scope = 0;	// MUEBLE DE ARMAS DESACTIVADO POR AHORA (el display de armas queda pendiente
+					// de hacerse bien con Buldozer - ver memoria). scope=0 = no spawnea/no aparece.
+					// Reactivar = scope=2 (+ resolver el display en sesion dedicada).
 		displayName = "Mueble de Armas";
 		descriptionShort = "Vitrina para armas: puerta con ventana + 2 cajones. Guarda armas y equipo. Vacio y cerrado se empaqueta con un destornillador.";
 		model = "\ExorStorage\data\models\guncab\guncab.p3d";
 		hiddenSelections[] = {};
+		hasProxiesToHide = 0;
 		// 8 SLOTS DE ARMAS (como los slots de la tumba): el player cuelga sus armas.
 		// Los slots Exor_Gun1..8 estan en CfgSlots; las armas (Rifle_Base/Pistol_Base)
 		// aceptan estos slots via inventorySlot (patch en CfgWeapons). Solo accesibles
@@ -335,7 +338,7 @@ class CfgVehicles
 
 	class Exor_MuebleArmas_Packed: Exor_Barrel_Packed_Base
 	{
-		scope = 2;
+		scope = 0;	// item empacado del mueble de armas: DESACTIVADO por ahora (ver Exor_MuebleArmas).
 		displayName = "Mueble de Armas";
 		descriptionShort = "Setealo en tu base para guardar y exhibir tus armas.";
 		model = "\ExorStorage\data\models\guncab\guncab_packed.p3d";
@@ -610,3 +613,20 @@ class CfgWeapons
 		inventorySlot[] += {"Exor_Gun1", "Exor_Gun2", "Exor_Gun3", "Exor_Gun4", "Exor_Gun5", "Exor_Gun6", "Exor_Gun7", "Exor_Gun8"};
 	};
 };
+
+// PROXIES de las armas del mueble: DESACTIVADO (mueble entero en scope=0 por ahora; el display
+// se hace con Buldozer en sesion aparte - ver memoria weapon-proxy-display-mechanism).
+/*
+class CfgNonAIVehicles
+{
+	class ProxyAttachment;
+	class Exor_GunProxy1: ProxyAttachment { scope = 2; inventorySlot[] = {"Exor_Gun1"}; model = "\ExorStorage\data\proxies\exor_gunproxy1.p3d"; };
+	class Exor_GunProxy2: ProxyAttachment { scope = 2; inventorySlot[] = {"Exor_Gun2"}; model = "\ExorStorage\data\proxies\exor_gunproxy2.p3d"; };
+	class Exor_GunProxy3: ProxyAttachment { scope = 2; inventorySlot[] = {"Exor_Gun3"}; model = "\ExorStorage\data\proxies\exor_gunproxy3.p3d"; };
+	class Exor_GunProxy4: ProxyAttachment { scope = 2; inventorySlot[] = {"Exor_Gun4"}; model = "\ExorStorage\data\proxies\exor_gunproxy4.p3d"; };
+	class Exor_GunProxy5: ProxyAttachment { scope = 2; inventorySlot[] = {"Exor_Gun5"}; model = "\ExorStorage\data\proxies\exor_gunproxy5.p3d"; };
+	class Exor_GunProxy6: ProxyAttachment { scope = 2; inventorySlot[] = {"Exor_Gun6"}; model = "\ExorStorage\data\proxies\exor_gunproxy6.p3d"; };
+	class Exor_GunProxy7: ProxyAttachment { scope = 2; inventorySlot[] = {"Exor_Gun7"}; model = "\ExorStorage\data\proxies\exor_gunproxy7.p3d"; };
+	class Exor_GunProxy8: ProxyAttachment { scope = 2; inventorySlot[] = {"Exor_Gun8"}; model = "\ExorStorage\data\proxies\exor_gunproxy8.p3d"; };
+};
+*/

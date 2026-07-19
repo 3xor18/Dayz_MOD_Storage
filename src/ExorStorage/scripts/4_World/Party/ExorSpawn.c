@@ -307,7 +307,6 @@ class ExorSpawn
 				return;
 			}
 			player.SetPosition(pos);
-			ExorAnticheat.MarkTeleport(sid);	// gracia AC: el salto del spawn no es speedhack
 			ExorVipState.Get().ConsumeUse(sid);
 			ExorVipState.ApplyLoadout(player);
 			int rem = ExorVipState.Get().RemainingUses(sid);
@@ -351,7 +350,6 @@ class ExorSpawn
 		if (pos != vector.Zero)
 		{
 			player.SetPosition(pos);
-			ExorAnticheat.MarkTeleport(sid);	// gracia AC: el salto del spawn no es speedhack
 			player.MessageImportant("Apareciste en el punto elegido.");
 		}
 	}

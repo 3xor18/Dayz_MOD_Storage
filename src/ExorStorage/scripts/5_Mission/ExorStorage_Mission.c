@@ -23,7 +23,6 @@ modded class MissionServer
 		// (auto-restore no completado por no haber un miembro online en el momento). Diferido
 		// 30s para no chocar con la carga de persistencia; luego se re-agenda solo cada 2 min.
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorGroupManager.Get().RestoreLostMastsTick, 30000, false);
-		ExorAnticheat.Start();	// anti-cheat heuristico: tick de watchlist (~1 Hz) + detector por kill
 		ExorKoth.Start();	// KOTH: eventos de captura con recompensa (si koth.json activar=true)
 		ExorCofre.Start();	// COFRE: zonas de apertura de cofres por horario (si cofre.json activado=true)
 		ExorServerMsg.Start();	// mensajes automaticos del server al chat (mensajes.json: repetibles + agendados)
@@ -78,7 +77,6 @@ modded class MissionServer
 		if (!player)
 			return;
 		PlayerIdentity identity = player.GetIdentity();
-		ExorAnticheat.MarkTeleport(ExorGroupManager.SteamId(player));	// gracia AC: conexion/respawn no son speedhack/godmode
 		ExorGroupManager.Get().OnPlayerConnected(player);
 		ExorTerritoryManager.Get().SyncToPlayer(player);
 		// SELF-HEAL del mastil: si el grupo del jugador perdio su mastil (se cayo tras un crash
@@ -129,8 +127,6 @@ modded class MissionServer
 	{
 		ExorAntiRaid.OnDisconnectInEnemyTerritory(player, identity);
 		ExorAntiRaid.OnCombatLogout(player, identity);
-		if (identity)
-			ExorAimTrack.OnPlayerGone(player, identity.GetPlainId());	// aim-track: volcar resumen de la vida al desconectar
 		super.OnClientDisconnectedEvent(identity, player, logoutTime, authFailed);
 	}
 

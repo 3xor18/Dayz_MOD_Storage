@@ -71,10 +71,30 @@ class ExorTerritoryManager
 	static ref ExorTerritoryManager s_Instance;
 	static bool s_Healing;	// self-heal en curso: el mastil recreado NO reclama territorio (guard, como ExorKoth.s_SpawningKothMast)
 	ref array<TerritoryFlag> m_Masts;
+	bool m_SyncPending;	// hay un SyncToAll diferido ya agendado (debounce anti-burst)
 
 	void ExorTerritoryManager()
 	{
 		m_Masts = new array<TerritoryFlag>;
+	}
+
+	// DEBOUNCE: cada register/unregister/claim/repair de bandera llamaba SyncToAll() de una,
+	// y SyncToAll reenvia el cache de territorio a TODOS los online (O(jugadores*banderas)).
+	// En el arranque (carga de N banderas) o en churn de self-heal eso son N reenvios de golpe.
+	// Ahora coalescemos: marcar pendiente y hacer UN solo SyncToAll diferido 500ms (imperceptible
+	// para el preview de construccion). Multiples triggers en esa ventana = 1 solo reenvio.
+	void RequestSyncToAll()
+	{
+		if (m_SyncPending)
+			return;
+		m_SyncPending = true;
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(DoDeferredSyncToAll, 500, false);
+	}
+
+	void DoDeferredSyncToAll()
+	{
+		m_SyncPending = false;
+		SyncToAll();
 	}
 
 	static ExorTerritoryManager Get()
@@ -88,7 +108,7 @@ class ExorTerritoryManager
 	{
 		if (m_Masts.Find(m) == -1)
 			m_Masts.Insert(m);
-		SyncToAll();
+		RequestSyncToAll();
 	}
 
 	void UnregisterMast(TerritoryFlag m)
@@ -96,7 +116,7 @@ class ExorTerritoryManager
 		int idx = m_Masts.Find(m);
 		if (idx != -1)
 			m_Masts.Remove(idx);
-		SyncToAll();
+		RequestSyncToAll();
 	}
 
 	// NOTA: la "inmortalidad" del mastil (que no lo borre el CE por lifetime) se maneja en el
@@ -247,17 +267,7 @@ class ExorTerritoryManager
 			if (m.ExorGetGroupId() == myGroupId && myGroupId != "")
 				continue;	// mi propio territorio
 			if (ExorTerritoryRules.Dist2D(pos, m.GetPosition()) <= radius)
-			{
-				// DIAG TEMPORAL (bug "no deja construir en base propia"): loguea por que
-				// este mastil se considera ajeno. Comparar myGroupId vs mastil_groupId:
-				//  - myGroupId VACIO  -> la membresia del jugador no resolvio (FindByPlayer)
-				//  - myGroupId OK pero mastil_groupId distinto/vacio -> el mastil perdio su binding (self-heal)
-				string diagSid = "";
-				if (player)
-					diagSid = ExorGroupManager.SteamId(player);
-				Print(string.Format("%1 DIAG-TERRITORIO BLOQUEO: sid=%2 myGroupId='%3' | mastil_groupId='%4' built=%5 pos=%6", ExorStorageConstants.LOG, diagSid, myGroupId, m.ExorGetGroupId(), m.ExorIsBuilt(), m.GetPosition()));
 				return m;	// territorio ajeno
-			}
 		}
 		return null;
 	}

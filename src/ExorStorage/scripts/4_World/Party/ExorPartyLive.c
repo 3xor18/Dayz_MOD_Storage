@@ -10,13 +10,14 @@ class ExorLiveMember
 {
 	string steamid;
 	string name;
-	float x;
-	float y;
-	float z;
-	float health;   // 0..1
-	bool is_self;   // si es el propio jugador que recibe (el HUD lo saltea)
-	int nid_low;    // network ID del player (para que el cliente resuelva su ENTIDAD real
-	int nid_high;   // y use su posicion VIVA/interpolada cuando esta en la burbuja = sin lag)
+	int x;          // metros CUANTIZADOS (int) en vez de float JSON largo ("6415.29980..") -> ~40% menos bytes
+	int y;
+	int z;
+	int health;     // 0..100 CUANTIZADO (el cliente lo pasa a 0..1); antes float 0..1
+	// is_self ELIMINADO: el cliente lo deriva comparando nid con su propio player -> el server
+	// manda 1 solo payload por grupo (sin copia por receptor) y sin este campo en cada miembro.
+	int nid_low;    // network ID del player (para que el cliente resuelva su ENTIDAD real,
+	int nid_high;   // use su posicion VIVA/interpolada en la burbuja, y derive is_self)
 }
 
 class ExorLiveDTO
@@ -72,11 +73,12 @@ class ExorPartyLive
 	{
 		if (!GetGame().IsServer())
 			return;
-		// 250 ms (4 Hz): la fluidez del nombre del compañero CERCANO ya NO depende de este
+		// 1000 ms (1 Hz): la fluidez del nombre del compañero CERCANO ya NO depende de este
 		// rate -> el cliente usa la ENTIDAD real (interpolada por el motor) cuando esta en la
 		// burbuja (ver ExorNameplates + nid). Este sync solo alimenta a los LEJANOS (HUD/
-		// distancia), donde 4 Hz sobra. Antes era 8 Hz (125 ms) para tapar el lag del nombre.
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().Tick, 250, true);
+		// distancia), donde 1 Hz sobra. Bajado de 4 Hz (250 ms) a 1 Hz: a 60 jugadores el push
+		// era el mayor emisor de red (O(jugadores*party)) y de CPU (serializacion) del server.
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().Tick, 1000, true);
 	}
 
 	void Tick()
@@ -111,7 +113,7 @@ class ExorPartyLive
 	void PushGroup(ExorGroup g, map<string, PlayerBase> idx)
 	{
 		// recolectar miembros online con su pos/vida (ref: si no, se liberan antes de usarlos)
-		array<ref ExorLiveMember> live = new array<ref ExorLiveMember>;
+		ExorLiveDTO dto = new ExorLiveDTO();
 		int i;
 		for (i = 0; i < g.members.Count(); i++)
 		{
@@ -122,49 +124,38 @@ class ExorPartyLive
 			lm.steamid = g.members.Get(i).steamid;
 			lm.name = g.members.Get(i).name;
 			vector p = pb.GetPosition();
-			lm.x = p[0]; lm.y = p[1]; lm.z = p[2];
-			lm.health = pb.GetHealth01("", "");
+			lm.x = Math.Round(p[0]); lm.y = Math.Round(p[1]); lm.z = Math.Round(p[2]);	// cuantizado a metros
+			lm.health = Math.Round(pb.GetHealth01("", "") * 100);	// 0..1 -> 0..100 (menos bytes)
 			// network ID del player -> el cliente resuelve su entidad real (si esta en la
 			// burbuja) y usa la pos VIVA/interpolada por el motor = nombre sin lag al correr.
+			// Ademas el cliente compara este nid con el de SU propio player para saber
+			// "soy yo" (is_self) local -> el server ya NO serializa una copia por receptor.
 			int nlo, nhi;
 			pb.GetNetworkID(nlo, nhi);
 			lm.nid_low = nlo;
 			lm.nid_high = nhi;
-			live.Insert(lm);
+			dto.members.Insert(lm);
 		}
 
-		// enviar a cada miembro online (con is_self marcado para ese receptor)
+		// OPTIMIZACION (perf a 60 jugadores): serializar el grupo UNA sola vez y mandar los
+		// MISMOS bytes a todos los miembros online. Antes se armaba una copia del DTO por
+		// receptor (para marcar is_self) y se re-serializaba a JSON por receptor -> CPU
+		// O(miembros^2) por grupo por tick + presion de GC. Ahora is_self lo deriva el
+		// cliente comparando nid (ver ExorNameplates/ExorPartyHud) -> O(miembros).
+		JsonSerializer js = new JsonSerializer();
+		string data;
+		js.WriteToString(dto, false, data);
+
+		// CHUNKING (como ROSTER/MARKER): con 5+ miembros el JSON supera ~2KB y el
+		// motor del cliente CORROMPE el string al leerlo de un RPC de un solo param
+		// -> el parse falla -> el cliente se quedaba con los ultimos 4 validos ("no
+		// veo mas de 4 en la party"). Partir en trozos lo evita sin importar cuantos
+		// miembros ni el largo de los nombres.
 		for (i = 0; i < g.members.Count(); i++)
 		{
 			PlayerBase rcv;
 			if (!idx.Find(g.members.Get(i).steamid, rcv) || !rcv || !rcv.GetIdentity())
 				continue;
-			string rsid = g.members.Get(i).steamid;
-
-			ExorLiveDTO dto = new ExorLiveDTO();
-			int j;
-			for (j = 0; j < live.Count(); j++)
-			{
-				ExorLiveMember src = live.Get(j);
-				ExorLiveMember cp = new ExorLiveMember();
-				cp.steamid = src.steamid;
-				cp.name = src.name;
-				cp.x = src.x; cp.y = src.y; cp.z = src.z;
-				cp.health = src.health;
-				cp.nid_low = src.nid_low;
-				cp.nid_high = src.nid_high;
-				cp.is_self = (src.steamid == rsid);
-				dto.members.Insert(cp);
-			}
-
-			JsonSerializer js = new JsonSerializer();
-			string data;
-			js.WriteToString(dto, false, data);
-			// CHUNKING (como ROSTER/MARKER): con 5+ miembros el JSON supera ~2KB y el
-			// motor del cliente CORROMPE el string al leerlo de un RPC de un solo param
-			// -> el parse falla -> el cliente se quedaba con los ultimos 4 validos ("no
-			// veo mas de 4 en la party"). Partir en trozos lo evita sin importar cuantos
-			// miembros ni el largo de los nombres.
 			ExorNetChunk.Send(rcv, rcv.GetIdentity(), ExorRPC.MEMBER_SYNC, data);
 		}
 	}

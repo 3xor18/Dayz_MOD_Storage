@@ -77,17 +77,22 @@ class ExorNameplates
 		if (p && live && !menuOpen)
 		{
 			vector me = p.GetPosition();
+			// is_self LOCAL: el server ya no serializa una copia por receptor -> derivamos
+			// "soy yo" comparando el network ID del miembro con el de nuestro propio player.
+			int myLo, myHi;
+			p.GetNetworkID(myLo, myHi);
 			int i;
 			for (i = 0; i < live.members.Count() && shown < m_Plates.Count(); i++)
 			{
 				ExorLiveMember m = live.members.Get(i);
-				if (m.is_self && !g.mostrar_propio)
+				bool selfM = (myLo != 0 || myHi != 0) && m.nid_low == myLo && m.nid_high == myHi;
+				if (selfM && !g.mostrar_propio)
 					continue;	// solo amigos (salvo que mostrar_propio este on)
 
 				// para uno mismo: posicion REAL local (siempre fluida);
 				// para otros: la sincronizada, SUAVIZADA hacia el ultimo objetivo
 				vector mpos;
-				if (m.is_self)
+				if (selfM)
 				{
 					mpos = me;
 				}

@@ -490,7 +490,7 @@ class ExorCfgBodyCadaver
 	int version = 1;
 	bool habilitado = true;         // master on/off de TODO el modulo de la lapida
 	int delay_segundos = 1;         // demora entre la muerte y la aparicion de la lapida
-	int duracion_minutos = 120;     // cuanto dura la lapida (2h). Sobrevive reinicio.
+	int duracion_minutos = 30;      // cuanto dura la lapida (30 min). Sobrevive reinicio. Configurable en bodycadaver.json.
 	// VIRTUALIZACION (baja entidades sin perder loot): la tumba saca su loot a disco cuando
 	// NADIE vivo esta a <alejar_metros por virtualizar_minutos, y lo RESTAURA al ABRIRLA o
 	// al acercarse un player a <acercar_metros. El restore al abrir es SINCRONO (como el
@@ -510,7 +510,7 @@ class ExorCfgBodyCadaver
 		version = 1;
 		habilitado = true;
 		delay_segundos = 1;
-		duracion_minutos = 120;
+		duracion_minutos = 30;
 		acercar_metros = 20;
 		alejar_metros = 40;
 		virtualizar_minutos = 2;

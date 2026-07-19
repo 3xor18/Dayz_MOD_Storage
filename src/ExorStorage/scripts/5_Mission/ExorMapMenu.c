@@ -99,11 +99,17 @@ class ExorMapMenu extends UIScriptedMenu
 		ExorLiveDTO live = ExorPartyClient.s_Live;
 		if (live && verMiembros)
 		{
+			// is_self LOCAL: el server manda 1 payload por grupo (sin is_self por receptor) ->
+			// derivamos "soy yo" por network ID para no marcarnos como companero.
+			int myLo, myHi;
+			if (p)
+				p.GetNetworkID(myLo, myHi);
 			int i;
 			for (i = 0; i < live.members.Count(); i++)
 			{
 				ExorLiveMember m = live.members.Get(i);
-				if (m.is_self)
+				bool selfM = (myLo != 0 || myHi != 0) && m.nid_low == myLo && m.nid_high == myHi;
+				if (selfM)
 					continue;
 				m_Map.AddUserMark(Vector(m.x, m.y, m.z), m.name, ARGB(255, 60, 220, 60), icon);
 			}

@@ -194,7 +194,15 @@ class ExorVO_Manager
 				snapBudget--;
 		}
 
-		// --- Muebles abribles (nevera, etc.): MISMA logica y presupuesto que el barril ---
+		// --- Muebles abribles (nevera, locker, guncab, etc.): MISMA logica que el barril pero
+		// con PRESUPUESTO PROPIO (no comparten cupo con los barriles). Antes usaban las mismas
+		// variables budget/snapBudget/reconcileBudget ya gastadas por los 634 barriles -> con
+		// muchos barriles activos los muebles nunca virtualizaban/snapshoteaban ese tick (y al
+		// reves). Cupos separados = agregar tipos de mueble NO degrada el manejo de barriles ni
+		// se starvean entre si. Los muebles son pocos por base, asi que su cupo casi no se usa.
+		int furBudget = ExorStorageConstants.MAX_VIRT_PER_TICK;
+		int furReconcileBudget = ExorStorageConstants.MAX_RECONCILE_PER_TICK;
+		int furSnapBudget = ExorStorageConstants.MAX_SNAPSHOT_PER_TICK;
 		for (i = m_Openables.Count() - 1; i >= 0; i--)
 		{
 			Exor_OpenableStorage fur = m_Openables.Get(i);
@@ -205,16 +213,16 @@ class ExorVO_Manager
 			}
 			if (fur.ExorNeedsReconcile())
 			{
-				if (reconcileBudget <= 0)
+				if (furReconcileBudget <= 0)
 					continue;
 				fur.ExorReconcileNow();
-				reconcileBudget--;
+				furReconcileBudget--;
 			}
 			bool didSnapF;
-			if (fur.ExorTick(now, cfg.storage, budget > 0, snapBudget > 0, players, didSnapF))
-				budget--;
+			if (fur.ExorTick(now, cfg.storage, furBudget > 0, furSnapBudget > 0, players, didSnapF))
+				furBudget--;
 			if (didSnapF)
-				snapBudget--;
+				furSnapBudget--;
 			// logica periodica de la subclase (ej: bateria de la nevera). Centralizado
 			// aca en vez de un timer por-nevera -> escala a muchas neveras sin cientos
 			// de timers. La nevera throttlea internamente (cada ~60s).
