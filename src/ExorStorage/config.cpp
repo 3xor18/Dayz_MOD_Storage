@@ -9,7 +9,7 @@ class CfgPatches
 {
 	class ExorStorage
 	{
-		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_OpenableStorage", "Exor_Fridge", "Exor_Refrigerador_Packed", "Exor_Locker", "Exor_Locker_Packed", "Exor_MuebleArmas", "Exor_MuebleArmas_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight"};
+		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_OpenableStorage", "Exor_Fridge", "Exor_Refrigerador_Packed", "Exor_Locker", "Exor_Locker_Packed", "Exor_LockerRojo", "Exor_LockerRojo_Packed", "Exor_MuebleArmas", "Exor_MuebleArmas_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight"};
 		weapons[] = {};
 		requiredVersion = 0.1;
 		// DZ_Gear_Camping = TerritoryFlag/Kit + SeaChest. DZ_Characters_Backpacks =
@@ -278,6 +278,59 @@ class CfgVehicles
 		displayName = "Locker de Equipo";
 		descriptionShort = "Setealo en tu base para guardar ropa, armas y equipo.";
 		model = "\ExorStorage\data\models\locker\locker_packed.p3d";
+		hiddenSelections[] = {};
+		hologramMaterial = "barrel";
+		hologramMaterialPath = "dz\gear\containers\data";
+		slopeTolerance = 0.2;
+		yawPitchRollLimit[] = {45, 45, 45};
+		carveNavmesh = 1;
+	};
+
+	// ------------------------------------------------------------------
+	//  LOCKER ROJO (closet scifi de 2 puertas) - clon del locker de equipo con
+	//  estetica distinta. ETAPA 2a: modelo estatico (sin AnimationSources aun).
+	// ------------------------------------------------------------------
+	class Exor_LockerRojo: Exor_OpenableStorage
+	{
+		scope = 2;
+		displayName = "Locker Rojo";
+		descriptionShort = "Armario scifi de 2 puertas. Guarda ropa, armas y equipo (no comida). Vacio y cerrado se empaqueta con un destornillador.";
+		model = "\ExorStorage\data\models\locker_rojo\locker_rojo.p3d";
+		hiddenSelections[] = {};
+		attachments[] = {"Headgear", "Mask", "Eyewear", "Gloves", "Armband", "Vest", "Body", "Hips", "Back", "Legs", "Feet", "Shoulder", "Melee"};
+		class Cargo
+		{
+			itemsCargoSize[] = {10, 50};	// 500 slots
+			openable = 0;
+			allowOwnedCargoManipulation = 1;
+		};
+		// Etapa 2b: DOS puertas animadas. sources L_Door/R_Door (el model.cfg liga cada
+		// uno a su seleccion L_door/R_door). El script hace SetAnimationPhase al abrir/cerrar.
+		class AnimationSources
+		{
+			class L_Door
+			{
+				source = "user";
+				initPhase = 0;
+				animPeriod = 0.5;
+			};
+			class R_Door
+			{
+				source = "user";
+				initPhase = 0;
+				animPeriod = 0.5;
+			};
+		};
+	};
+
+	class Exor_LockerRojo_Packed: Exor_Barrel_Packed_Base
+	{
+		scope = 2;
+		displayName = "Locker Rojo";
+		descriptionShort = "Setealo en tu base para guardar ropa, armas y equipo.";
+		// modelo empacado = SOLO LOD visual (sin geometry) -> el holograma no tiene colision
+		// y no se cancela al colocar (el deployado locker_rojo.p3d si tiene colision).
+		model = "\ExorStorage\data\models\locker_rojo\locker_rojo_packed.p3d";
 		hiddenSelections[] = {};
 		hologramMaterial = "barrel";
 		hologramMaterialPath = "dz\gear\containers\data";
