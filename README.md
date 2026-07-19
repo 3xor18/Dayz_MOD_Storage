@@ -501,7 +501,52 @@ Recomendado: spawnear la versión **empaquetada**; la desplegada en `nominal=0`.
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0"/>
     <category name="containers"/>
 </type>
+
+<!-- ===== MUEBLES ===== -->
+<!-- EMPACADOS (la caja que se lleva/coloca). nominal>0 = aparecen como loot en el mundo;
+     poné nominal=0 y min=0 si los entregás solo por trader/admin. -->
+<type name="Exor_Refrigerador_Packed">
+    <nominal>2</nominal> <lifetime>14400</lifetime> <restock>1800</restock>
+    <min>1</min> <quantmin>-1</quantmin> <quantmax>-1</quantmax> <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0"/>
+    <category name="containers"/> <usage name="Town"/>
+</type>
+<type name="Exor_Locker_Packed">
+    <nominal>2</nominal> <lifetime>14400</lifetime> <restock>1800</restock>
+    <min>1</min> <quantmin>-1</quantmin> <quantmax>-1</quantmax> <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0"/>
+    <category name="containers"/> <usage name="Town"/>
+</type>
+<type name="Exor_LockerRojo_Packed">
+    <nominal>2</nominal> <lifetime>14400</lifetime> <restock>1800</restock>
+    <min>1</min> <quantmin>-1</quantmin> <quantmax>-1</quantmax> <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0"/>
+    <category name="containers"/> <usage name="Town"/>
+</type>
+
+<!-- DESPLEGADOS (el mueble armado en la base). nominal=0 + lifetime largo para que
+     persistan y el CE NO los limpie. NO subir nominal (no deben spawnear como loot). -->
+<type name="Exor_Fridge">
+    <nominal>0</nominal> <lifetime>3888000</lifetime> <restock>0</restock>
+    <min>0</min> <quantmin>-1</quantmin> <quantmax>-1</quantmax> <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0"/>
+    <category name="containers"/>
+</type>
+<type name="Exor_Locker">
+    <nominal>0</nominal> <lifetime>3888000</lifetime> <restock>0</restock>
+    <min>0</min> <quantmin>-1</quantmin> <quantmax>-1</quantmax> <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0"/>
+    <category name="containers"/>
+</type>
+<type name="Exor_LockerRojo">
+    <nominal>0</nominal> <lifetime>3888000</lifetime> <restock>0</restock>
+    <min>0</min> <quantmin>-1</quantmin> <quantmax>-1</quantmax> <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0"/>
+    <category name="containers"/>
+</type>
 ```
+
+> **Muebles:** las clases `_Ghost` (holograma) NO van en types.xml (son proyecciones, no persisten). Los **empacados** los podés dar por loot (nominal>0), trader o admin; los **desplegados** SIEMPRE en `nominal=0` + `lifetime=3888000` para que no los limpie el CE.
 
 > **Tip vanilla:** vehículos/items spawneados por herramientas de admin que no estén en `types.xml` los limpia el CE a los ~45 s. Si tu server hace eso, agregá cada classname con `nominal=0` y `lifetime=3888000`.
 
