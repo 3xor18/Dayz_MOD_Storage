@@ -202,7 +202,10 @@ class Exor_Refrigerador_Packed : ItemBase
 
 		// Colocacion compartida: mueble estatico + base sobre la superficie real (raycast
 		// que ignora el holograma). baseOffset 0.65 = calibrado in-game para la nevera.
-		EntityAI fridge = Exor_OpenableStorage.ExorDeployFurniture(player, "Exor_Fridge", position, orientation, 0.65, GetHealth01("", ""));
+		// baseOffset = -altura/2. La nevera mide 1.798m -> base tras el centrado de binarize en
+		// -0.899. Antes era 0.65 (afinado para el raycast viejo); con el fix de superficie
+		// (usa la Y del holograma) debe ser -0.899 como los lockers, si no se hunde.
+		EntityAI fridge = Exor_OpenableStorage.ExorDeployFurniture(player, "Exor_Fridge", position, orientation, -0.899, GetHealth01("", ""));
 		if (!fridge)
 			return;
 		Print("[3xorStorage] Refrigerador seteado en " + fridge.GetPosition().ToString());

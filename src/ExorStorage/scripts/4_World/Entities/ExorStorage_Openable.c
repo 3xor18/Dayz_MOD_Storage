@@ -256,15 +256,19 @@ class Exor_OpenableStorage : Container_Base
 				ignoreObj = holo.GetProjectionEntity();
 		}
 
+		// La Y de colocacion viene del holograma (ya snapeo a la superficie donde apuntaste,
+		// incluido el piso de un edificio o de una torre). La usamos como base.
+		// El raycast afina SOLO en pendientes: se acepta unicamente si cae MUY cerca de esa Y.
+		// Si cae lejos (terreno DEBAJO del piso del edificio -> se hundia; o piso de ARRIBA en
+		// una torre -> saltaba), se IGNORA. Asi el mueble queda donde mostro el holograma.
+		float surfaceY = position[1];
 		vector rayStart = Vector(position[0], position[1] + 2.5, position[2]);
 		vector rayEnd   = Vector(position[0], position[1] - 2.5, position[2]);
 		vector hitPos, hitNorm;
 		int hitComp;
-		float surfaceY;
-		if (DayZPhysics.RaycastRV(rayStart, rayEnd, hitPos, hitNorm, hitComp, null, null, ignoreObj, true, false))
+		bool rayHit = DayZPhysics.RaycastRV(rayStart, rayEnd, hitPos, hitNorm, hitComp, null, null, ignoreObj, true, false);
+		if (rayHit && Math.AbsFloat(hitPos[1] - position[1]) <= 0.5)
 			surfaceY = hitPos[1];
-		else
-			surfaceY = GetGame().SurfaceY(position[0], position[2]);
 
 		vector pos = position;
 		pos[1] = surfaceY - baseOffset;
