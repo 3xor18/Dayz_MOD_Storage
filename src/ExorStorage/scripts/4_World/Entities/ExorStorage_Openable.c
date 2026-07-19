@@ -235,7 +235,11 @@ class Exor_OpenableStorage : Container_Base
 		vector pos = position;
 		pos[1] = surfaceY - baseOffset;
 
-		EntityAI e = EntityAI.Cast(GetGame().CreateObject(type, pos, false, false, false));
+		// create_physics=false NO registra la colision hasta el primer guardado/recarga -> el
+		// mueble RECIEN seteado se puede atravesar (los ya persistidos son solidos). Lo creamos
+		// CON fisica (ECE_CREATEPHYSICS) para colision inmediata y luego congelamos el cuerpo
+		// (ALWAYS_INACTIVE) para que NO se hunda/caiga: colisiona pero no se simula ni se mueve.
+		EntityAI e = EntityAI.Cast(GetGame().CreateObjectEx(type, pos, ECE_CREATEPHYSICS));
 		if (!e)
 		{
 			Print("[3xorStorage] ERROR: no se pudo crear " + type + " al colocar el mueble");
@@ -243,6 +247,7 @@ class Exor_OpenableStorage : Container_Base
 		}
 		e.SetPosition(pos);
 		e.SetOrientation(orientation);
+		dBodyDynamic(e, false);							// cuerpo ESTATICO: solido, no se simula ni se hunde
 		e.SetHealth01("", "", health);
 		return e;
 	}
