@@ -17,10 +17,12 @@ modded class PlayerBase
 
 	// --- Bolsa de cadaver (server): ropa copiada + armas/manos (entidades reales a mover) ---
 	protected ref array<ref ExorVO_ItemData> m_ExorDeathLoot;
-	protected ref array<EntityAI> m_ExorDeathWeapons;
+	protected ref array<EntityAI> m_ExorDeathWeapons;	// 'moveItems' de SpawnFromLoot: MUEVE la entidad real (hoy vacio)
+	protected ref array<EntityAI> m_ExorDeathOriginals;	// originales del loadout, a destruir tras recrearlo (anti-dupe)
 
 	// --- Auto-run (cliente, jugador local) ---
 	protected bool m_ExorAutoRun;       // auto-run activo
+	protected int  m_ExorLastScoreReqMs;	// throttle del pedido de leaderboard (SCORE_REQ)
 	protected bool m_ExorArKeyPrev;     // estado previo de la tecla (deteccion de flanco)
 	protected bool m_ExorArApplied;     // el override esta puesto (para soltarlo 1 sola vez al apagar)
 	protected bool m_ExorArTired;       // sin stamina -> baja a trote sin sprint hasta recuperar (histeresis)
@@ -105,6 +107,15 @@ modded class PlayerBase
 
 	void ExorAutoRunTick()
 	{
+		// EARLY-OUT SERVER: esto corre POR JUGADOR y POR FRAME (desde ModCommandHandlerBefore),
+		// o sea es el unico codigo del mod en el camino critico del hilo que es el cuello de
+		// botella. Para la enorme mayoria de jugadores el auto-run esta APAGADO y no hay nada
+		// que aplicar ni que soltar, asi que no vale la pena ni pedir el input controller ni
+		// evaluar canRun (5 llamadas virtuales). El cliente sigue entrando siempre porque es
+		// el que lee la tecla; el server solo simula cuando hay estado real.
+		if (GetGame().IsServer() && GetGame().GetPlayer() != this && !m_ExorAutoRun && !m_ExorArApplied)
+			return;
+
 		HumanInputController hic = GetInputController();
 		if (!hic)
 			return;
@@ -387,7 +398,21 @@ modded class PlayerBase
 		// + supresor via SpawnAttachedMagazine/TakeEntityAsAttachment (solo se pierde la bala
 		// en recamara, despreciable).
 		m_ExorDeathLoot = new array<ref ExorVO_ItemData>;
-		m_ExorDeathWeapons = new array<EntityAI>;	// sin uso ahora (se recrea todo); se deja por compat de firma
+		// ANTI-DUPE: guardar la ENTIDAD REAL de todo lo que se captura, no solo sus datos.
+		// El loadout se recrea dentro de la bolsa, asi que el original TIENE que desaparecer.
+		// Borrar el cadaver no alcanza: durante el delay el motor de DayZ dropea parte del
+		// equipo AL PISO (el comentario de arriba ya lo dice), y una vez en el piso el item
+		// dejo de ser hijo del cadaver -> ObjectDelete(this) no se lo lleva y queda duplicado
+		// (uno en la tumba, otro tirado). Por eso "a veces se dupea el arma": depende de si
+		// el motor alcanzo a dropearla antes del delete, o sea DEPENDE DEL LAG.
+		// La referencia EntityAI sigue siendo valida aunque el item cambie de padre, asi que
+		// guardarlas y borrarlas explicitamente cubre los dos casos.
+		// OJO: m_ExorDeathWeapons se pasa a SpawnFromLoot como 'moveItems' y ESE camino MUEVE
+		// la entidad real a la bolsa. Como aca se recrea TODO el loadout desde datos, tiene
+		// que quedar VACIO: si se llenara, cada item entraria dos veces (uno recreado + uno
+		// movido). Los originales a destruir van en su propio array.
+		m_ExorDeathWeapons = new array<EntityAI>;	// vacio a proposito (todo se recrea)
+		m_ExorDeathOriginals = new array<EntityAI>;	// entidades originales a destruir
 		GameInventory inv = GetInventory();
 		int natt = 0;
 		if (inv)
@@ -400,6 +425,7 @@ modded class PlayerBase
 				if (!att)
 					continue;
 				m_ExorDeathLoot.Insert(ExorVO_Serializer.CaptureItem(att));	// ropa Y armas puestas -> recrear
+				m_ExorDeathOriginals.Insert(att);	// y anotar el original para destruirlo
 			}
 		}
 		// lo que tenga en manos (arma u otro) tambien se captura -> recrear en la bolsa
@@ -407,7 +433,10 @@ modded class PlayerBase
 		if (GetHumanInventory())
 			hands = GetHumanInventory().GetEntityInHands();
 		if (hands)
+		{
 			m_ExorDeathLoot.Insert(ExorVO_Serializer.CaptureItem(hands));
+			m_ExorDeathOriginals.Insert(hands);
+		}
 
 		Print(string.Format("%1 muerte: %2 items (loadout completo) para la bolsa (attachments=%3)", ExorStorageConstants.LOG, m_ExorDeathLoot.Count(), natt));
 
@@ -420,14 +449,78 @@ modded class PlayerBase
 	// 'this' es el cadaver -> spawnear la bolsa con TODO el loadout recreado (ropa + armas).
 	void ExorDoSpawnBodyBag()
 	{
+		// GUARD "NOQUEADO NO ES MUERTO": entre EEKilled y este callback pasa delay_segundos.
+		// Si en ese lapso resulta que el jugador NO esta muerto (quedo inconsciente y el
+		// motor lo revivio, o EEKilled entro por un desync/rollback), NO hay que generar
+		// ninguna tumba: se le estaria clonando el loadout a un jugador vivo.
+		// Se chequea el estado REAL ahora, no el de hace un segundo.
+		if (IsAlive())
+		{
+			Print(string.Format("%1 tumba CANCELADA para %2: el jugador sigue vivo (noqueado/desync, no muerte real)", ExorStorageConstants.LOG, m_ExorDeathName));
+			m_ExorDeathDone = false;	// si mas tarde muere de verdad, que se procese normal
+			m_ExorDeathLoot = null;
+			m_ExorDeathOriginals = null;
+			return;
+		}
+
+		// GUARD ANTI-TUMBA-DOBLE: si ya se genero una tumba para este steamid hace muy poco,
+		// no crear otra. m_ExorDeathDone protege contra el EEKilled multiple de una granada,
+		// pero es POR INSTANCIA de PlayerBase; si el motor tiene dos instancias del mismo
+		// personaje (desync, combat-log, reconexion durante el logout timer) cada una entra
+		// aca con su flag propio en false y salen 2 tumbas del mismo muerto.
+		if (m_ExorDeathSid != "" && ExorBodyBagGuard.YaGenero(m_ExorDeathSid))
+		{
+			Print(string.Format("%1 tumba DUPLICADA evitada para %2 (%3): ya se genero una hace instantes", ExorStorageConstants.LOG, m_ExorDeathName, m_ExorDeathSid));
+			GetGame().ObjectDelete(this);
+			return;
+		}
+
 		Exor_BodyBag bag = Exor_BodyBag.SpawnFromLoot(GetPosition(), m_ExorDeathLoot, m_ExorDeathWeapons);
 		if (!bag)
 			return;
+		if (m_ExorDeathSid != "")
+			ExorBodyBagGuard.Marcar(m_ExorDeathSid);
+
 		// forense: registrar la tumba (muerto/pos/fecha/items) en tumbas\<id>.json
 		ExorTumbaForense.Registrar(bag.ExorGetID(), bag.GetPosition(), m_ExorDeathName, m_ExorDeathSid, ExorTimeUtil.NowMinutes(), m_ExorDeathLoot);
-		// Ya es seguro borrar el cuerpo en el acto: las armas se RECREARON en la bolsa (no se
-		// movio la entidad real), asi que borrar el cuerpo no afecta el loot de la bolsa.
+
+		// ANTI-DUPE: destruir los ORIGINALES. El loot ya se recreo dentro de la bolsa, asi que
+		// todo lo que quedo del loadout es una copia sobrante. Hay que borrarlo explicitamente
+		// porque durante el delay el motor pudo dropear parte al piso, y eso ya no cuelga del
+		// cadaver -> el ObjectDelete de abajo no lo alcanzaria (arma duplicada: una en la
+		// tumba, otra tirada en el suelo).
+		int borrados = 0;
+		if (m_ExorDeathOriginals)
+		{
+			int i;
+			for (i = 0; i < m_ExorDeathOriginals.Count(); i++)
+			{
+				EntityAI orig = m_ExorDeathOriginals.Get(i);
+				if (!orig)
+					continue;	// ya lo destruyo el motor
+				// no tocar lo que haya terminado DENTRO de la bolsa (el camino moveItems no
+				// se usa hoy, pero si alguien lo reactiva esto evita borrar el loot bueno)
+				if (orig.GetHierarchyParent() == bag)
+					continue;
+				GetGame().ObjectDelete(orig);
+				borrados++;
+			}
+		}
+		// 1 linea por muerte, a proposito NO en debug: es la confirmacion de que el anti-dupe
+		// actuo. Si un arma aparece a la vez en la tumba y en el piso, este numero dice
+		// cuantos originales se alcanzaron a destruir y permite comparar con el loadout.
+		if (borrados > 0)
+			Print(string.Format("%1 tumba: %2 originales del loadout destruidos (anti-dupe)", ExorStorageConstants.LOG, borrados));
+
+		// Ya es seguro borrar el cuerpo: las armas se RECREARON en la bolsa (no se movio la
+		// entidad real) y los originales se destruyeron arriba.
 		GetGame().ObjectDelete(this);
+	}
+
+	void ExorDbgBag(string ev)
+	{
+		if (ExorStorageConstants.DEBUG_BARRELS)
+			Print(string.Format("%1 [dbg] tumba: %2", ExorStorageConstants.LOG, ev));
 	}
 
 	// Nombre legible del arma usada (server).
@@ -731,9 +824,25 @@ modded class PlayerBase
 	}
 
 	// ------------------------- RPC -------------------------
+	// true si el rpc_type pertenece al rango reservado del mod (ver ExorRPC en ExorParty_Net.c)
+	bool ExorIsOwnRPC(int rpc_type)
+	{
+		return rpc_type >= ExorRPC.RANGE_MIN && rpc_type <= ExorRPC.RANGE_MAX;
+	}
+
 	override void OnRPC(PlayerIdentity sender, int rpc_type, ParamsReadContext ctx)
 	{
-		super.OnRPC(sender, rpc_type, ctx);
+		// NO delegar los RPC PROPIOS a super. Antes se llamaba super.OnRPC() SIEMPRE y
+		// PRIMERO, asi que cada RPC nuestro atravesaba la cadena de los otros mods; el
+		// XMLEditor de VPPAdminTools intentaba parsearlo como suyo y reventaba con
+		// "NULL pointer to instance. Variable 'data'" (visto en produccion 19-jul 22:06).
+		// Ademas es peligroso: si otro mod LEE el ctx, el cursor del stream avanza y
+		// nuestro handler despues lee basura.
+		if (!ExorIsOwnRPC(rpc_type))
+		{
+			super.OnRPC(sender, rpc_type, ctx);
+			return;
+		}
 
 		switch (rpc_type)
 		{
@@ -789,8 +898,15 @@ modded class PlayerBase
 			case ExorRPC.SCORE_REQ:
 				if (GetGame().IsServer())
 				{
+					// THROTTLE por jugador: el cliente puede pedir el leaderboard tan rapido
+					// como abra/cierre el panel (se vieron 3 pedidos en 1 segundo, 301 en 8h).
+					// Cada uno rearma el JSON completo (~3.8 KB) y lo manda en trozos por red.
+					// 1 pedido cada 5s por jugador alcanza de sobra para un panel de UI.
+					int nowScore = GetGame().GetTime();
+					if (nowScore - m_ExorLastScoreReqMs < 5000)
+						break;
+					m_ExorLastScoreReqMs = nowScore;
 					string sj = ExorStats.Get().BuildJson();
-					Print(string.Format("%1 SCORE_REQ recibido -> enviando %2 chars de leaderboard (en trozos)", ExorStorageConstants.LOG, sj.Length()));
 					ExorNetChunk.Send(this, GetIdentity(), ExorRPC.SCORE_DATA, sj);
 				}
 				break;
@@ -1044,6 +1160,16 @@ modded class PlayerBase
 
 	void ExorOpenSpawnMenu()
 	{
-		GetGame().GetUIManager().EnterScriptedMenu(ExorMenuIDs.SPAWN, null);
+		// IDEMPOTENTE: el server reintenta el SPAWN_OPEN hasta que el jugador elige, asi que
+		// este handler puede correr varias veces. Si el menu YA esta abierto no hay que
+		// re-abrirlo (reabrirlo pisaria la seleccion que el jugador esta por confirmar);
+		// los datos igual se refrescaron via ExorSpawnClient.Set() antes de llamar aca.
+		UIManager ui = GetGame().GetUIManager();
+		if (!ui)
+			return;
+		UIScriptedMenu abierto = ui.FindMenu(ExorMenuIDs.SPAWN);
+		if (abierto)
+			return;
+		ui.EnterScriptedMenu(ExorMenuIDs.SPAWN, null);
 	}
 }

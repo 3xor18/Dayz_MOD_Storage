@@ -142,9 +142,25 @@ class ExorVO_Manager
 				virt++;
 			}
 		}
-		// Las bolsas de cadaver NO se virtualizan (virtualizar perdia el loot). Su cargo es
-		// top-level (no anidado en un barril), asi que persiste bien como entidades reales
-		// via la persistencia normal del contenedor -> nada que hacer al apagar.
+		// BOLSAS DE CADAVER: antes se saltaban aca, asumiendo que su cargo era "top-level" y
+		// que la persistencia normal alcanzaba. NO alcanza: el loot de una tumba incluye ROPA
+		// CON ITEMS ADENTRO (anidado), que es exactamente lo que DayZ tira al piso al recargar.
+		// Reproducido en el test local del 20-jul: 2 tumbas con loot 12/12, reinicio, y al
+		// volver estaban VACIAS con el loot desparramado en el piso e inagarrable.
+		// (El motivo historico de la exclusion -"virtualizar perdia el loot"- era el bug viejo,
+		// ya resuelto en v2.8.0: hoy las tumbas virtualizan por distancia todo el tiempo sin
+		// perder nada, asi que hacerlo tambien al apagar es el mismo camino ya probado.)
+		for (i = 0; i < m.m_BodyBags.Count(); i++)
+		{
+			Exor_BodyBag bag = m.m_BodyBags.Get(i);
+			// ExorContentCount (no CargoCount): en la tumba la mayor parte del loot vive en
+			// los SLOTS DE EQUIPO, no en el cargo; contar solo el cargo daria 0.
+			if (bag && !bag.ExorIsVirtualized() && bag.ExorContentCount() > 0)
+			{
+				bag.ExorVirtualize();
+				virt++;
+			}
+		}
 		Print(string.Format("%1 VirtualizeAll (apagado): %2 contenedores virtualizados a disco", ExorStorageConstants.LOG, virt));
 	}
 
@@ -162,10 +178,32 @@ class ExorVO_Manager
 		GetGame().GetPlayers(players);
 		s_PopCount = players.Count();
 
-		// --- Barriles: reconcile de arranque (THROTTLE) + auto-cierre + virtualizacion (THROTTLE) + snapshot (THROTTLE) ---
-		int budget = ExorStorageConstants.MAX_VIRT_PER_TICK;
-		int reconcileBudget = ExorStorageConstants.MAX_RECONCILE_PER_TICK;
-		int snapBudget = ExorStorageConstants.MAX_SNAPSHOT_PER_TICK;
+		// --- PRESUPUESTO COMPARTIDO Y ADAPTATIVO ---
+		// Un solo pool para barriles + muebles (antes tenian uno cada uno = el doble de
+		// trabajo maximo por tick). El factor lo mueve el peor frame observado: si el server
+		// sufre, el cupo se corta a la mitad; si esta holgado, se devuelve de a poco.
+		AdaptBudgetFactor();
+		int budget = ScaleBudget(ExorStorageConstants.MAX_VIRT_PER_TICK);
+		int reconcileBudget = ScaleBudget(ExorStorageConstants.MAX_RECONCILE_PER_TICK);
+		int snapBudget = ScaleBudget(ExorStorageConstants.MAX_SNAPSHOT_PER_TICK);
+
+		// RESERVA PARA MUEBLES: el bloque de barriles corre primero y, si se comiera todo el
+		// cupo, los muebles no reconciliarian hasta que terminaran los ~657 barriles (y hasta
+		// entonces NO auto-cierran ni virtualizan). Se le guarda la mitad del cupo de
+		// reconcile al bloque de muebles. Si no hay muebles el reservado se devuelve abajo.
+		int furReserve = 0;
+		if (m_Openables.Count() > 0 && reconcileBudget > 1)
+		{
+			furReserve = reconcileBudget / 2;
+			reconcileBudget = reconcileBudget - furReserve;
+		}
+
+		// Instrumentacion: cuanto tarda cada bloque de este tick. Se loguea SOLO si el tick
+		// se pasa de TICK_WARN_MS -> en operacion normal no escribe nada.
+		int tStart = GetGame().GetTime();
+		int nBarrelWork = 0;
+		int nFurWork = 0;
+
 		for (i = m_Barrels.Count() - 1; i >= 0; i--)
 		{
 			Exor_Barrel_Base barrel = m_Barrels.Get(i);
@@ -180,54 +218,94 @@ class ExorVO_Manager
 			if (barrel.ExorNeedsReconcile())
 			{
 				if (reconcileBudget <= 0)
-					continue;
-				barrel.ExorReconcileNow();
-				reconcileBudget--;
+					continue;	// sin cupo: espera al proximo tick (sigue sin tickear)
+				// solo descuenta si REALMENTE reconcilio (los vacios se saldan gratis y
+				// siguen de largo al tick normal en vez de perder el turno)
+				if (barrel.ExorReconcileNow())
+				{
+					reconcileBudget--;
+					nBarrelWork++;
+				}
 			}
 			// allowVirtualize=budget>0 y allowSnapshot=snapBudget>0: si se acabo el cupo de
 			// este tick, el barril se auto-cierra igual pero difiere virtualizar/snapshot al
 			// proximo tick -> sin pico de CPU (virtualizar) ni de I/O a disco (snapshot).
 			bool didSnap;
 			if (barrel.ExorTick(now, cfg.storage, budget > 0, snapBudget > 0, players, didSnap))
+			{
 				budget--;
+				nBarrelWork++;
+			}
 			if (didSnap)
+			{
 				snapBudget--;
+				nBarrelWork++;
+			}
 		}
+		int tBarrels = GetGame().GetTime() - tStart;
 
-		// --- Muebles abribles (nevera, locker, guncab, etc.): MISMA logica que el barril pero
-		// con PRESUPUESTO PROPIO (no comparten cupo con los barriles). Antes usaban las mismas
-		// variables budget/snapBudget/reconcileBudget ya gastadas por los 634 barriles -> con
-		// muchos barriles activos los muebles nunca virtualizaban/snapshoteaban ese tick (y al
-		// reves). Cupos separados = agregar tipos de mueble NO degrada el manejo de barriles ni
-		// se starvean entre si. Los muebles son pocos por base, asi que su cupo casi no se usa.
-		int furBudget = ExorStorageConstants.MAX_VIRT_PER_TICK;
-		int furReconcileBudget = ExorStorageConstants.MAX_RECONCILE_PER_TICK;
-		int furSnapBudget = ExorStorageConstants.MAX_SNAPSHOT_PER_TICK;
+		// --- Muebles abribles (nevera, locker, guncab, etc.): MISMA logica que el barril y
+		// COMPARTIENDO el pool (lo que sobro del bloque de barriles).
+		//
+		// Antes tenian presupuesto PROPIO para que los 634 barriles no los starvearan. El
+		// efecto colateral fue duplicar el techo de trabajo por tick (15+15 virt, 12+12
+		// snapshot, 3+3 reconcile) justo cuando se desplegaron los muebles -> mas pico de
+		// CPU/IO por tick con alta poblacion. Ahora el pool es unico y el anti-starvation
+		// se resuelve con el CURSOR ROTATIVO de abajo: cada tick los muebles empiezan a
+		// recorrerse desde donde quedo el anterior, asi que ninguno se queda sin turno
+		// aunque el cupo se haya agotado varias veces seguidas. Escala igual con 3 muebles
+		// que con 300.
+		// pase 1: limpiar referencias muertas (barato, sin tocar presupuesto)
 		for (i = m_Openables.Count() - 1; i >= 0; i--)
 		{
-			Exor_OpenableStorage fur = m_Openables.Get(i);
-			if (!fur)
-			{
+			if (!m_Openables.Get(i))
 				m_Openables.Remove(i);
-				continue;
-			}
-			if (fur.ExorNeedsReconcile())
-			{
-				if (furReconcileBudget <= 0)
-					continue;
-				fur.ExorReconcileNow();
-				furReconcileBudget--;
-			}
-			bool didSnapF;
-			if (fur.ExorTick(now, cfg.storage, furBudget > 0, furSnapBudget > 0, players, didSnapF))
-				furBudget--;
-			if (didSnapF)
-				furSnapBudget--;
-			// logica periodica de la subclase (ej: bateria de la nevera). Centralizado
-			// aca en vez de un timer por-nevera -> escala a muchas neveras sin cientos
-			// de timers. La nevera throttlea internamente (cada ~60s).
-			fur.ExorPeriodicTick(now);
 		}
+
+		// pase 2: recorrer DESDE EL CURSOR, dando la vuelta. El que no alcanzo cupo este
+		// tick queda primero en el proximo -> reparto justo sin presupuesto dedicado.
+		// devolver la reserva: lo que sobro del bloque de barriles + lo reservado para muebles
+		reconcileBudget = reconcileBudget + furReserve;
+
+		int furCount = m_Openables.Count();
+		if (furCount > 0)
+		{
+			int furStart = m_FurCursor % furCount;
+			for (int k = 0; k < furCount; k++)
+			{
+				Exor_OpenableStorage fur = m_Openables.Get((furStart + k) % furCount);
+				if (!fur)
+					continue;
+				if (fur.ExorNeedsReconcile())
+				{
+					if (reconcileBudget <= 0)
+						continue;
+					if (fur.ExorReconcileNow())
+					{
+						reconcileBudget--;
+						nFurWork++;
+					}
+				}
+				bool didSnapF;
+				if (fur.ExorTick(now, cfg.storage, budget > 0, snapBudget > 0, players, didSnapF))
+				{
+					budget--;
+					nFurWork++;
+				}
+				if (didSnapF)
+				{
+					snapBudget--;
+					nFurWork++;
+				}
+				// logica periodica de la subclase (ej: bateria de la nevera). Centralizado
+				// aca en vez de un timer por-nevera -> escala a muchas neveras sin cientos
+				// de timers. La nevera throttlea internamente (cada ~60s).
+				fur.ExorPeriodicTick(now);
+			}
+			// avanzar el cursor para que el proximo tick arranque en otro punto
+			m_FurCursor = (furStart + 1) % furCount;
+		}
+		int tFurniture = GetGame().GetTime() - tStart - tBarrels;
 
 		// --- Bolsas de cadaver: TTL + virtualizar/restaurar por distancia (reusa 'players') ---
 		for (i = m_BodyBags.Count() - 1; i >= 0; i--)
@@ -240,6 +318,105 @@ class ExorVO_Manager
 			}
 			bag.ExorBagTick(now, players);
 		}
+
+		// --- Cerrar sesiones de saqueo inactivas (escribe la linea agrupada al audit) ---
+		ExorRoboBuffer.Tick();
+
+		// --- Volcar el forense de tumbas (1 escritura por tumba, no por item looteado) ---
+		ExorTumbaForense.FlushPending();
+
+		// --- Volcar el audit bufferizado a disco ---
+		// El unico llamador periodico de Flush() era el tick 1Hz del anti-cheat; al sacarlo
+		// quedo SOLO el flush de OnMissionFinish, o sea el audit se escribia recien al apagar
+		// y un crash se llevaba puesto todo el log del ciclo. Ahora se vuelca cada 5s
+		// (barato: sale enseguida si la cola esta vacia, y abre el archivo UNA vez por flush).
+		ExorRaidLog.Flush();
+
+		// --- INSTRUMENTACION: solo habla cuando el tick DUELE ---
+		// Sin esto solo se ve el FPS global (duele, pero no donde). Con esto, cuando el tick
+		// se pasa del umbral queda en el RPT que bloque lo causo y con cuanta carga.
+		// grep "3xorVO TICK-LENTO" <RPT>
+		int tTotal = GetGame().GetTime() - tStart;
+		if (tTotal >= ExorStorageConstants.TICK_WARN_MS)
+		{
+			// OJO: string.Format acepta como MUCHO 9 parametros (%1..%9). Por eso va en dos
+			// lineas en vez de una sola larga.
+			int tBags = tTotal - tBarrels - tFurniture;
+			Print(string.Format("%1 TICK-LENTO total=%2ms | barriles=%3ms/%4ops de %5 | muebles=%6ms/%7ops de %8",
+				ExorStorageConstants.LOG,
+				tTotal, tBarrels, nBarrelWork, m_Barrels.Count(),
+				tFurniture, nFurWork, m_Openables.Count()));
+			Print(string.Format("%1 TICK-LENTO (cont) bolsas=%2ms de %3 | players=%4 | cupo=%5%%",
+				ExorStorageConstants.LOG,
+				tBags, m_BodyBags.Count(),
+				s_PopCount, Math.Round(m_BudgetFactor * 100)));
+		}
+	}
+
+	// ------------------------- presupuesto adaptativo -------------------------
+	// Factor actual del cupo (1.0 = techo completo). Lo mueve el peor frame observado por
+	// ExorPerfMonitor entre ticks: el server se auto-regula en vez de depender de que
+	// alguien tunee constantes a mano para cada nivel de poblacion.
+	float m_BudgetFactor = 1.0;
+	// espejo estatico del factor: lo leen las entidades en su tick (ej. el debounce del
+	// snapshot) sin tener que recibirlo por parametro en toda la cadena
+	static float s_BudgetFactor = 1.0;
+
+	// ------------------------- serializacion de RESTORES -------------------------
+	// Restaurar un contenedor es lo mas caro que hace el mod y NO pasaba por ningun
+	// presupuesto: lo dispara el jugador al ABRIR, y corre entero en UN frame (crea y
+	// reubica cada item, recursivo por attachments y cargo anidado). Un locker lleno son
+	// facilmente 1500-2500 entidades creadas de golpe.
+	// Con 50-60 jugadores varias aperturas caen en el mismo frame y se suman -> hitch.
+	// Esto no parte el restore individual (partirlo a mitad es riesgoso para el loot):
+	// solo garantiza que no arranquen DOS en el mismo frame. El inventario del mueble esta
+	// bloqueado hasta que termina, asi que esperar unos ms es invisible para el jugador.
+	static int s_LastRestoreMs;
+	static const int RESTORE_SPACING_MS = 250;	// separacion minima entre restores
+
+	// true si se puede restaurar YA. Si no, el llamador debe re-agendar.
+	static bool CanRestoreNow()
+	{
+		int now = GetGame().GetTime();
+		if (now - s_LastRestoreMs < RESTORE_SPACING_MS)
+			return false;
+		s_LastRestoreMs = now;
+		return true;
+	}
+	int m_FurCursor = 0;	// cursor rotativo de muebles (anti-starvation sin cupo dedicado)
+
+	void AdaptBudgetFactor()
+	{
+		float worst = ExorPerfMonitor.ConsumeWorstMs();
+		if (worst <= 0)
+			return;	// todavia sin muestra (arranque): dejar el factor como esta
+
+		if (worst >= ExorStorageConstants.ADAPT_FRAME_BAD_MS)
+		{
+			// el server viene sufriendo -> cortar rapido y dejar respirar al frame
+			m_BudgetFactor = m_BudgetFactor * ExorStorageConstants.ADAPT_STEP_DOWN;
+			if (m_BudgetFactor < ExorStorageConstants.ADAPT_MIN_FACTOR)
+				m_BudgetFactor = ExorStorageConstants.ADAPT_MIN_FACTOR;
+		}
+		else if (worst <= ExorStorageConstants.ADAPT_FRAME_OK_MS)
+		{
+			// holgado -> devolver cupo DE A POCO (subir de golpe hace oscilar el frame)
+			m_BudgetFactor = m_BudgetFactor + ExorStorageConstants.ADAPT_STEP_UP;
+			if (m_BudgetFactor > 1.0)
+				m_BudgetFactor = 1.0;
+		}
+		// zona muerta entre OK y BAD: no tocar nada (histeresis, evita el ping-pong)
+		s_BudgetFactor = m_BudgetFactor;
+	}
+
+	// Escala un cupo por el factor actual, con piso de 1: aunque el server este muy
+	// cargado SIEMPRE se hace al menos una operacion por tick -> nunca se estanca la cola.
+	int ScaleBudget(int techo)
+	{
+		int v = (int)Math.Round(techo * m_BudgetFactor);
+		if (v < 1)
+			v = 1;
+		return v;
 	}
 
 	// ------------------------- tick lento (30s): vehiculos -------------------------
@@ -252,6 +429,10 @@ class ExorVO_Manager
 
 		// volcar stats pendientes a disco (1 sola escritura cada 30s, no por cada kill)
 		ExorStats.Get().FlushIfDirty();
+		// idem el ledger anti-farmeo: solo se persistia en OnMissionFinish, asi que un crash
+		// borraba la ventana de 4h y el contador de farmeo arrancaba de cero.
+		ExorKillFarm.FlushIfDirty();
+		ExorBodyBagGuard.Purgar();	// soltar las marcas de tumba vencidas
 
 		// --- Vehiculos: dormir los inactivos ---
 		if (!veh.vehiculos_dormir)

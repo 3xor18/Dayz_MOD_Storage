@@ -21,6 +21,16 @@ class Exor_BodyBag extends Container_Base
 		RegisterNetSyncVariableBool("m_ExorVirtualizedSync");
 	}
 
+	// Log de rutina, apagado por defecto (mismo gate que el barril). El virtualizar/restaurar
+	// de tumbas era ~460 lineas por sesion de 8h de I/O sincrona por evento normal. Lo que
+	// SI sigue en Print son los eventos con valor forense: creacion (liga muerte->bolsa),
+	// expiracion por TTL (explica el "perdi mi loot") y el descarte anti-dupe.
+	void ExorDbg(string ev)
+	{
+		if (ExorStorageConstants.DEBUG_BARRELS)
+			Print(string.Format("%1 [dbg] BodyBag %2: %3", ExorStorageConstants.LOG, ExorGetID(), ev));
+	}
+
 	override void EEInit()
 	{
 		super.EEInit();
@@ -89,6 +99,63 @@ class Exor_BodyBag extends Container_Base
 		return string.Format("%1\\%2.json", ExorStorageConstants.BODYBAG_DIR, ExorGetID());
 	}
 
+	// ------------------------- purga de JSON huerfanos -------------------------
+	// Al arrancar, borra los JSON de bolsas que ya no existen. Se acumulaban porque el TTL
+	// solo borraba el archivo si la bolsa estaba virtualizada, y porque un crash/reinicio
+	// deja archivos sin dueño. En produccion habia 273 acumulados (4 dias) con tumbas que
+	// duran 30 minutos.
+	// Es seguro correrlo DESPUES de que la persistencia cargo las bolsas vivas: cada bolsa
+	// viva se registra en el manager, asi que lo que no este registrado es basura.
+	static void PurgarHuerfanos()
+	{
+		if (!GetGame() || !GetGame().IsServer())
+			return;
+		if (!FileExist(ExorStorageConstants.BODYBAG_DIR))
+			return;
+
+		// ids de las bolsas VIVAS (las que la persistencia acaba de cargar)
+		set<string> vivas = new set<string>;
+		array<Exor_BodyBag> bags = ExorVO_Manager.Get().m_BodyBags;
+		int i;
+		for (i = 0; i < bags.Count(); i++)
+		{
+			if (bags.Get(i))
+				vivas.Insert(bags.Get(i).ExorGetID());
+		}
+
+		int borrados = 0;
+		string pattern = string.Format("%1\\*.json", ExorStorageConstants.BODYBAG_DIR);
+		string fileName;
+		FileAttr attr;
+		FindFileHandle h = FindFile(pattern, fileName, attr, FindFileFlags.ALL);
+		if (h)
+		{
+			if (fileName != "" && PurgarUno(fileName, vivas))
+				borrados++;
+			while (FindNextFile(h, fileName, attr))
+			{
+				if (fileName != "" && PurgarUno(fileName, vivas))
+					borrados++;
+			}
+			CloseFindFile(h);
+		}
+		if (borrados > 0)
+			Print(string.Format("%1 BodyBags: %2 JSON huerfanos borrados al arrancar", ExorStorageConstants.LOG, borrados));
+	}
+
+	// true si borro el archivo. fileName viene SIN ruta (ej "123_45_67.json").
+	static bool PurgarUno(string fileName, set<string> vivas)
+	{
+		int dot = fileName.IndexOf(".");
+		if (dot <= 0)
+			return false;
+		string id = fileName.Substring(0, dot);
+		if (vivas.Find(id) != -1)
+			return false;	// tiene bolsa viva: es su virtualizacion, NO tocar
+		DeleteFile(string.Format("%1\\%2", ExorStorageConstants.BODYBAG_DIR, fileName));
+		return true;
+	}
+
 	bool ExorIsVirtualized()
 	{
 		return FileExist(ExorGetStoragePath());
@@ -131,8 +198,11 @@ class Exor_BodyBag extends Container_Base
 			int age = ExorTimeUtil.NowMinutes() - m_ExorSpawnMin;
 			if (age >= cfg.duracion_minutos)
 			{
-				if (ExorIsVirtualized())
-					DeleteFile(ExorGetStoragePath());
+				// Borrar el JSON SIEMPRE, no solo si estaba virtualizada. Si la bolsa expiraba
+				// con items reales (habia alguien cerca, asi que nunca virtualizo) su archivo
+				// quedaba huerfano para siempre: se encontraron 273 JSON acumulados desde
+				// hacia 4 dias, con tumbas que duran 30 minutos.
+				DeleteFile(ExorGetStoragePath());
 				Print(string.Format("%1 BodyBag %2 expirada (%3 min) -> borrada", ExorStorageConstants.LOG, ExorGetID(), age));
 				GetGame().ObjectDelete(this);
 				return;
@@ -244,7 +314,7 @@ class Exor_BodyBag extends Container_Base
 
 		m_ExorVirtualizedSync = true;
 		SetSynchDirty();
-		Print(string.Format("%1 BodyBag %2 virtualizada: %3 items a disco", ExorStorageConstants.LOG, ExorGetID(), f.items.Count()));
+		ExorDbg(string.Format("virtualizada: %1 items a disco", f.items.Count()));	// rutina -> a debug
 	}
 
 	void ExorRestore()
@@ -279,7 +349,7 @@ class Exor_BodyBag extends Container_Base
 		DeleteFile(path);	// consumido tras restaurar (anti-dupe)
 		m_ExorVirtualizedSync = false;
 		SetSynchDirty();
-		Print(string.Format("%1 BodyBag %2 restaurada: %3 items", ExorStorageConstants.LOG, ExorGetID(), f.items.Count()));
+		ExorDbg(string.Format("restaurada: %1 items", f.items.Count()));	// rutina -> a debug
 	}
 
 	// NO MOVIBLE: no se puede levantar a las manos ni meter en otro contenedor.

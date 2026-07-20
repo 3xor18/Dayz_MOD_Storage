@@ -240,13 +240,18 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	// (barril no-virtualizado al guardar) o tiro anidados al piso, se limpia todo y el
 	// barril queda virtualizado -> se restaura del JSON al abrir. Lo llama el manager
 	// (con throttle) o ExorRestoreIfNeeded si un player abre antes de su turno.
-	void ExorReconcileNow()
+	// Devuelve true si hizo trabajo REAL. Ver la nota en ExorStorage_Openable.ExorReconcileNow:
+	// un contenedor sin JSON no debe consumir cupo de reconcile del tick.
+	bool ExorReconcileNow()
 	{
 		if (m_ExorLoadDone)
-			return;
+			return false;
 		ExorDbg("ExorReconcileNow (1ra reconciliacion tras cargar; JSON manda)");
 		m_ExorLoadDone = true;
+		if (!ExorHasContent())
+			return false;	// barril vacio/legacy: nada que reconciliar, no gastar presupuesto
 		ExorReconcileOnLoad();
+		return true;
 	}
 
 	// allowSnapshot/didSnapshot: el guardado en vivo del JSON escribe a DISCO de forma
@@ -300,7 +305,7 @@ class Exor_Barrel_Base : Barrel_ColorBase
 			{
 				ExorDbg("ExorTick -> auto-cierre (nadie cerca por el umbral)");
 				Close();
-				Print(string.Format("%1 Barril %2 auto-cerrado (nadie cerca)", ExorStorageConstants.LOG, ExorGetID()));
+				ExorDbg("auto-cerrado (nadie cerca)");	// rutina: ~483/8h -> a debug
 			}
 			return false;
 		}
@@ -424,11 +429,24 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		m_ExorVirt = true;
 		m_ExorVirtualizedSync = true;
 		SetSynchDirty();
-		Print(string.Format("%1 Barril %2 virtualizado: %3 items sacados del mundo", ExorStorageConstants.LOG, ExorGetID(), toDelete.Count()));
+		ExorDbg(string.Format("virtualizado: %1 items sacados del mundo", toDelete.Count()));	// rutina: ~1240/8h -> a debug
 		ExorDbg("ExorVirtualize FIN (barril virtualizado, cargo vacio en el mundo)");
 	}
 
 	// Se llama al ABRIR. Recrea los items reales desde el JSON, o migra un barril viejo.
+	// Reintento del restore cuando el turno estaba tomado por otro contenedor.
+	void ExorRestoreRetry()
+	{
+		if (!m_ExorVirt)
+			return;	// ya lo restauro otro camino
+		if (!ExorVO_Manager.CanRestoreNow())
+		{
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorRestoreRetry, ExorVO_Manager.RESTORE_SPACING_MS, false);
+			return;
+		}
+		ExorDoRestore();
+	}
+
 	void ExorRestoreIfNeeded()
 	{
 		// si abren ANTES de su turno de reconcile (throttle del manager), forzar la
@@ -451,6 +469,13 @@ class Exor_Barrel_Base : Barrel_ColorBase
 			{
 				ExorDbg("ExorRestoreIfNeeded: cargo stale pendiente de borrar (delete diferido) -> restore DIFERIDO 300ms");
 				GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorDoRestore, 300, false);
+				return;
+			}
+			// SERIALIZAR: no arrancar dos restores en el mismo frame (cada uno crea y
+			// reubica cientos de entidades). Ver ExorVO_Manager.CanRestoreNow.
+			if (!ExorVO_Manager.CanRestoreNow())
+			{
+				GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorRestoreRetry, ExorVO_Manager.RESTORE_SPACING_MS, false);
 				return;
 			}
 			ExorDbg("ExorRestoreIfNeeded: esta virtualizado -> restaurar del JSON");
@@ -525,8 +550,15 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		m_ExorVirt = false;
 		m_ExorVirtualizedSync = false;
 		SetSynchDirty();
-		Print(string.Format("%1 Barril %2 restaurado: %3/%4 items (real/esperado)", ExorStorageConstants.LOG, ExorGetID(), ExorCargoCount(), f.items.Count()));
-		ExorDbg(string.Format("ExorDoRestore FIN: cargo real ahora = %1 (esperado %2)", ExorCargoCount(), f.items.Count()));
+		// LOG SOLO SI HAY DISCREPANCIA. La restauracion correcta era ~1248 lineas por sesion
+		// de 8h (I/O sincrona en el hilo del juego, por evento de rutina). Lo que importa
+		// forensemente es cuando el cargo real NO coincide con el JSON = se perdio loot;
+		// ese caso sigue gritando en el RPT. grep "3xorVO PERDIDA"
+		int realCount = ExorCargoCount();
+		int espCount = f.items.Count();
+		if (realCount != espCount)
+			Print(string.Format("%1 PERDIDA Barril %2 restaurado INCOMPLETO: %3/%4 items (real/esperado)", ExorStorageConstants.LOG, ExorGetID(), realCount, espCount));
+		ExorDbg(string.Format("ExorDoRestore FIN: cargo real ahora = %1 (esperado %2)", realCount, espCount));
 	}
 
 	// RECONCILIAR AL CARGAR: el JSON manda. Si DayZ cargo items reales (barril no
@@ -572,7 +604,10 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		{
 			dropped = ExorCleanDroppedNearby();
 			// reintento diferido: algunos drops tardan en asentarse tras la carga del mundo.
-			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanDroppedRetry, 8000, false);
+			// SOLO si el 1er barrido encontro algo: si el piso estaba limpio, repetir el
+			// scan de 15m + re-parseo del JSON por cada barril es trabajo puro de mas.
+			if (dropped > 0)
+				GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanDroppedRetry, 8000, false);
 		}
 
 		m_ExorVirt = true;	// queda virtualizado; se restaura al abrir
@@ -608,6 +643,8 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	TStringArray ExorTypesFromJsonText(string path)
 	{
 		TStringArray result = new TStringArray;
+		// dedup con map en vez de result.Find() lineal: ver la nota en ExorStorage_Openable.
+		map<string, bool> seen = new map<string, bool>;
 		FileHandle fh = OpenFile(path, FileMode.READ);
 		if (fh == 0)
 			return result;
@@ -626,8 +663,11 @@ class Exor_Barrel_Base : Barrel_ColorBase
 			if (q2 < 0)
 				continue;
 			string val = rest2.Substring(0, q2);
-			if (val != "" && result.Find(val) < 0)
+			if (val != "" && !seen.Contains(val))
+			{
+				seen.Set(val, true);
 				result.Insert(val);
+			}
 		}
 		CloseFile(fh);
 		return result;

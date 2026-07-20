@@ -395,6 +395,31 @@ class ExorGroupManager
 	// Se itera sobre una COPIA de m_Groups: HealGroupMast puede llamar a MarkGroupDeleted (base ya
 	// reconstruida por otro clan) que remueve el grupo de m_Groups -> mutar la lista en pleno for
 	// desincronizaria los indices y saltearia grupos.
+	// true si algun jugador vivo dentro del radio esta COLOCANDO algo (holograma activo).
+	// Se usa para no destruir/recrear entidades bajo una accion de deploy en curso.
+	// 'players' se pasa desde afuera: el barrido recorre TODOS los grupos y sin esto cada
+	// grupo sin mastil hacia su propio GetPlayers() en el mismo frame -> O(grupos*players).
+	bool SomeoneDeployingNear(array<Man> players, float x, float z, float radius)
+	{
+		if (!players)
+			return false;
+		vector target = Vector(x, 0, z);
+		int i;
+		for (i = 0; i < players.Count(); i++)
+		{
+			PlayerBase p = PlayerBase.Cast(players.Get(i));
+			if (!p || !p.IsAlive())
+				continue;
+			if (!p.IsPlacingServer())
+				continue;
+			vector pp = p.GetPosition();
+			pp[1] = 0;	// comparar en 2D: la altura no importa para "esta al lado"
+			if (vector.Distance(pp, target) <= radius)
+				return true;
+		}
+		return false;
+	}
+
 	void RestoreLostMastsTick()
 	{
 		if (!GetGame() || !GetGame().IsServer())
@@ -408,6 +433,10 @@ class ExorGroupManager
 		PlayerBase builder = AnyOnlinePlayer();
 		if (!builder)
 			return;	// sin nadie online no se puede construir el poste; se reintenta en 2 min
+
+		// lista de jugadores UNA vez para todo el barrido (la reusa SomeoneDeployingNear)
+		array<Man> sweepPlayers = new array<Man>;
+		GetGame().GetPlayers(sweepPlayers);
 
 		// snapshot (ver nota arriba: HealGroupMast puede remover grupos de m_Groups)
 		array<ExorGroup> snapshot = new array<ExorGroup>;
@@ -432,6 +461,18 @@ class ExorGroupManager
 					g.mast_lost = 0;
 					SaveGroup(g);
 				}
+				continue;
+			}
+			// GUARD ANTI-NULL: no recrear el mastil si hay alguien COLOCANDO algo al lado.
+			// El self-heal borra/recrea la entidad; si un jugador esta a mitad de una accion
+			// de deploy sobre ese punto, su ActionDeployObject se queda con el puntero muerto
+			// y ActionConditionContinue tira NULL pointer POR FRAME hasta que suelta.
+			// Caso real (19-jul 03:08:11): 121 excepciones en 1 segundo, FPS 203->107, con el
+			// jugador a 2.77m del mastil que se estaba recreando. Se difiere al proximo ciclo
+			// (2 min) -> el mastil igual se restaura, sin reventar la accion de nadie.
+			if (SomeoneDeployingNear(sweepPlayers, g.mast_x, g.mast_z, 30.0))
+			{
+				Print(string.Format("%1 Party: self-heal del mastil del grupo %2 DIFERIDO (hay un jugador colocando algo cerca); se reintenta en 2 min", ExorStorageConstants.LOG, g.id));
 				continue;
 			}
 			// falta el mastil (mast_lost==1 explicito, O caso silencioso con mast_lost==0): recrear.

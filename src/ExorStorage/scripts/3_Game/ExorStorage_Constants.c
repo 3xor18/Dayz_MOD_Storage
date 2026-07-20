@@ -4,7 +4,12 @@
 class ExorStorageConstants
 {
 	static const string MOD_NAME = "3xor_Vanilla_Optimization";
-	static const string MOD_VERSION = "2.8.0";
+	static const string MOD_VERSION = "2.9.1";
+	// Sello de build: SUBIRLO EN CADA EMPAQUE, aunque no cambie MOD_VERSION. Sirve para
+	// saber desde el RPT que PBO esta corriendo el server (el de version sola no alcanza:
+	// se desplego 2.9.1 con MOD_VERSION todavia en "2.8.0" y los logs pre/post deploy
+	// salieron identicos -> imposible confirmar si el deploy habia entrado).
+	static const string MOD_BUILD = "2026-07-20";
 	static const string LOG = "[3xorVO]";
 	// DEBUG temporal del ciclo de vida del barril (setear/levantar/abrir/cerrar/item
 	// in-out/virtualizar/restaurar/load/save/shutdown). Poner en false (o borrar las
@@ -95,4 +100,36 @@ class ExorStorageConstants
 	static const int MAX_RECONCILE_PER_TICK = 3;	// bajado 5->3: el floor scan (12m) es lo mas caro;
 	// repartirlo en mas ticks suaviza el hitch post-arranque (~125ms->~75ms). Loot-safe: el que un
 	// player abra reconcilia YA (ExorRestoreIfNeeded); los untouched se ponen al dia de a poco.
+
+	// ------------------------------------------------------------------------
+	// PRESUPUESTO ADAPTATIVO (escalabilidad)
+	// ------------------------------------------------------------------------
+	// Los cupos de arriba son el TECHO. El manager los escala hacia abajo solo cuando el
+	// server viene sufriendo, y los devuelve cuando se recupera. Asi el mismo PBO sirve
+	// para 10 jugadores (cupo full, se pone al dia rapido) y para 60 (cupo minimo, prioriza
+	// el frame). Nada de esto toca la seguridad del loot: lo que no entra en un tick se
+	// hace en el siguiente (los flags dirty/needs-reconcile persisten).
+	//
+	// Contexto: barriles y muebles tenian presupuestos SEPARADOS, o sea el trabajo maximo
+	// por tick era el doble (15+15 virt, 12+12 snapshot, 3+3 reconcile). Ahora comparten
+	// un pool unico repartido con cursor rotativo -> ni se starvean entre si ni duplican
+	// el pico de CPU/IO.
+	static const float ADAPT_FRAME_OK_MS   = 40.0;	// peor frame por debajo de esto = server holgado -> subir cupo
+	static const float ADAPT_FRAME_BAD_MS  = 90.0;	// peor frame por encima de esto = server sufriendo -> bajar cupo
+	static const float ADAPT_MIN_FACTOR    = 0.25;	// piso: nunca menos del 25% del cupo (si no, nunca se pone al dia)
+	static const float ADAPT_STEP_DOWN     = 0.50;	// al sufrir, cortar el cupo a la mitad (reaccion rapida)
+	static const float ADAPT_STEP_UP       = 0.10;	// al recuperarse, devolver de a poco (evita oscilar)
+
+	// Umbral para el log de diagnostico del tick. Si un BarrelTick tarda mas que esto, se
+	// escribe UNA linea con el desglose por bloque (grep "3xorVO TICK-LENTO"). En operacion
+	// normal el tick tarda pocos ms -> no escribe nada.
+	static const int TICK_WARN_MS = 25;
+
+	// Debounce del guardado EN VIVO mientras el contenedor esta ABIERTO. Cada snapshot
+	// reserializa el contenedor ENTERO y reescribe su archivo (los JSON de produccion van
+	// de 14 KB de mediana a 128 KB el mayor), asi que guardar cada 5s mientras alguien
+	// acomoda su base es I/O sincrona repetida sobre los mismos bytes.
+	// Loot-safe: Close() y ExorVirtualize() fuerzan el volcado sin esperar, y el flag dirty
+	// persiste -> lo unico que cambia es CUANDO se escribe, no SI se escribe.
+	static const int SNAP_DEBOUNCE_MS = 15000;
 }

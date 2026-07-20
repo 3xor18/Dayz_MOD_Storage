@@ -157,7 +157,15 @@ class CfgVehicles
 		itemBehaviour = 0;			// mueble pesado (no se lleva en la mano)
 		physLayer = "item_large";
 		itemIsOpenable = 1;
-		carveNavmesh = 1;
+		// carveNavmesh = 0: cada objeto que lo activa obliga al motor a recortar la navmesh
+		// en su footprint, al crearse Y al cargar la persistencia. Con el plan de pasar de
+		// decenas a cientos de muebles, son cientos de recortes concentrados en pocas bases
+		// mas un pathfinding de zombies mas pesado ahi adentro. Los barriles (657 en
+		// produccion) NUNCA lo usaron y no dan problema.
+		// Lo que se pierde: los zombies dejan de "saber" esquivar el mueble antes de tocarlo;
+		// igual chocan por la colision solida (physLayer item_large). Si aparecen zombies
+		// trabados contra muebles, volver a 1.
+		carveNavmesh = 0;
 		// Indestructible por codigo (SetAllowDamage(false)); DamageSystem minimo
 		// para que el motor no se queje de health.
 		class DamageSystem
@@ -174,6 +182,11 @@ class CfgVehicles
 					};
 				};
 			};
+			// DamageZones vacio pero PRESENTE: sin esta clase el motor escupe
+			// "No entry '...Exor_OpenableStorage/DamageSystem.DamageZones'" por cada
+			// mueble que la hereda. Es solo ruido (el mueble es indestructible por
+			// codigo), pero lo heredan TODOS los muebles -> se multiplica.
+			class DamageZones {};
 		};
 	};
 
@@ -433,7 +446,9 @@ class CfgVehicles
 		hologramMaterialPath = "dz\gear\containers\data";
 		slopeTolerance = 0.2;
 		yawPitchRollLimit[] = {45, 45, 45};
-		carveNavmesh = 1;
+		// sin carveNavmesh: esto es el item EMPACADO, se lleva en la mano. Recortar la
+		// navmesh por un item que el jugador carga encima no tiene sentido.
+		carveNavmesh = 0;
 	};
 
 	// ------------------------------------------------------------------
@@ -454,12 +469,13 @@ class CfgVehicles
 		model = "\DZ\structures\Specific\Cemeteries\Cemetery_Tombstone1.p3d";
 		weight = 35000;
 		rotationFlags = 17;
-		// SLOTS DEL EQUIPO DEL PLAYER: al lootear la bolsa se ve igual que un
-		// cadaver (chaleco/mochila/bolsillos con sus items, cada uno en su slot).
+		// SLOTS DEL EQUIPO DEL PLAYER, y SOLO esos: al lootear la bolsa se ve igual que un
+		// cadaver (chaleco/mochila/bolsillos con sus items, cada uno en su slot), incluidos
+		// los slots de arma que ya tiene el personaje vanilla (Shoulder / Melee).
 		// Al morir, la ropa puesta se recrea en estos slots (ExorBodyBag.c).
-		// Slots de equipo + HILERA DE 8 ARMAS (Exor_Gun1..8, en CfgSlots; las armas los
-		// aceptan via el patch CfgWeapons +=). Guardar armas aparte del cargo de cosas.
-		attachments[] = {"Headgear", "Mask", "Eyewear", "Gloves", "Armband", "Vest", "Body", "Hips", "Back", "Legs", "Feet", "Shoulder", "Melee", "Exor_Gun1", "Exor_Gun2", "Exor_Gun3", "Exor_Gun4", "Exor_Gun5", "Exor_Gun6", "Exor_Gun7", "Exor_Gun8", "Exor_Gun9", "Exor_Gun10", "Exor_Gun11"};
+		// NO van los Exor_Gun1..11: esa hilera de armas es de los LOCKERS, no de la tumba.
+		// Lo que no entra en un slot cae al Cargo de abajo, que es el comportamiento buscado.
+		attachments[] = {"Headgear", "Mask", "Eyewear", "Gloves", "Armband", "Vest", "Body", "Hips", "Back", "Legs", "Feet", "Shoulder", "Melee"};
 		class Cargo
 		{
 			// Grande (300) para que SIEMPRE entre todo el loot del muerto + el sobrante
@@ -467,6 +483,26 @@ class CfgVehicles
 			// Antes {7,5}=35 -> con un jugador full equipado se desbordaba y caia loot.
 			itemsCargoSize[] = {10, 30};	// 300 slots
 			openable = 0;
+		};
+		// Mismo caso que Exor_OpenableStorage: SeaChest (la clase padre, vanilla) tampoco
+		// declara DamageZones, asi que el motor tira
+		// "No entry '...SeaChest/DamageSystem.DamageZones'" cada vez que se crea una tumba.
+		// Visto en el test local del 20-jul, una vez por muerte.
+		class DamageSystem
+		{
+			class GlobalHealth
+			{
+				class Health
+				{
+					hitpoints = 5000;
+					healthLevels[] =
+					{
+						{1.0, {}},
+						{0.0, {}}
+					};
+				};
+			};
+			class DamageZones {};
 		};
 	};
 

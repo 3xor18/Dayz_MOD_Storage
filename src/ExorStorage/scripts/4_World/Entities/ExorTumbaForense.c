@@ -86,6 +86,15 @@ class ExorTumbaForense
 		}
 	}
 
+	// ------------------------- buffer de looteo -------------------------
+	// Antes esto hacia un read-modify-write del JSON COMPLETO por CADA item sacado de la
+	// tumba: vaciar un kit (30-60 items) eran 60-120 operaciones de disco SINCRONAS en el
+	// hilo del juego, y encima cuadratico (el archivo crece y se re-parsea entero cada vez).
+	// Despues de un tiroteo, con varios jugadores looteando tumbas a la vez, se apilaba.
+	// Ahora se acumula en memoria por tumba y se vuelca UNA vez por tick (5s), que es el
+	// mismo patron que ya usan ExorRoboBuffer y ExorRaidLog.
+	static ref map<string, ref array<ref ExorTumbaLoot>> s_Pending;
+
 	// Registra que 'looter' saco 'itemType' de la tumba 'id'. Config-gated (si lagea, off).
 	static void Looteo(string id, string itemType, string looterNombre, string looterSid)
 	{
@@ -93,18 +102,49 @@ class ExorTumbaForense
 			return;
 		if (!GetExorConfig().bodycadaver.forense_registrar_looteadores || id == "")
 			return;
-		string p = Path(id);
-		if (!FileExist(p))
-			return;
 
-		ExorTumbaFile f = new ExorTumbaFile();
-		JsonFileLoader<ExorTumbaFile>.JsonLoadFile(p, f);
 		ExorTumbaLoot l = new ExorTumbaLoot();
 		l.item = itemType;
 		l.looter = string.Format("%1 (%2)", looterNombre, looterSid);
-		l.hora = ExorRaidLog.TimeStamp();
-		f.looteado.Insert(l);
-		JsonFileLoader<ExorTumbaFile>.JsonSaveFile(p, f);
+		l.hora = ExorRaidLog.TimeStamp();	// se sella AHORA, aunque se escriba despues
+
+		if (!s_Pending)
+			s_Pending = new map<string, ref array<ref ExorTumbaLoot>>;
+		array<ref ExorTumbaLoot> lst;
+		if (!s_Pending.Find(id, lst) || !lst)
+		{
+			lst = new array<ref ExorTumbaLoot>;
+			s_Pending.Set(id, lst);
+		}
+		lst.Insert(l);
+	}
+
+	// Vuelca lo acumulado: UNA lectura + UNA escritura por tumba tocada, no por item.
+	// Lo llama el BarrelTick (5s) y el apagado.
+	static void FlushPending()
+	{
+		if (!GetGame() || !GetGame().IsServer())
+			return;
+		if (!s_Pending || s_Pending.Count() == 0)
+			return;
+
+		int i, j;
+		for (i = 0; i < s_Pending.Count(); i++)
+		{
+			string id = s_Pending.GetKey(i);
+			array<ref ExorTumbaLoot> lst = s_Pending.GetElement(i);
+			if (!lst || lst.Count() == 0)
+				continue;
+			string p = Path(id);
+			if (!FileExist(p))
+				continue;	// la tumba expiro y su JSON ya no esta: se descarta
+			ExorTumbaFile f = new ExorTumbaFile();
+			JsonFileLoader<ExorTumbaFile>.JsonLoadFile(p, f);
+			for (j = 0; j < lst.Count(); j++)
+				f.looteado.Insert(lst.Get(j));
+			JsonFileLoader<ExorTumbaFile>.JsonSaveFile(p, f);
+		}
+		s_Pending.Clear();
 	}
 
 	// Borra los JSON forenses mas viejos que forense_retener_dias (por spawn_min). Al arrancar.

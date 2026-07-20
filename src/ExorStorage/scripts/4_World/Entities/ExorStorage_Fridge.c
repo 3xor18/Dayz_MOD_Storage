@@ -92,12 +92,21 @@ class Exor_Fridge : Exor_OpenableStorage
 	{
 		if (!GetGame().IsServer())
 			return;
-		// throttle: correr esto cada ~60s (el manager llama cada 5s)
-		if (m_ExorLastBatteryMs != 0 && now - m_ExorLastBatteryMs < EXOR_FRIDGE_BATTERY_MS)
+		// DESFASE INICIAL: si todas las neveras arrancan con el contador en 0 (carga del
+		// server), sus ventanas de 60s quedan alineadas y se agotan/procesan TODAS en el
+		// mismo tick. Al primer paso se les reparte un offset aleatorio dentro de la ventana
+		// para que queden escalonadas. Solo afecta CUANDO corre el chequeo, no el drenaje:
+		// el consumo se calcula por tiempo real transcurrido.
+		if (m_ExorLastBatteryMs == 0)
+		{
+			m_ExorLastBatteryMs = now - Math.RandomInt(0, EXOR_FRIDGE_BATTERY_MS);
 			return;
-		float elapsedSec = EXOR_FRIDGE_BATTERY_MS / 1000.0;
-		if (m_ExorLastBatteryMs != 0)
-			elapsedSec = (now - m_ExorLastBatteryMs) / 1000.0;
+		}
+		// throttle: correr esto cada ~60s (el manager llama cada 5s)
+		if (now - m_ExorLastBatteryMs < EXOR_FRIDGE_BATTERY_MS)
+			return;
+		// tiempo REAL desde el ultimo chequeo (m_ExorLastBatteryMs ya no puede ser 0 aca)
+		float elapsedSec = (now - m_ExorLastBatteryMs) / 1000.0;
 		m_ExorLastBatteryMs = now;
 
 		CarBattery battery = ExorGetBattery();
@@ -129,8 +138,12 @@ class Exor_Fridge : Exor_OpenableStorage
 
 		// Si la bateria se AGOTO mientras la comida estaba virtualizada, restaurarla para
 		// que se pudra real (si no, quedaria congelada fuera del mundo para siempre).
+		// Va por ExorRestoreRetry (no ExorDoRestore directo): esto corre DENTRO del loop del
+		// manager, sin presupuesto, y un restore completo son cientos de entidades creadas.
+		// Si varias neveras se quedan sin bateria en el mismo tick, se reparten en vez de
+		// apilarse en un frame.
 		if (m_ExorPoweredPrev && !powered && ExorIsVirtualized())
-			ExorDoRestore();
+			ExorRestoreRetry();
 
 		m_ExorPoweredPrev = powered;
 	}

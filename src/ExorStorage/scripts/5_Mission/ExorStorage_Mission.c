@@ -27,8 +27,19 @@ modded class MissionServer
 		ExorCofre.Start();	// COFRE: zonas de apertura de cofres por horario (si cofre.json activado=true)
 		ExorServerMsg.Start();	// mensajes automaticos del server al chat (mensajes.json: repetibles + agendados)
 		ExorTumbaForense.Limpiar();	// borra los JSON forenses de tumbas caducados (retencion en bodycadaver.json)
+		// Purga de JSON de bolsas sin dueño. Diferido 60s A PROPOSITO: necesita que la
+		// persistencia ya haya cargado y registrado las bolsas vivas, porque lo que decide
+		// que un archivo es basura es que su id NO corresponda a ninguna bolsa registrada.
+		// Correrlo antes borraria la virtualizacion de tumbas vivas = perdida de loot.
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Exor_BodyBag.PurgarHuerfanos, 60000, false);
 
 		// OJO: este compilador no acepta expresiones partidas en varias lineas (ni ternarios)
+		// Banner de arranque: version + sello de build, bien visible y facil de grepear en el
+		// RPT (grep "3xorVO BUILD"). Confirma QUE PBO esta corriendo el server antes de
+		// diagnosticar cualquier regresion.
+		Print("[3xorVO] ============================================================");
+		Print(string.Format("%1 BUILD -> %2 v%3 (build %4)", ExorStorageConstants.LOG, ExorStorageConstants.MOD_NAME, ExorStorageConstants.MOD_VERSION, ExorStorageConstants.MOD_BUILD));
+		Print("[3xorVO] ============================================================");
 		Print(string.Format("%1 %2 v%3 inicializado", ExorStorageConstants.LOG, ExorStorageConstants.MOD_NAME, ExorStorageConstants.MOD_VERSION));
 		Print(string.Format("%1 virtualizar_segundos=%2 auto_cerrar_segundos=%3 multiplicador_comida=%4", ExorStorageConstants.LOG, cfg.storage.virtualizar_segundos, cfg.storage.auto_cerrar_segundos, cfg.storage.multiplicador_comida));
 		Print(string.Format("%1 vehiculos_dormir=%2 dormir_minutos=%3 despertar_metros=%4", ExorStorageConstants.LOG, cfg.vehiculos.vehiculos_dormir, cfg.vehiculos.vehiculos_dormir_minutos, cfg.vehiculos.vehiculos_despertar_metros));
@@ -50,6 +61,8 @@ modded class MissionServer
 	{
 		ExorVO_Manager.VirtualizeAll();
 		ExorStats.Get().FlushIfDirty();	// volcar stats pendientes antes de apagar
+		ExorRoboBuffer.FlushAll();		// cerrar sesiones de saqueo abiertas (ANTES del Flush del log)
+		ExorTumbaForense.FlushPending();	// volcar el looteo de tumbas pendiente
 		ExorRaidLog.Flush();			// volcar el log de auditoria bufferizado antes de apagar
 		ExorKillFarm.FlushIfDirty();	// volcar el ledger anti-farmeo antes de apagar (ventana 4h vs reinicio)
 		super.OnMissionFinish();
@@ -162,8 +175,10 @@ modded class MissionServer
 
 	void ExorDelayedSendOpen(PlayerBase player)
 	{
+		// SendOpenTracked (no SendOpen): manda el menu Y reintenta si el jugador no elige,
+		// para que un cliente que todavia estaba cargando no se quede sin pantalla de spawn.
 		if (player)
-			ExorSpawn.SendOpen(player);
+			ExorSpawn.SendOpenTracked(player);
 	}
 
 	// Re-envia el roster de party (y el cache de territorio) tras conectar/respawnear,

@@ -52,6 +52,13 @@ class ExorPartyLive
 	ref map<string, int> m_MarkCounter;	// groupId -> contador correlativo (1,2,3...)
 	ref map<string, int> m_MarkLastMs;	// groupId -> uptime ms de la ultima marca
 	int m_LastSweepMs;	// ultima vez que se barrieron marcas vencidas
+	// Ultimo payload de posiciones enviado por grupo. Si el nuevo es IDENTICO no se
+	// reenvia: las posiciones van cuantizadas a metros, asi que un grupo quieto (AFK, en
+	// base, adentro de un edificio) genera el mismo JSON tick tras tick y se estaba
+	// mandando igual por red a cada miembro, 1 vez por segundo.
+	ref map<string, string> m_LastLivePayload;
+	ref map<string, int> m_LastLiveForceMs;	// groupId -> ultimo reenvio forzado
+	static const int LIVE_FORCE_MS = 10000;	// cada 10s se manda igual, aunque no haya cambiado
 
 	static const int MARK_TTL_MS = 600000;	// 10 min: a los 10 min la marca se borra y el contador se reinicia
 
@@ -60,6 +67,8 @@ class ExorPartyLive
 		m_MarkersByGroup = new map<string, ref ExorMarkersDTO>;
 		m_MarkCounter = new map<string, int>;
 		m_MarkLastMs = new map<string, int>;
+		m_LastLivePayload = new map<string, string>;
+		m_LastLiveForceMs = new map<string, int>;
 	}
 
 	static ExorPartyLive Get()
@@ -137,6 +146,13 @@ class ExorPartyLive
 			dto.members.Insert(lm);
 		}
 
+		// EARLY-EXIT: grupo sin NADIE online -> no hay a quien mandarle nada. Sin esto se
+		// serializaba igual un DTO vacio a JSON y se recorrian los miembros de nuevo para no
+		// enviar a nadie. Con ~61 grupos registrados y solo una parte con gente conectada,
+		// eran decenas de serializaciones por segundo tiradas a la basura.
+		if (dto.members.Count() == 0)
+			return;
+
 		// OPTIMIZACION (perf a 60 jugadores): serializar el grupo UNA sola vez y mandar los
 		// MISMOS bytes a todos los miembros online. Antes se armaba una copia del DTO por
 		// receptor (para marcar is_self) y se re-serializaba a JSON por receptor -> CPU
@@ -145,6 +161,24 @@ class ExorPartyLive
 		JsonSerializer js = new JsonSerializer();
 		string data;
 		js.WriteToString(dto, false, data);
+
+		// SIN CAMBIOS -> no reenviar. El cliente ya tiene exactamente estos bytes; mandarlos
+		// de nuevo solo gasta ancho de banda y CPU de chunking. Un grupo entero quieto pasa
+		// de N envios por segundo a 0.
+		// SALVO cada LIVE_FORCE_MS: reenvio de seguridad para que un cliente que se perdio
+		// el ultimo update (reconecto, se le cayo un chunk) se ponga al dia solo, sin
+		// depender de que alguien del grupo se mueva.
+		int nowLive = GetGame().GetTime();
+		int lastForce = 0;
+		m_LastLiveForceMs.Find(g.id, lastForce);
+		bool forzar = (nowLive - lastForce) >= LIVE_FORCE_MS;
+
+		string prevPayload = "";
+		if (!forzar && m_LastLivePayload.Find(g.id, prevPayload) && prevPayload == data)
+			return;
+		m_LastLivePayload.Set(g.id, data);
+		if (forzar)
+			m_LastLiveForceMs.Set(g.id, nowLive);
 
 		// CHUNKING (como ROSTER/MARKER): con 5+ miembros el JSON supera ~2KB y el
 		// motor del cliente CORROMPE el string al leerlo de un RPC de un solo param

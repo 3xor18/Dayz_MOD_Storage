@@ -277,6 +277,58 @@ class ExorSpawn
 		ExorNetChunk.Send(player, player.GetIdentity(), ExorRPC.SPAWN_OPEN, data);
 	}
 
+	// ------------------------- entrega garantizada del menu de spawn -------------------------
+	// El menu se mandaba UNA sola vez, 5s despues de OnClientNewEvent. Si a los 5s el cliente
+	// todavia estaba cargando (server cargado / conexion lenta), el RPC se perdia y el jugador
+	// se quedaba SIN pantalla de spawn (reportado el 19-jul con 43+ jugadores). Ahora se
+	// reintenta con espaciado creciente hasta que el jugador elige (ApplyPick lo cancela) o
+	// se agotan los intentos.
+	static ref map<string, int> s_OpenTries;	// steamid -> intentos hechos
+	static const int OPEN_MAX_TRIES = 4;
+	static const int OPEN_RETRY_MS  = 7000;
+
+	// Reenvia el menu si el jugador sigue sin elegir. Se re-agenda sola.
+	static void RetryOpen(PlayerBase player)
+	{
+		if (!GetGame() || !GetGame().IsServer())
+			return;
+		if (!player || !player.GetIdentity())
+			return;	// se fue: nada que reintentar
+		if (!s_OpenTries)
+			s_OpenTries = new map<string, int>;
+
+		string sid = player.GetIdentity().GetPlainId();
+		int tries = 0;
+		if (!s_OpenTries.Find(sid, tries))
+			return;	// ya eligio (ApplyPick borro la entrada) -> cortar la cadena
+
+		if (tries >= OPEN_MAX_TRIES)
+		{
+			Print(string.Format("%1 SPAWN_OPEN: %2 no confirmo eleccion tras %3 intentos -> se deja de reintentar", ExorStorageConstants.LOG, sid, tries));
+			s_OpenTries.Remove(sid);
+			return;
+		}
+
+		s_OpenTries.Set(sid, tries + 1);
+		SendOpen(player);
+		Print(string.Format("%1 SPAWN_OPEN: reintento %2 para %3 (sigue sin elegir)", ExorStorageConstants.LOG, tries + 1, sid));
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(RetryOpen, OPEN_RETRY_MS, false, player);
+	}
+
+	// Primer envio + arranque de la cadena de reintentos.
+	static void SendOpenTracked(PlayerBase player)
+	{
+		if (!GetGame() || !GetGame().IsServer())
+			return;
+		if (!player || !player.GetIdentity())
+			return;
+		if (!s_OpenTries)
+			s_OpenTries = new map<string, int>;
+		s_OpenTries.Set(player.GetIdentity().GetPlainId(), 1);
+		SendOpen(player);
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(RetryOpen, OPEN_RETRY_MS, false, player);
+	}
+
 	// El jugador eligio (index >=0 = punto; -1 = base). Teleporta si corresponde.
 	static void ApplyPick(PlayerBase player, int index)
 	{
@@ -284,6 +336,9 @@ class ExorSpawn
 			return;
 		Ensure();
 		string sid = player.GetIdentity().GetPlainId();
+		// eligio -> cortar los reintentos del menu
+		if (s_OpenTries)
+			s_OpenTries.Remove(sid);
 		vector pos = vector.Zero;
 
 		if (index == -2)

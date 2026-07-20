@@ -38,8 +38,14 @@ class ExorCfgStorage
 	// mientras haya alguien a menos de cerrar_distancia_metros, el barril queda abierto;
 	// recien se cierra auto_cerrar_segundos DESPUES de que el jugador se aleja. Asi nunca
 	// se cierra mientras lo estas usando (aunque te quedes ordenando tu inventario).
-	int auto_cerrar_segundos = 5;        // se cierra a los Xs de que NO haya nadie cerca (0 = off)
-	int virtualizar_segundos = 5;        // virtualiza a los Xs de cerrado (0 = off) -> total ~10s
+	// OJO CON BAJAR ESTOS DOS. Mandan el ritmo de cierre/virtualizacion de ~657 barriles:
+	// a la mitad de segundos, el doble de churn (cerrar->virtualizar->restaurar) y el costo
+	// escala con cuantos barriles hay en ciclo a la vez, o sea con la poblacion.
+	// El server de produccion venia con 10/10; al desplegar, su storage.json tomo estos
+	// defaults (5/5) sin que nadie lo decidiera, y coincide con la caida de FPS a partir de
+	// ~30 jugadores del 19-jul. Se alinean a 10/10 para que el default sea el valor probado.
+	int auto_cerrar_segundos = 10;       // se cierra a los Xs de que NO haya nadie cerca (0 = off)
+	int virtualizar_segundos = 10;       // virtualiza a los Xs de cerrado (0 = off) -> total ~20s
 	float cerrar_distancia_metros = 10.0; // radio para considerar "hay un jugador cerca" (aleja 10m = se va)
 	float multiplicador_comida = 2.0;
 	bool permitir_ropa_con_items = true;

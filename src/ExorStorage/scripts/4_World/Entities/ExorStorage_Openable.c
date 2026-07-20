@@ -30,6 +30,7 @@ class Exor_OpenableStorage : Container_Base
 	protected bool m_ExorVirtualizedSync;	// net-sync: tiene contenido guardado en disco
 	protected bool m_ExorVirt;			// los items reales estan SACADOS del mundo (en el JSON)
 	protected bool m_ExorSnapDirty;		// hubo cambios de cargo sin volcar al JSON
+	protected int  m_ExorDirtySinceMs;	// uptime ms del PRIMER cambio sucio sin volcar (debounce)
 	protected bool m_ExorLoadDone;		// ya se reconcilio JSON vs persistencia tras cargar
 	protected bool m_ExorRestoring;		// recreando items DESDE el JSON (no marcar dirty)
 	protected bool m_ExorFloorCleaned;	// ya se limpio el piso (drops de DayZ) tras el arranque
@@ -56,6 +57,38 @@ class Exor_OpenableStorage : Container_Base
 		if (!ExorStorageConstants.DEBUG_BARRELS)
 			return;
 		Print(string.Format("%1[DBG-mueble] %2 | id=%3 pos=%4 cargo=%5 open=%6 virt=%7", ExorStorageConstants.LOG, ev, m_ExorID, GetPosition(), ExorCargoCount(), m_IsOpened, m_ExorVirt));
+	}
+
+	// Marca que hay cambios sin volcar. Solo la PRIMERA marca de un periodo sucio sella el
+	// timestamp: asi el debounce mide desde el primer cambio, no desde el ultimo, y un
+	// jugador moviendo items sin parar igual termina guardando cada SNAP_DEBOUNCE_MS.
+	void ExorMarkSnapDirty()
+	{
+		if (!m_ExorSnapDirty)
+			m_ExorDirtySinceMs = GetGame().GetTime();
+		m_ExorSnapDirty = true;
+	}
+
+	// Debounce del guardado en vivo, ADAPTATIVO segun como venga el server.
+	//
+	// El trade-off: espaciar el guardado ahorra I/O, pero agranda la ventana en la que un
+	// crash pierde cambios. Y la perdida es REAL, no teorica: ExorReconcileOnLoad borra el
+	// cargo que no este en el JSON ("el JSON manda"), asi que lo que no se alcanzo a volcar
+	// desaparece al reiniciar.
+	//
+	// Por eso el debounce NO es fijo:
+	//   server sano (factor 1.0) -> 0 ms  = guarda como siempre, ventana de perdida minima
+	//   server cargado (factor 0.25) -> el maximo = prioriza el frame
+	// O sea: solo se acepta mas riesgo cuando el server realmente esta sufriendo, que es
+	// cuando ahorrar I/O vale la pena. Con poblacion normal el comportamiento no cambia.
+	int ExorSnapDebounceMs()
+	{
+		float f = ExorVO_Manager.s_BudgetFactor;
+		if (f > 1.0)
+			f = 1.0;
+		if (f < 0)
+			f = 0;
+		return (int)(ExorStorageConstants.SNAP_DEBOUNCE_MS * (1.0 - f));
 	}
 
 	// ======================= INIT / PERSISTENCIA =======================
@@ -110,6 +143,7 @@ class Exor_OpenableStorage : Container_Base
 			m_IsOpened = false;
 			if (GetInventory())
 				GetInventory().LockInventory(HIDE_INV_FROM_SCRIPT);
+			ExorLockAttachments(true);	// las armas cargadas de persistencia arrancan bloqueadas
 			m_ExorVirtualizedSync = ExorHasContent();
 			SetSynchDirty();
 		}
@@ -123,6 +157,7 @@ class Exor_OpenableStorage : Container_Base
 		SetSynchDirty();
 		if (GetInventory())
 			GetInventory().UnlockInventory(HIDE_INV_FROM_SCRIPT);	// abierta = accesible
+		ExorLockAttachments(false);	// las armas/prendas vuelven a ser accesibles
 		if (GetGame().IsServer())
 		{
 			ExorRestoreIfNeeded();		// recrear items del JSON si estaba virtualizado
@@ -137,6 +172,7 @@ class Exor_OpenableStorage : Container_Base
 		SetSynchDirty();
 		if (GetInventory())
 			GetInventory().LockInventory(HIDE_INV_FROM_SCRIPT);
+		ExorLockAttachments(true);
 		if (GetGame().IsServer())
 		{
 			int now = GetGame().GetTime();
@@ -144,6 +180,35 @@ class Exor_OpenableStorage : Container_Base
 			m_ExorLastCloseMs = now;
 		}
 		ExorUpdateDoorAnim();
+	}
+
+	// Bloquea/desbloquea el inventario de CADA attachment (las armas de los slots Exor_Gun*,
+	// la ropa, etc.).
+	//
+	// Sin esto, cerrar el mueble ocultaba sus slots y su cargo -CanDisplayAttachmentSlot y
+	// CanDisplayCargo devuelven IsOpen()- pero NO el contenido de cada arma: DayZ dibuja cada
+	// item attached que tiene cargo/attachments propios como su propia fila expandible en el
+	// inventario. Resultado: con el locker CERRADO seguian viendose las armas con sus miras,
+	// cargadores, etc. y -lo grave- se podia interactuar con ellas, o sea lootear el mueble
+	// sin abrirlo.
+	// Bloquear el inventario de cada attachment corta la interaccion de raiz, sin depender de
+	// que el cliente refresque bien la UI.
+	void ExorLockAttachments(bool lockThem)
+	{
+		GameInventory inv = GetInventory();
+		if (!inv)
+			return;
+		int i;
+		for (i = 0; i < inv.AttachmentCount(); i++)
+		{
+			EntityAI att = inv.GetAttachmentFromIndex(i);
+			if (!att || !att.GetInventory())
+				continue;
+			if (lockThem)
+				att.GetInventory().LockInventory(HIDE_INV_FROM_SCRIPT);
+			else
+				att.GetInventory().UnlockInventory(HIDE_INV_FROM_SCRIPT);
+		}
 	}
 
 	override bool IsOpen()
@@ -316,14 +381,18 @@ class Exor_OpenableStorage : Container_Base
 	override bool CanPutInCargo(EntityAI parent) { return false; }
 	override bool CanPutIntoHands(EntityAI parent) { return false; }
 
-	// No lockeable: bloquea CodeLock / candados de cualquier mod
+	// No lockeable: bloquea CodeLock / candados de cualquier mod.
+	// El motor llama esto por CADA slot candidato al arrastrar algo, y los lockers tienen 24
+	// slots -> antes eran 24 ToLower() + hasta 96 barridos de substring por validacion, y la
+	// UI lo repite mientras arrastras. Con un solo Contains("lock") alcanza: los otros tres
+	// terminan todos en "lock", asi que eran redundantes.
 	override bool CanReceiveAttachment(EntityAI attachment, int slotId)
 	{
 		if (attachment)
 		{
 			string type = attachment.GetType();
 			type.ToLower();
-			if (type.Contains("codelock") || type.Contains("combinationlock") || type.Contains("padlock") || type.Contains("lock"))
+			if (type.Contains("lock"))	// cubre codelock / combinationlock / padlock / *lock
 				return false;
 		}
 		return super.CanReceiveAttachment(attachment, slotId);
@@ -400,12 +469,20 @@ class Exor_OpenableStorage : Container_Base
 	// el manager pregunta esto para repartir el reconcile de arranque (scan caro)
 	bool ExorNeedsReconcile() { return !m_ExorLoadDone; }
 
-	void ExorReconcileNow()
+	// Devuelve true si hizo trabajo REAL (scan del piso + limpieza de cargo stale). Un mueble
+	// sin JSON se salda con un FileExist y devuelve false -> el manager NO le descuenta cupo.
+	// Antes cada mueble vacio consumia un slot de MAX_RECONCILE_PER_TICK (3 por tick): con
+	// 657 barriles + cientos de muebles, ponerse al dia tardaba entre 30 y 90 minutos, y
+	// mientras tanto ningun mueble auto-cerraba ni virtualizaba.
+	bool ExorReconcileNow()
 	{
 		if (m_ExorLoadDone)
-			return;
+			return false;
 		m_ExorLoadDone = true;
+		if (!ExorHasContent())
+			return false;	// nada que reconciliar: no gastar presupuesto
 		ExorReconcileOnLoad();
+		return true;
 	}
 
 	// Vuelca el cargo ACTUAL al JSON (los items SIGUEN en el mundo). Guardado "en vivo".
@@ -498,6 +575,20 @@ class Exor_OpenableStorage : Container_Base
 	}
 
 	// Se llama al ABRIR: recrea los items reales desde el JSON (o migra un mueble viejo).
+	// Reintento del restore cuando el turno estaba tomado por otro contenedor. Se re-agenda
+	// solo hasta conseguirlo; si mientras tanto dejo de estar virtualizado, no hace nada.
+	void ExorRestoreRetry()
+	{
+		if (!m_ExorVirt)
+			return;	// ya lo restauro otro camino
+		if (!ExorVO_Manager.CanRestoreNow())
+		{
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorRestoreRetry, ExorVO_Manager.RESTORE_SPACING_MS, false);
+			return;
+		}
+		ExorDoRestore();
+	}
+
 	void ExorRestoreIfNeeded()
 	{
 		bool justReconciled = !m_ExorLoadDone;
@@ -510,6 +601,13 @@ class Exor_OpenableStorage : Container_Base
 			if (justReconciled && ExorCargoCount() > 0)
 			{
 				GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorDoRestore, 300, false);
+				return;
+			}
+			// SERIALIZAR: si otro contenedor acaba de restaurar, esperar el turno en vez de
+			// sumar dos avalanchas de creacion de entidades en el mismo frame.
+			if (!ExorVO_Manager.CanRestoreNow())
+			{
+				GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorRestoreRetry, ExorVO_Manager.RESTORE_SPACING_MS, false);
 				return;
 			}
 			ExorDoRestore();
@@ -611,7 +709,12 @@ class Exor_OpenableStorage : Container_Base
 		if (cleared > 0)
 		{
 			dropped = ExorCleanDroppedNearby();
-			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanDroppedRetry, 8000, false);
+			// El retry a 8s existe porque el motor puede dropear items DESPUES del 1er
+			// barrido. Pero solo tiene sentido si el 1ro encontro algo: si el piso estaba
+			// limpio, no hay razon para pagar otro GetObjectsAtPosition(15m) + re-parseo del
+			// JSON por contenedor. Con cientos de muebles eso son cientos de scans de mas.
+			if (dropped > 0)
+				GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanDroppedRetry, 8000, false);
 		}
 
 		m_ExorVirt = true;
@@ -629,6 +732,11 @@ class Exor_OpenableStorage : Container_Base
 	TStringArray ExorTypesFromJsonText(string path)
 	{
 		TStringArray result = new TStringArray;
+		// DEDUP CON MAP: antes era result.Find(val) por cada "type" del archivo, o sea una
+		// busqueda LINEAL sobre los tipos ya encontrados. Con un JSON de 128 KB (~10k lineas)
+		// y ~100 tipos unicos daba del orden de 10^6 comparaciones de string por llamada, y
+		// esta funcion se llama hasta 3 veces por contenedor. Con el map es O(n).
+		map<string, bool> seen = new map<string, bool>;
 		FileHandle fh = OpenFile(path, FileMode.READ);
 		if (fh == 0)
 			return result;
@@ -647,8 +755,11 @@ class Exor_OpenableStorage : Container_Base
 			if (q2 < 0)
 				continue;
 			string val = rest2.Substring(0, q2);
-			if (val != "" && result.Find(val) < 0)
+			if (val != "" && !seen.Contains(val))
+			{
+				seen.Set(val, true);
 				result.Insert(val);
+			}
 		}
 		CloseFile(fh);
 		return result;
@@ -709,7 +820,14 @@ class Exor_OpenableStorage : Container_Base
 			// mientras haya alguien cerca, sigue "en uso" (no auto-cierra)
 			if (ExorVO_Manager.IsAlivePlayerNearList(players, GetPosition(), settings.cerrar_distancia_metros))
 				m_ExorLastInteractMs = now;
-			if (m_ExorSnapDirty && !m_ExorVirt && allowSnapshot)
+			// DEBOUNCE del guardado EN VIVO: mientras el mueble esta ABIERTO el jugador
+			// sigue moviendo items, y cada snapshot reserializa el contenedor ENTERO (500
+			// slots de cargo + los arboles de attachment) y reescribe el archivo completo:
+			// hasta 128 KB de I/O sincrona, cada 5s, por mueble en uso. Se espera a que se
+			// acumulen SNAP_DEBOUNCE_MS desde el primer cambio antes de volcar.
+			// Loot-safe: Close() y ExorVirtualize() fuerzan el volcado igual, y el flag
+			// dirty persiste, asi que nada se pierde por esperar.
+			if (m_ExorSnapDirty && !m_ExorVirt && allowSnapshot && now - m_ExorDirtySinceMs >= ExorSnapDebounceMs())
 			{
 				ExorWriteSnapshot();
 				didSnapshot = true;
@@ -719,7 +837,7 @@ class Exor_OpenableStorage : Container_Base
 			return false;
 		}
 
-		// cerrado
+		// cerrado: ya nadie lo esta usando -> volcar sin esperar el debounce
 		if (m_ExorSnapDirty && !m_ExorVirt && allowSnapshot)
 		{
 			ExorWriteSnapshot();
@@ -761,7 +879,7 @@ class Exor_OpenableStorage : Container_Base
 		if (GetGame() && GetGame().IsServer() && !m_ExorRestoring)
 		{
 			m_ExorLastInteractMs = GetGame().GetTime();
-			m_ExorSnapDirty = true;
+			ExorMarkSnapDirty();
 		}
 	}
 
@@ -771,7 +889,7 @@ class Exor_OpenableStorage : Container_Base
 		if (GetGame() && GetGame().IsServer() && !m_ExorRestoring)
 		{
 			m_ExorLastInteractMs = GetGame().GetTime();
-			m_ExorSnapDirty = true;
+			ExorMarkSnapDirty();
 		}
 	}
 
@@ -780,20 +898,30 @@ class Exor_OpenableStorage : Container_Base
 	override void EEItemAttached(EntityAI item, string slot_name)
 	{
 		super.EEItemAttached(item, slot_name);
+		// Si el mueble ya esta CERRADO cuando entra el item (restore desde el JSON, carga de
+		// persistencia), su inventario tiene que nacer bloqueado. Si no, esa arma quedaria
+		// visible e interactuable con el mueble cerrado.
+		if (!m_IsOpened && item && item.GetInventory())
+			item.GetInventory().LockInventory(HIDE_INV_FROM_SCRIPT);
 		if (ExorVirtualizeAttachments() && GetGame() && GetGame().IsServer() && !m_ExorRestoring)
 		{
 			m_ExorLastInteractMs = GetGame().GetTime();
-			m_ExorSnapDirty = true;
+			ExorMarkSnapDirty();
 		}
 	}
 
 	override void EEItemDetached(EntityAI item, string slot_name)
 	{
 		super.EEItemDetached(item, slot_name);
+		// SIEMPRE desbloquear al salir. El bloqueo es una propiedad de "estar guardado en un
+		// mueble cerrado", no del item: si un arma se fuera del locker todavia bloqueada,
+		// el jugador no podria acceder a su cargador ni a sus attachments = arma inutil.
+		if (item && item.GetInventory())
+			item.GetInventory().UnlockInventory(HIDE_INV_FROM_SCRIPT);
 		if (ExorVirtualizeAttachments() && GetGame() && GetGame().IsServer() && !m_ExorRestoring)
 		{
 			m_ExorLastInteractMs = GetGame().GetTime();
-			m_ExorSnapDirty = true;
+			ExorMarkSnapDirty();
 		}
 	}
 }

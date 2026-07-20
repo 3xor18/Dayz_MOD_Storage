@@ -63,9 +63,9 @@ class ExorKothRun
 
 	int Online()
 	{
-		array<Man> players = new array<Man>;
-		GetGame().GetPlayers(players);
-		return players.Count();
+		// conteo CACHEADO por BarrelTick (cada 5s). Antes armaba un array y llamaba
+		// GetPlayers() por cada run de KOTH, 1 vez por segundo, solo para contar.
+		return ExorVO_Manager.s_PopCount;
 	}
 
 	// una coordenada cualquiera (para la marca preliminar de los avisos)
@@ -376,14 +376,18 @@ class ExorKothRun
 		namesInCap = "";
 		array<Man> players = new array<Man>;
 		GetGame().GetPlayers(players);
+		// radios al CUADRADO: comparar d2 evita una raiz cuadrada por jugador por segundo
+		float r2cap  = g.metros_cercania_player_para_completar * g.metros_cercania_player_para_completar;
+		float r2prox = g.metros_proximidad_mastil_para_bonus * g.metros_proximidad_mastil_para_bonus;
+		float r2near = g.metros_para_detectar_falta_player * g.metros_para_detectar_falta_player;
 		int i;
 		for (i = 0; i < players.Count(); i++)
 		{
 			PlayerBase pb = PlayerBase.Cast(players.Get(i));
 			if (!pb || !pb.IsAlive())
 				continue;
-			float d = vector.Distance(pb.GetPosition(), m_Pos);
-			if (d <= g.metros_cercania_player_para_completar)
+			float d = vector.DistanceSq(pb.GetPosition(), m_Pos);
+			if (d <= r2cap)
 			{
 				capN++;
 				string nm = "jugador";
@@ -393,9 +397,9 @@ class ExorKothRun
 					namesInCap = namesInCap + ", ";
 				namesInCap = namesInCap + nm;
 			}
-			if (d <= g.metros_proximidad_mastil_para_bonus)
+			if (d <= r2prox)
 				proxN++;
-			if (d <= g.metros_para_detectar_falta_player)
+			if (d <= r2near)
 				nearN++;
 		}
 	}

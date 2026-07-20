@@ -180,8 +180,10 @@ class ExorAntiRaid
 
 		string sid = ExorGroupManager.SteamId(player);
 		string nm = ExorGroupManager.PlayerName(player);
-		string detalle = string.Format("tomo '%1' dentro de territorio de %2", item.GetType(), GroupLabel(m));
-		ExorRaidLog.Write("ROBO_ITEM", sid, nm, player.GetPosition(), detalle);
+		// AGRUPADO: no se escribe una linea por item (vaciar una mochila eran ~20 escrituras
+		// sincronas al audit en el mismo segundo). El buffer junta la sesion de saqueo y
+		// escribe UNA linea con el total y el desglose. Ver ExorRoboBuffer.c
+		ExorRoboBuffer.Add(sid, nm, GroupLabel(m), player.GetPosition(), item.GetType());
 	}
 
 	// ------------------------- #5: abrir barril 3xor ajeno -------------------------

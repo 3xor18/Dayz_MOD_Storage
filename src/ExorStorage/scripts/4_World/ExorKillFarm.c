@@ -36,6 +36,12 @@ class ExorKillFarm
 	static bool s_Loaded;
 	static bool s_Dirty;
 
+	// Anti-spam del log: por par, el ultimo 'count' que ya se reporto. No se persiste a
+	// proposito: tras un reinicio se vuelve a reportar el par si sigue farmeando, que es
+	// justamente lo que se quiere ver.
+	static ref map<string, int> s_Reported;
+	static const int REPORT_STEP = 5;	// re-reportar el mismo par recien cada 5 kills mas
+
 	static void Init()
 	{
 		Load();
@@ -146,6 +152,19 @@ class ExorKillFarm
 		int count = ts.Count();
 		if (count >= cfg.farmeo_umbral)
 		{
+			// ANTI-SPAM: una vez cruzado el umbral se logueaba CADA kill posterior del mismo
+			// par. Un solo caso real (20-jul) genero 20 lineas subiendo "4,5,6...14 veces",
+			// todas diciendo lo mismo. Ahora se reporta al CRUZAR el umbral y despues solo
+			// cada REPORT_STEP kills -> el patron sigue visible pero sin inundar el audit.
+			if (!s_Reported)
+				s_Reported = new map<string, int>;
+			int lastRep = 0;
+			s_Reported.Find(key, lastRep);
+			bool debeReportar = (lastRep == 0) || (count >= lastRep + REPORT_STEP);
+			if (!debeReportar)
+				return;
+			s_Reported.Set(key, count);
+
 			string tk = "no";
 			if (teamKill)
 				tk = "si (mismo grupo)";

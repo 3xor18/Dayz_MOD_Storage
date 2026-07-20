@@ -817,7 +817,15 @@ modded class TerritoryFlag
 			// B: FORENSE del despawn. Antes el borrado del mastil era un misterio (no se sabia si
 			// lo arruino un raid, lo limpio el CE, o lo borro otro mod). Logueamos el estado exacto
 			// al morir: si NO fue un disband nuestro (m_ExorDisbanding=false) es una caida anomala.
-			if (!m_ExorDisbanding)
+			// La bandera del KOTH se borra SOLA al terminar el evento: es el flujo normal, no
+			// una anomalia. Reportarla ensuciaba el log (16 de 19 "MASTIL BORRADO (anomalo)"
+			// de una sesion de 8h eran la misma bandera KOTH, con la coord repitiendose 5
+			// veces) y tapaba los 3 casos reales de mastil de jugador.
+			if (m_ExorIsKothMast)
+			{
+				// silencioso: sin grupo que conservar ni mastil que restaurar
+			}
+			else if (!m_ExorDisbanding)
 			{
 				float hp = GetHealth01("", "");
 				bool ruined = IsRuined();

@@ -38,6 +38,12 @@ class ExorRPC
 	static const int POP_REQ        = 49239;	// C -> S: pedir la cantidad de jugadores conectados (al abrir el mapa, refrescado)
 	static const int POP_COUNT      = 49240;	// S -> C: cantidad de jugadores conectados (para el contador del mapa)
 	static const int KOTH_SYNC      = 49241;	// S -> C: estado de la marca del KOTH en el mapa (mostrar/ocultar + pos + color + label)
+
+	// Rango reservado del mod. Se usa para decidir si un RPC es NUESTRO y por lo tanto NO
+	// hay que pasarlo a super.OnRPC() (la cadena de los otros mods). Al agregar un RPC
+	// nuevo, mantenerlo DENTRO de este rango o ampliar el tope.
+	static const int RANGE_MIN = 49216;
+	static const int RANGE_MAX = 49299;	// margen para RPCs futuros sin tocar el chequeo
 }
 
 // Cache cliente: cantidad de jugadores conectados (la setea el server por POP_COUNT).
