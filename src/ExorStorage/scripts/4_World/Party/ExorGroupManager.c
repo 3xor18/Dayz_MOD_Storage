@@ -750,9 +750,21 @@ class ExorGroupManager
 			leader.MessageImportant("Esa persona no esta en tu party.");
 			return false;
 		}
-		// Expulsar al DUENO = disolver el party + borrar el mastil
+		// Expulsar al DUENO = disolver el party + borrar el mastil. MISMO guard que disolver
+		// a mano (LeaveParty): no se puede si quedan muebles cerca del mastil, hay que sacarlos
+		// primero. Sin esto quedaba un hueco para disolver el territorio con muebles adentro
+		// (que despues quedan huerfanos, sin dueno y sin proteccion).
 		if (targetSid == g.owner_id)
 		{
+			if (!(g.mast_x == 0 && g.mast_z == 0))
+			{
+				string reasonKick;
+				if (!ExorMuebleRules.CanRemoveMast(Vector(g.mast_x, 0, g.mast_z), reasonKick))
+				{
+					ExorMuebleRules.SendRed(leader, reasonKick);
+					return false;
+				}
+			}
 			DisbandGroup(g, "El party fue disuelto (se expulso al lider).", asid);
 			return true;
 		}
