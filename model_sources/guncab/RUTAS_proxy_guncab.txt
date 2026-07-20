@@ -1,0 +1,34 @@
+========================================================================
+ RUTAS - PROXIES DE ARMAS DEL GUN CABINET (Object Builder)
+========================================================================
+
+P: (work drive)
+  Raiz de P:        C:\Users\Exor1\OneDrive\Documentos\DayZ
+  Montar (si se cae): "D:\SteamLibrary\steamapps\common\DayZ Tools\Bin\WorkDrive\WorkDrive.exe" /mount p "C:\Users\Exor1\OneDrive\Documentos\DayZ"
+  Junction del mod:  P:\ExorStorage  ->  (repo)\src\ExorStorage   [ya existe]
+
+MODELO A EDITAR (ya abierto en Object Builder)
+  C:\Users\Exor1\OneDrive\Escritorio\DAYZ-SERVER\Dayz_MOD_Storage\model_sources\guncab\guncab_MLOD_editable.p3d
+
+ARMA DE REFERENCIA (para ver como parar el proxy)
+  P:\dz\weapons\firearms\AKM\akm.p3d
+  (se ve rosa/sin textura = normal, solo importa la forma)
+
+NOMBRE DE CADA PROXY (seleccion en el p3d) - OJO ruta RELATIVA \ExorStorage\ (NO \P:\)
+  proxy:\ExorStorage\data\proxies\exor_gunproxy1.001
+  proxy:\ExorStorage\data\proxies\exor_gunproxy2.002
+  proxy:\ExorStorage\data\proxies\exor_gunproxy3.003
+  proxy:\ExorStorage\data\proxies\exor_gunproxy4.004
+  proxy:\ExorStorage\data\proxies\exor_gunproxy5.005
+  proxy:\ExorStorage\data\proxies\exor_gunproxy6.006
+  proxy:\ExorStorage\data\proxies\exor_gunproxy7.007
+  proxy:\ExorStorage\data\proxies\exor_gunproxy8.008
+
+GUARDAR EL MODELO CON PROXIES COMO (Save As)
+  C:\Users\Exor1\OneDrive\Escritorio\DAYZ-SERVER\Dayz_MOD_Storage\model_sources\guncab\guncab_OB_proxied.p3d
+
+DESPUES: yo binarizo ese p3d -> lo despliego -> aviso antes de lanzar el server.
+
+OBJETIVO ORIENTACION: culata ABAJO, cano ARRIBA, inclinada un poco hacia atras
+(como un rifle parado en un rack real). Empezar con 1 solo proxy (slot 1) y probar.
+========================================================================
