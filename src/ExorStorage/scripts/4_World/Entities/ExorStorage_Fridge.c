@@ -33,14 +33,52 @@ class Exor_Fridge : Exor_OpenableStorage
 	override string ExorGetDoorAnimSource()	{ return "Lid"; }
 	override string ExorGetPackedType()		{ return "Exor_Refrigerador_Packed"; }
 
+	// GUARD AUTO-RECUPERACION: una nevera con cargo CORRUPTO crashea el server al cargar. El
+	// canary (ver ExorFridgeCanary) detecta CUAL fue -> aca se DESCARTA solo esa (return false)
+	// para que el motor no cargue su cargo corrupto y el server arranque. Las demas cargan normal.
+	// La nevera descartada la recrea VACIA el self-heal en su posicion. Automatico, sin config.
+	override bool OnStoreLoad(ParamsReadContext ctx, int version)
+	{
+		if (!super.OnStoreLoad(ctx, version))	// consumir nuestro stream (no desalinear)
+			return false;
+		if (GetGame().IsServer() && m_ExorID != "")
+		{
+			// esta nevera crasheo el server el arranque pasado (cargo corrupto)?
+			if (ExorFridgeCanary.Read() == m_ExorID)
+			{
+				ExorFridgeCanary.Clear();	// ya la aislamos; seguir con las demas
+				// borrar su JSON de contenido: asi el self-heal la recrea VACIA y no re-crashea
+				// intentando restaurar contenido posiblemente corrupto.
+				string sp = ExorGetStoragePath();
+				if (FileExist(sp))
+					DeleteFile(sp);
+				Print(string.Format("%1 nevera con cargo CORRUPTO descartada (id=%2) -> se recreara VACIA", ExorStorageConstants.LOG, m_ExorID));
+				return false;	// descartar -> el motor no carga su cargo corrupto
+			}
+			// marcar que el motor esta por cargar el cargo de ESTA nevera. Si crashea, el
+			// canary queda con este id -> el proximo arranque la descarta. El manager borra
+			// el canary al llegar al 1er tick (= la carga termino OK).
+			ExorFridgeCanary.Write(m_ExorID);
+		}
+		return true;
+	}
+
 	// La nevera NUNCA es idle: aunque este cerrada+virtualizada, su ExorPeriodicTick tiene que
 	// correr para descargar la bateria. Si se salteara, la bateria no se drenaria.
 	override bool ExorIsIdle() { return false; }
 
-	// FILTRO: comida (vegetales, carnes, latas, sodas = Edible_Base) + agua
-	// (cantimplora, botella, water pouch, olla = Bottle_Base, NO heredan Edible_Base).
+	// FILTRO: comida (vegetales, carnes, latas, sodas = Edible_Base) + agua (cantimplora,
+	// botella, water pouch = Bottle_Base). NO acepta CONTENEDORES (ollas/Pot y cualquier item
+	// con cargo propio): un contenedor anidado dentro de la nevera es la fuente probable del
+	// inventario corrupto que crashea el server al cargar (y del NULL de Pot sin food-stage
+	// visto 20-jul). Solo comida/bebida SUELTA, sin items que metan items adentro.
 	override bool ExorCanStore(EntityAI item)
 	{
+		if (!item)
+			return false;
+		// rechazar cualquier cosa que tenga cargo propio (olla/Pot, bidones, etc.)
+		if (item.GetInventory() && item.GetInventory().GetCargo())
+			return false;
 		return item.IsInherited(Edible_Base) || item.IsInherited(Bottle_Base);
 	}
 

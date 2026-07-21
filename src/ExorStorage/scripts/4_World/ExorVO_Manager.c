@@ -38,10 +38,16 @@ class ExorVO_Manager
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().Tick, ExorStorageConstants.TICK_MS, true);
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().BarrelTick, ExorStorageConstants.BARREL_TICK_MS, true);
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().WakeTick, ExorStorageConstants.WAKE_TICK_MS, true);
-		// SELF-HEAL DESACTIVADO (21-jul): el registro por-mueble en la carga se correlacionaba
-		// con un OOM al arrancar en el server del amigo (v2.10.0 booteaba, v2.10.1/2 no). Se saca
-		// para descartar. Si el despawn de muebles vuelve, reactivar con un enfoque mas liviano.
-		// GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().HealTick, 90000, false);
+		// CANARY de neveras: si llegamos a arrancar, la carga de la persistencia TERMINO OK
+		// (ninguna nevera crasheo) -> borrar el canary (si no, la ultima nevera cargada quedaria
+		// marcada y se descartaria de gusto el proximo arranque). Diferido 60s: para cuando el
+		// CE storage ya termino de restaurar los dynamic (la carga real ocurre tras el OnInit).
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorFridgeCanary.Clear, 60000, false);
+
+		// SELF-HEAL de muebles despawneados/descartados: 1 pasada DIFERIDA 90s tras arrancar.
+		// Recrea (vacios) los muebles del registro que no estan vivos -> incluye la nevera que el
+		// canary descarto por corrupta. Ver ExorMuebleRegistry. NO causaba el OOM (era la nevera).
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().HealTick, 90000, false);
 		Print(string.Format("%1 Manager iniciado (tick %2 ms, barrel-tick %3 ms, wake-tick %4 ms)", ExorStorageConstants.LOG, ExorStorageConstants.TICK_MS, ExorStorageConstants.BARREL_TICK_MS, ExorStorageConstants.WAKE_TICK_MS));
 	}
 
@@ -507,6 +513,15 @@ class ExorVO_Manager
 		{
 			Print(string.Format("%1 Vehiculos dormidos: +%2 (total %3 de %4)", ExorStorageConstants.LOG, dormidos, totalDormidos, m_Vehicles.Count()));
 		}
+	}
+
+	// SELF-HEAL: recrea (vacios) los muebles del registro que el motor despawneo / el canary
+	// descarto. 1 pasada diferida al arrancar. El grueso esta en ExorMuebleRegistry.HealScan.
+	void HealTick()
+	{
+		if (!GetGame().IsServer())
+			return;
+		ExorMuebleRegistry.HealScan();
 	}
 
 	// ------------------------- tick rapido (5s): despertar + auto-virtualizar -------------------------
