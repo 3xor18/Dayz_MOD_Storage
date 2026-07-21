@@ -72,14 +72,29 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	// true si el barril esta ATTACHED a un slot de barril de un vehiculo/objeto (no en el piso
 	// ni en un cargo suelto). Se usa para abrirlo solo en el slot (asi acepta items ahi) y no
 	// en el cargo del vehiculo (transporte). No se toca EEParentedTo para no romper la colocacion.
+	// InventoryLocation REUTILIZABLE (una sola instancia para TODOS los barriles). Antes
+	// esta funcion hacia `new InventoryLocation()` en cada llamada, y el manager la llama
+	// para los 600+ barriles cada tick (5s) -> 600+ allocaciones/tick = basura que dispara
+	// pausas de GC (los "peorFrame" parejos ~99ms). El script es mono-hilo y la llamada es
+	// secuencial (1 barril a la vez en el tick), asi que compartir el objeto es seguro:
+	// GetCurrentInventoryLocation lo sobreescribe entero en cada uso.
+	static ref InventoryLocation s_ExorSlotLoc;
+
 	bool ExorIsInVehicleSlot()
 	{
+		// FAST-PATH: un barril tirado en el piso o en una base NO tiene padre en la jerarquia.
+		// Solo los que estan ENGANCHADOS a algo (slot de vehiculo, cargo de una carpa, etc.)
+		// tienen padre. La MAYORIA de los 600+ barriles estan sueltos -> cortamos aca con un
+		// accesor barato y NOS AHORRAMOS la consulta de inventario para casi todos.
+		if (!GetHierarchyParent())
+			return false;
 		if (!GetInventory())
 			return false;
-		InventoryLocation loc = new InventoryLocation();
-		if (!GetInventory().GetCurrentInventoryLocation(loc))
+		if (!s_ExorSlotLoc)
+			s_ExorSlotLoc = new InventoryLocation();
+		if (!GetInventory().GetCurrentInventoryLocation(s_ExorSlotLoc))
 			return false;
-		return loc.GetType() == InventoryLocationType.ATTACHMENT;
+		return s_ExorSlotLoc.GetType() == InventoryLocationType.ATTACHMENT;
 	}
 
 	override void OnStoreSave(ParamsWriteContext ctx)

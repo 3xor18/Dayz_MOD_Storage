@@ -55,6 +55,18 @@ class ExorActionPackFridge : ActionContinuousBase
 		if (!fur)
 			return;
 
+		// PERMISO: mismo criterio que ABRIR/lootear el mueble -> FUERA de horario de raid solo
+		// los MIEMBROS del territorio (o staff) pueden empaquetarlo; EN raid cualquiera (igual
+		// que lootearlo). Antes no habia chequeo -> cualquiera empaquetaba un locker vacio en
+		// cualquier momento (hueco). El PARKING es la excepcion (CanPackAtPos, nunca en raid).
+		PlayerBase packer = action_data.m_Player;
+		string denyPack;
+		if (!ExorMuebleRules.CanLootMueble(packer, fur, denyPack))
+		{
+			ExorMuebleRules.SendRed(packer, denyPack);
+			return;
+		}
+
 		// Re-validar en server al terminar (pudo cambiar durante la accion)
 		if (!fur.ExorCanBePacked())
 			return;

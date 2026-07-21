@@ -35,10 +35,63 @@ class Exor_OpenableStorage : Container_Base
 	protected bool m_ExorRestoring;		// recreando items DESDE el JSON (no marcar dirty)
 	protected bool m_ExorFloorCleaned;	// ya se limpio el piso (drops de DayZ) tras el arranque
 
+	// ---- CLAVE (code-lock, solo lockers) ----
+	protected string m_ExorLockKey;			// "" = sin clave. Persistido. SOLO server la conoce.
+	protected string m_ExorKeySetterSid;	// steamid del que puso la clave (para limpiarla si lo expulsan). Persistido.
+	protected ref TStringArray m_ExorUnlockedBy;	// steamids que ya metieron la clave (runtime, se
+													// resetea al reiniciar el server -> vuelve a pedirla).
+
 	void Exor_OpenableStorage()
 	{
 		RegisterNetSyncVariableBool("m_IsOpened");
 		RegisterNetSyncVariableBool("m_ExorVirtualizedSync");
+		m_ExorUnlockedBy = new TStringArray;
+	}
+
+	// ======================= CLAVE (code-lock) =======================
+	// La subclase LOCKER lo pone en true -> tiene candado (accion "Poner/Cambiar clave" + pide
+	// clave al abrir). Los demas muebles (nevera) devuelven false = abren normal.
+	bool ExorHasCodeLock() { return false; }
+
+	bool ExorHasKey() { return m_ExorLockKey != ""; }
+
+	// setea/cambia la clave. Al cambiarla, se OLVIDAN los desbloqueos viejos (todos deben meter
+	// la nueva), salvo el que la acaba de setear (obvio que la sabe).
+	void ExorSetKey(string key, string setterSteamId)
+	{
+		m_ExorLockKey = key;
+		m_ExorKeySetterSid = setterSteamId;	// "" al limpiar
+		if (m_ExorUnlockedBy)
+			m_ExorUnlockedBy.Clear();
+		if (key != "" && setterSteamId != "")
+			ExorMarkUnlocked(setterSteamId);
+	}
+
+	string ExorGetKeySetterSid() { return m_ExorKeySetterSid; }
+
+	// limpia la clave (la usa el kick del party: si expulsan a quien la puso, el locker
+	// queda sin clave para que el resto del clan no quede afuera).
+	void ExorClearKey()
+	{
+		ExorSetKey("", "");
+	}
+
+	bool ExorKeyMatches(string key)
+	{
+		return m_ExorLockKey != "" && m_ExorLockKey == key;
+	}
+
+	void ExorMarkUnlocked(string steamId)
+	{
+		if (!m_ExorUnlockedBy)
+			m_ExorUnlockedBy = new TStringArray;
+		if (steamId != "" && m_ExorUnlockedBy.Find(steamId) == -1)
+			m_ExorUnlockedBy.Insert(steamId);
+	}
+
+	bool ExorIsUnlockedBy(string steamId)
+	{
+		return m_ExorUnlockedBy && m_ExorUnlockedBy.Find(steamId) != -1;
 	}
 
 	// ---- HOOKS que las subclases pueden override ----
@@ -46,6 +99,23 @@ class Exor_OpenableStorage : Container_Base
 	string ExorGetDoorAnimSource() { return "Lid"; }
 	// filtro de cargo de la subclase (ej: solo comida). Default: acepta todo.
 	bool ExorCanStore(EntityAI item) { return true; }
+
+	// Filtro compartido de los LOCKERS (negro y rojo): guardan gear/ropa/armas/MEDICO,
+	// pero NO comida ni bebida (esas van a la nevera). Las pastillas medicas heredan
+	// Edible_Base, asi que se detectan por NOMBRE (no hay clase Pill_Base) y se PERMITEN.
+	bool ExorLockerCanStore(EntityAI item)
+	{
+		if (!item)
+			return true;
+		string t = item.GetType();
+		t.ToLower();
+		// medico: pastillas/tablets/vitaminas/antibioticos/carbon/purificadoras -> SI se guardan
+		if (t.Contains("tablet") || t.Contains("pill") || t.Contains("vitamin") || t.Contains("antibiotic") || t.Contains("charcoal") || t.Contains("purification"))
+			return true;
+		if (item.IsInherited(Edible_Base) || item.IsInherited(Bottle_Base))
+			return false;	// comida / bebida -> a la nevera
+		return true;
+	}
 	// tipo del item empacado (para re-empaquetar). "" = no empaquetable.
 	string ExorGetPackedType() { return ""; }
 	// virtualizar TAMBIEN los attachments (ej armas en slots del mueble, ropa en el
@@ -113,7 +183,24 @@ class Exor_OpenableStorage : Container_Base
 	override void EEDelete(EntityAI parent)
 	{
 		if (GetGame().IsServer())
+		{
 			ExorVO_Manager.UnregisterOpenable(this);
+			// DIAGNOSTICO (paso 1): loguear TODA baja de un mueble en sesion viva -> tipo + pos +
+			// estado. Un empaque deliberado ademas deja "Mueble empaquetado"; un DESPAWN del motor
+			// (bug de pared/invalid-location/CE) deja SOLO esta linea, sin "empaquetado" -> asi se
+			// caza el bug con la posicion exacta. No loguea en el apagado (s_ShuttingDown).
+			if (!ExorVO_Manager.s_ShuttingDown)
+			{
+				int openInt = 0;
+				if (m_IsOpened)
+					openInt = 1;
+				int loadedInt = 0;
+				if (m_ExorLoadDone)
+					loadedInt = 1;
+				Print(string.Format("%1 MUEBLE-REMOVIDO tipo=%2 pos=%3 abierto=%4 cargado=%5 (si NO hay 'Mueble empaquetado' cerca -> es DESPAWN del motor, revisar si estaba en una pared)",
+					ExorStorageConstants.LOG, GetType(), GetPosition().ToString(), openInt, loadedInt));
+			}
+		}
 		super.EEDelete(parent);
 	}
 
@@ -121,6 +208,17 @@ class Exor_OpenableStorage : Container_Base
 	{
 		super.OnStoreSave(ctx);
 		ctx.Write(m_ExorID);
+		ctx.Write(m_ExorLockKey);		// clave del locker (campo agregado despues del ID)
+		ctx.Write(m_ExorKeySetterSid);	// quien la puso
+		// LISTA de quienes ya metieron la clave: se PERSISTE para que, una vez ingresada, no se
+		// vuelva a pedir NI aunque reinicie el server. Se guarda count + cada steamid.
+		int uc = 0;
+		if (m_ExorUnlockedBy)
+			uc = m_ExorUnlockedBy.Count();
+		ctx.Write(uc);
+		int u;
+		for (u = 0; u < uc; u++)
+			ctx.Write(m_ExorUnlockedBy.Get(u));
 	}
 
 	override bool OnStoreLoad(ParamsReadContext ctx, int version)
@@ -131,6 +229,28 @@ class Exor_OpenableStorage : Container_Base
 		if (!ctx.Read(id))
 			return false;
 		m_ExorID = id;
+		// CLAVE: lectura OPCIONAL. Los lockers guardados ANTES de esta feature no la tienen;
+		// si no esta, ctx.Read devuelve false y queda "" (sin candado) -> NO rompe la carga.
+		string key;
+		if (ctx.Read(key))
+		{
+			m_ExorLockKey = key;
+			string setter;
+			if (ctx.Read(setter))
+				m_ExorKeySetterSid = setter;
+			// lista de desbloqueos (opcional: lockers guardados antes de esto no la tienen)
+			int uc;
+			if (ctx.Read(uc))
+			{
+				int u;
+				for (u = 0; u < uc; u++)
+				{
+					string usid;
+					if (ctx.Read(usid) && usid != "")
+						m_ExorUnlockedBy.Insert(usid);
+				}
+			}
+		}
 		return true;
 	}
 
@@ -411,6 +531,7 @@ class Exor_OpenableStorage : Container_Base
 	{
 		super.SetActions();
 		AddAction(ExorActionOpenCloseFridge);
+		AddAction(ExorActionSetLockerKey);	// "Poner/Cambiar clave" (solo aparece si ExorHasCodeLock)
 		// El empaque va en el DESTORNILLADOR (ExorFridge_Screwdriver.c): con el
 		// destornillador en la mano y mirando el mueble aparece "Empaquetar".
 	}

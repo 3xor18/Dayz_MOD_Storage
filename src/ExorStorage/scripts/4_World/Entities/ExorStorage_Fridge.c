@@ -58,12 +58,10 @@ class Exor_Fridge : Exor_OpenableStorage
 
 	protected CarBattery ExorGetBattery()
 	{
-		// Acepta bateria de AUTO (slot CarBattery) o de CAMION (slot TruckBattery).
-		// TruckBattery hereda CarBattery -> el Cast funciona para ambas.
-		CarBattery b = CarBattery.Cast(FindAttachmentBySlotName("CarBattery"));
-		if (!b)
-			b = CarBattery.Cast(FindAttachmentBySlotName("TruckBattery"));
-		return b;
+		// UN SOLO slot ("ExorBattery", en config): acepta bateria de AUTO o de CAMION.
+		// TruckBattery hereda CarBattery -> el Cast funciona para ambas; luego
+		// ExorPeriodicTick chequea IsInherited(TruckBattery) para el drenaje x2.
+		return CarBattery.Cast(FindAttachmentBySlotName("ExorBattery"));
 	}
 
 	// hay comida perecedera (no podrida) en el cargo?
@@ -79,7 +77,12 @@ class Exor_Fridge : Exor_OpenableStorage
 		for (i = 0; i < cargo.GetItemCount(); i++)
 		{
 			Edible_Base food = Edible_Base.Cast(cargo.GetItem(i));
-			if (food && food.GetFoodStageType() != FoodStageType.ROTTEN)
+			// GUARD: un Edible SIN food stage (olla vacia, etc.) tira NULL pointer en
+			// GetFoodStageType() -> CRASH del server. Visto en produccion 20-jul 17:49
+			// (una Pot en la nevera). Chequear GetFoodStage() antes.
+			if (!food || !food.GetFoodStage())
+				continue;	// sin comida real adentro -> no cuenta como perecedero
+			if (food.GetFoodStageType() != FoodStageType.ROTTEN)
 				return true;
 		}
 		return false;

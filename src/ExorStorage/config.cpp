@@ -9,7 +9,7 @@ class CfgPatches
 {
 	class ExorStorage
 	{
-		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_OpenableStorage", "Exor_Fridge", "Exor_Refrigerador_Packed", "Exor_Refrigerador_Ghost", "Exor_Locker", "Exor_Locker_Packed", "Exor_Locker_Ghost", "Exor_LockerRojo", "Exor_LockerRojo_Packed", "Exor_LockerRojo_Ghost", "Exor_MuebleArmas", "Exor_MuebleArmas_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight"};
+		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_OpenableStorage", "Exor_Fridge", "Exor_Refrigerador_Packed", "Exor_Refrigerador_Ghost", "Exor_Locker", "Exor_Locker_Packed", "Exor_Locker_Ghost", "Exor_LockerRojo", "Exor_LockerRojo_Packed", "Exor_LockerRojo_Ghost", "Exor_MuebleArmas", "Exor_MuebleArmas_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight", "Exor_Parking", "Exor_Parking_Packed", "Exor_Parking_Ghost"};
 		weapons[] = {};
 		requiredVersion = 0.1;
 		// DZ_Gear_Camping = TerritoryFlag/Kit + SeaChest. DZ_Characters_Backpacks =
@@ -147,6 +147,65 @@ class CfgVehicles
 	//  abrir/cerrar limpio (MMG) + virtualizacion (barril) + colision solida.
 	//  Los muebles (nevera y futuros) heredan de aca. Ver ExorStorage_Openable.c.
 	// ------------------------------------------------------------------
+	// PARKING: maquina estatica que se setea en la base. Al interactuar abre el menu de
+	// autos del clan (virtualizar / desvirtualizar). Por ahora config MINIMO para spawnear
+	// y verificar que el modelo se ve bien (no rosa). El comportamiento (colocacion en
+	// territorio, permisos, menu, virtualizacion) se agrega en codigo despues.
+	// DESPLEGADO (estatico en la base). Se crea al setear el _Packed. No se levanta.
+	class Exor_Parking: Inventory_Base
+	{
+		scope = 2;
+		displayName = "Parking";
+		descriptionShort = "Máquina de parking: administra los autos de tu clan (virtualizar/desvirtualizar).";
+		model = "\ExorStorage\data\models\parking\parking.p3d";
+		weight = 45000;
+		itemBehaviour = 0;			// pesado, estatico (no se lleva en la mano)
+		physLayer = "item_large";	// colision solida: el jugador no lo atraviesa
+		carveNavmesh = 0;
+		class DamageSystem
+		{
+			class GlobalHealth
+			{
+				class Health
+				{
+					hitpoints = 5000;
+					healthLevels[] = { {1.0, {}}, {0.0, {}} };
+				};
+			};
+			class DamageZones {};
+		};
+	};
+
+	// EMPACADO (item que se lleva en la mano; se setea con la accion Deploy). Modelo = caja
+	// de carton como los otros muebles; el holograma del preview usa el modelo del parking.
+	class Exor_Parking_Packed: Inventory_Base
+	{
+		scope = 2;
+		displayName = "Parking";
+		descriptionShort = "Máquina de parking: setealo en tu base para administrar los autos del clan. Guardalo con un destornillador.";
+		model = "DZ\structures\furniture\Cases\PaperBox\PaperBox_01_small_closed.p3d";
+		projectionTypename = "Exor_Parking_Ghost";	// holograma = modelo del parking
+		rotationFlags = 17;
+		itemSize[] = {5, 5};
+		weight = 10000;
+		itemBehaviour = 0;
+		hiddenSelections[] = {};
+	};
+
+	// HOLOGRAMA del preview (se ve el parking al apuntar donde colocarlo).
+	// scope=1: usable como proyeccion por codigo pero NO aparece en el spawn de admin
+	// (evita el "tercer item fantasma" en la lista).
+	class Exor_Parking_Ghost: Inventory_Base
+	{
+		scope = 1;
+		displayName = "Parking";
+		model = "\ExorStorage\data\models\parking\parking.p3d";
+		rotationFlags = 17;
+		weight = 10000;
+		itemBehaviour = 0;
+		hiddenSelections[] = {};
+	};
+
 	class Exor_OpenableStorage: Container_Base
 	{
 		scope = 0;
@@ -197,9 +256,10 @@ class CfgVehicles
 		descriptionShort = "Guarda comida, bebida y agua. Con una bateria de coche puesta (dura ~3 dias) conserva la comida y no se pudre. Vacio y cerrado se empaqueta con un destornillador.";
 		model = "\ExorStorage\data\models\fridge\fridge.p3d";
 		hiddenSelections[] = {};
-		// Slot de BATERIA DE AUTO o de CAMION (aparece en la UI del contenedor).
-		// La de camion dura el DOBLE (ver ExorStorage_Fridge.c ExorPeriodicTick).
-		attachments[] = {"CarBattery", "TruckBattery"};
+		// UN SOLO slot de bateria: se le mete UNA bateria, de AUTO o de CAMION (ambas
+		// aceptan el slot "ExorBattery", patcheado en CfgVehicles mas abajo). La de
+		// camion dura el DOBLE (ver ExorStorage_Fridge.c ExorPeriodicTick).
+		attachments[] = {"ExorBattery"};
 		class Cargo
 		{
 			itemsCargoSize[] = {10, 12};	// 120 slots
@@ -231,6 +291,25 @@ class CfgVehicles
 		model = "DZ\structures\furniture\Cases\PaperBox\PaperBox_01_small_closed.p3d";	// caja de carton (item en mano)
 		projectionTypename = "Exor_Refrigerador_Ghost";	// holograma = modelo del refri
 		hiddenSelections[] = {};
+	};
+
+	// ------------------------------------------------------------------
+	//  BATERIAS vanilla re-slotteadas: se les AGREGA el slot "ExorBattery" (el slot
+	//  unico de la nevera) SIN tocar sus slots vanilla. Asi una sola bocacha de la
+	//  nevera acepta bateria de auto O de camion.
+	//  MISMAS REGLAS CRITICAS que las armas (ver bloque CfgWeapons abajo):
+	//   1) DECLARAR el padre en el merge (`: Inventory_Base` / `: CarBattery`), sino
+	//      el motor resetea la herencia y CRASHEA.
+	//   2) `+=` NO `=`: `=` borraria el slot vanilla ("CarBattery"/"TruckBattery") y
+	//      la bateria ya no entraria en los autos. `+=` conserva lo vanilla y agrega.
+	// ------------------------------------------------------------------
+	class CarBattery: Inventory_Base
+	{
+		inventorySlot[] += {"ExorBattery"};
+	};
+	class TruckBattery: CarBattery
+	{
+		inventorySlot[] += {"ExorBattery"};
 	};
 
 	// HOLOGRAMA del refri (solo proyeccion, scope=0). model = fridge_packed.p3d (LOD visual
@@ -718,6 +797,9 @@ class CfgSlots
 	class Slot_Exor_Gun9 { name = "Exor_Gun9"; displayName = "Arma 9"; ghostIcon = "missing"; selection = "Exor_Gun9"; };
 	class Slot_Exor_Gun10 { name = "Exor_Gun10"; displayName = "Arma 10"; ghostIcon = "missing"; selection = "Exor_Gun10"; };
 	class Slot_Exor_Gun11 { name = "Exor_Gun11"; displayName = "Arma 11"; ghostIcon = "missing"; selection = "Exor_Gun11"; };
+	// UN SOLO slot de bateria para la nevera: acepta bateria de AUTO o de CAMION (ambas
+	// se le agregan como inventorySlot mas abajo, en CfgVehicles). La de camion dura x2.
+	class Slot_ExorBattery { name = "ExorBattery"; displayName = "Batería"; ghostIcon = "battery"; selection = "ExorBattery"; };
 };
 
 // Habilitar que TODAS las armas (rifles + pistolas) puedan colgarse en los 8 slots.

@@ -38,6 +38,11 @@ class ExorRPC
 	static const int POP_REQ        = 49239;	// C -> S: pedir la cantidad de jugadores conectados (al abrir el mapa, refrescado)
 	static const int POP_COUNT      = 49240;	// S -> C: cantidad de jugadores conectados (para el contador del mapa)
 	static const int KOTH_SYNC      = 49241;	// S -> C: estado de la marca del KOTH en el mapa (mostrar/ocultar + pos + color + label)
+	static const int PARKING_OPEN   = 49242;	// S -> C: abrir/refrescar el menu de parking (JSON: autos almacenados + reales cerca) [chunked]
+	static const int PARKING_VIRT   = 49243;	// C -> S: virtualizar (guardar) el auto real seleccionado (Param2 netId low/high)
+	static const int PARKING_SPAWN  = 49244;	// C -> S: desvirtualizar (sacar) el auto almacenado seleccionado (Param1 id)
+	static const int LOCK_MODAL_OPEN   = 49245;	// S -> C: abrir el modal de clave del locker (Param1 int mode: 0=meter clave, 1=setear/cambiar)
+	static const int LOCK_MODAL_SUBMIT = 49246;	// C -> S: el jugador confirmo el modal (Param2 int mode, string clave)
 
 	// Rango reservado del mod. Se usa para decidir si un RPC es NUESTRO y por lo tanto NO
 	// hay que pasarlo a super.OnRPC() (la cadena de los otros mods). Al agregar un RPC
@@ -272,6 +277,8 @@ class ExorMenuIDs
 	static const int PARTY = 47211;
 	static const int MAP   = 47212;
 	static const int SERVERINFO = 47213;
+	static const int PARKING = 47214;
+	static const int LOCKKEY = 47215;
 }
 
 // Una fila del leaderboard (stats por jugador). Server la guarda/persiste; se manda

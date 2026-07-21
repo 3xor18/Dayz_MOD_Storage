@@ -11,15 +11,16 @@ class Exor_LockerRojo : Exor_OpenableStorage
 {
 	override string ExorGetPackedType() { return "Exor_LockerRojo_Packed"; }
 
+	// tiene candado: aparece la accion "Poner/Cambiar clave" y pide clave al abrir (a miembros).
+	override bool ExorHasCodeLock() { return true; }
+
 	// Virtualizar tambien la ropa/gear de los slots al cerrar/alejarse (perf a 55 players).
 	override bool ExorVirtualizeAttachments() { return true; }
 
-	// Guarda ropa/armas/gear; NO comida (Edible_Base) ni bebida (Bottle_Base) -> eso va a la nevera.
+	// Guarda ropa/armas/gear/MEDICO; NO comida ni bebida (mismo filtro que el locker negro).
 	override bool ExorCanStore(EntityAI item)
 	{
-		if (item.IsInherited(Edible_Base) || item.IsInherited(Bottle_Base))
-			return false;
-		return true;
+		return ExorLockerCanStore(item);
 	}
 
 	// ETAPA 2b: DOS puertas animadas. sources "L_Door" y "R_Door" (ver model.cfg +

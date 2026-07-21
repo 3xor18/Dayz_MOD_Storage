@@ -118,8 +118,13 @@ class ExorVO_Manager
 	// server (OnMissionFinish): asi su contenido anidado pasa al JSON ANTES de que el
 	// engine guarde la persistencia -> al reiniciar no quedan items reales en
 	// bag-in-barril que el motor tire al piso por "invalid location" (anidado profundo).
+	// true durante el apagado del server (OnMissionFinish -> VirtualizeAll). Lo mira el log de
+	// MUEBLE-REMOVIDO para NO loguear las bajas normales del shutdown (solo las de sesion viva).
+	static bool s_ShuttingDown;
+
 	static void VirtualizeAll()
 	{
+		s_ShuttingDown = true;
 		ExorVO_Manager m = Get();
 		int virt = 0;
 		int i;
@@ -187,6 +192,13 @@ class ExorVO_Manager
 		int reconcileBudget = ScaleBudget(ExorStorageConstants.MAX_RECONCILE_PER_TICK);
 		int snapBudget = ScaleBudget(ExorStorageConstants.MAX_SNAPSHOT_PER_TICK);
 
+		// PAUSA DE VIRTUALIZACION EN RAID: en las ventanas de looteo libre (= horario de raid)
+		// no auto-virtualizamos barriles ni muebles. Los reales se quedan reales (abrir =
+		// instantaneo, sin restaurar) y no metemos ops de virtualizar/restaurar en el pico.
+		// El snapshot (crash-safety) y el reconcile siguen; abrir/restaurar bajo demanda anda
+		// igual; nada desaparece. Se calcula 1 vez por tick, no por barril.
+		bool pauseVirt = cfg.storage.pausar_virt_en_raid && ExorMuebleRules.IsLootFreeNow();
+
 		// RESERVA PARA MUEBLES: el bloque de barriles corre primero y, si se comiera todo el
 		// cupo, los muebles no reconciliarian hasta que terminaran los ~657 barriles (y hasta
 		// entonces NO auto-cierran ni virtualizan). Se le guarda la mitad del cupo de
@@ -231,7 +243,7 @@ class ExorVO_Manager
 			// este tick, el barril se auto-cierra igual pero difiere virtualizar/snapshot al
 			// proximo tick -> sin pico de CPU (virtualizar) ni de I/O a disco (snapshot).
 			bool didSnap;
-			if (barrel.ExorTick(now, cfg.storage, budget > 0, snapBudget > 0, players, didSnap))
+			if (barrel.ExorTick(now, cfg.storage, budget > 0 && !pauseVirt, snapBudget > 0, players, didSnap))
 			{
 				budget--;
 				nBarrelWork++;
@@ -287,14 +299,16 @@ class ExorVO_Manager
 					}
 				}
 				bool didSnapF;
-				if (fur.ExorTick(now, cfg.storage, budget > 0, snapBudget > 0, players, didSnapF))
+				// PESO: una op de mueble descuenta MUEBLE_BUDGET_WEIGHT del cupo (no 1 como el
+				// barril) porque cuesta ~15x mas -> evita apilar varios muebles caros en un tick.
+				if (fur.ExorTick(now, cfg.storage, budget > 0 && !pauseVirt, snapBudget > 0, players, didSnapF))
 				{
-					budget--;
+					budget -= ExorStorageConstants.MUEBLE_BUDGET_WEIGHT;
 					nFurWork++;
 				}
 				if (didSnapF)
 				{
-					snapBudget--;
+					snapBudget -= ExorStorageConstants.MUEBLE_BUDGET_WEIGHT;
 					nFurWork++;
 				}
 				// logica periodica de la subclase (ej: bateria de la nevera). Centralizado
@@ -485,18 +499,21 @@ class ExorVO_Manager
 		}
 	}
 
-	// ------------------------- tick rapido (5s): despertar -------------------------
+	// ------------------------- tick rapido (5s): despertar + auto-virtualizar -------------------------
 	void WakeTick()
 	{
 		// Las bolsas de cadaver ya NO se tocan aca: su virtualizar/restaurar por distancia
 		// corre en el BarrelTick (5s, que ya tiene la lista de players) + Open() al abrir.
 		ExorCfgVehiculos veh = GetExorConfig().vehiculos;
-		if (!veh.vehiculos_dormir)
+		ExorCfgStorage st = GetExorConfig().storage;
+		bool autoVirt = st.parking_auto_virtualizar;
+		if (!veh.vehiculos_dormir && !autoVirt)
 			return;
 
 		// players obtenidos UNA vez para todos los chequeos de distancia de este tick
 		array<Man> players = new array<Man>;
 		GetGame().GetPlayers(players);
+		int now = GetGame().GetTime();
 
 		int i;
 		for (i = m_Vehicles.Count() - 1; i >= 0; i--)
@@ -507,13 +524,58 @@ class ExorVO_Manager
 				m_Vehicles.Remove(i);
 				continue;
 			}
-			if (!car.ExorIsSleeping())
+			// AUTO-VIRTUALIZAR: auto idle dentro del radio de un parking, sin jugador por el
+			// umbral -> se guarda solo (sale de la red). Si lo hizo, el auto se borro -> continue.
+			if (autoVirt && ExorTryAutoVirtualize(car, players, now, st))
 				continue;
-			if (IsPlayerNearList(players, car.GetPosition(), veh.vehiculos_despertar_metros))
+			// DESPERTAR dormidos cuando un jugador entra al radio
+			if (veh.vehiculos_dormir && car.ExorIsSleeping())
 			{
-				car.ExorWake();
+				if (IsPlayerNearList(players, car.GetPosition(), veh.vehiculos_despertar_metros))
+					car.ExorWake();
 			}
 		}
+	}
+
+	// Auto-virtualiza un auto si: NO esta en uso, esta dentro del radio de un parking (base),
+	// no hubo jugador cerca por 'parking_auto_minutos', y el parking esta en un territorio (para
+	// taggear el auto con ese grupo y poder recuperarlo del menu). Devuelve TRUE solo si lo
+	// VIRTUALIZO (el auto quedo borrado -> el caller debe hacer 'continue'). Los guards de robo/
+	// tripulantes/motor los aplica ExorVehicleGarage.Virtualize.
+	bool ExorTryAutoVirtualize(CarScript car, array<Man> players, int now, ExorCfgStorage st)
+	{
+		if (car.IsRuined())
+			return false;
+		// en uso (motor prendido o alguien adentro) -> resetear timer, no virtualizar
+		if (car.ExorIsActive())
+		{
+			car.ExorSetLastNear(now);
+			return false;
+		}
+		// debe estar dentro del radio de un PARKING (si no, es un auto suelto: no se recuperaria)
+		vector parkingPos;
+		if (!ExorVehicleGarage.NearParking(car.GetPosition(), st.parking_radio_metros, parkingPos))
+			return false;
+		// jugador cerca del auto -> resetear timer (sigue "en uso reciente")
+		if (IsPlayerNearList(players, car.GetPosition(), st.parking_radio_metros))
+		{
+			car.ExorSetLastNear(now);
+			return false;
+		}
+		// todavia no paso el umbral de inactividad
+		if (now - car.ExorGetLastNear() < st.parking_auto_minutos * 60000)
+			return false;
+		// grupo dueño del territorio del parking (para recuperar el auto desde el menu de ESE clan)
+		string group = ExorTerritoryManager.Get().GroupAtPos(parkingPos);
+		if (group == "")
+			return false;	// parking fuera de territorio -> no se podria recuperar -> no virtualizar
+		string reason = ExorVehicleGarage.Virtualize(car, group);
+		if (reason == "")
+		{
+			Print(string.Format("%1 auto-virtualizado (idle cerca de un parking, grupo %2)", ExorStorageConstants.LOG, group));
+			return true;
+		}
+		return false;	// un guard lo bloqueo (enemigo cerca, etc.) -> se reintenta el proximo tick
 	}
 
 	// Contador de jugadores conectados, CACHEADO (lo refresca BarrelTick reusando la lista
@@ -538,6 +600,31 @@ class ExorVO_Manager
 				return true;
 		}
 		return false;
+	}
+
+	// Limpia la clave de los LOCKERS cuya clave puso 'sid'. Lo llama el kick del party: si
+	// expulsan al miembro que puso la clave (ej: dejo de conectarse y no la compartio), su
+	// locker queda SIN clave para que el resto del clan no quede afuera.
+	static void ClearLockerKeysBySetter(string sid)
+	{
+		if (sid == "")
+			return;
+		ExorVO_Manager m = Get();
+		if (!m || !m.m_Openables)
+			return;
+		int i;
+		int n = 0;
+		for (i = 0; i < m.m_Openables.Count(); i++)
+		{
+			Exor_OpenableStorage fur = m.m_Openables.Get(i);
+			if (fur && fur.ExorHasCodeLock() && fur.ExorHasKey() && fur.ExorGetKeySetterSid() == sid)
+			{
+				fur.ExorClearKey();
+				n++;
+			}
+		}
+		if (n > 0)
+			Print(string.Format("%1 clave limpiada de %2 locker(s) al expulsar a %3", ExorStorageConstants.LOG, n, sid));
 	}
 
 	// Como IsPlayerNear pero solo cuenta players VIVOS (un cadaver tambien es un Man).

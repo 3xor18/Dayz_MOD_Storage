@@ -772,6 +772,9 @@ class ExorGroupManager
 		string nm = mm.name;
 		g.AddFormer(targetSid, nm, ExorTimeUtil.TodayNumber(), "expulsado");
 		g.RemoveMember(targetSid);
+		// Si el expulsado habia puesto clave en algun locker, LIMPIARLA (para que el resto del
+		// clan no quede afuera si el se dejo de conectar sin compartirla).
+		ExorVO_Manager.ClearLockerKeysBySetter(targetSid);
 		SaveGroup(g);
 		SyncGroup(g);
 
@@ -797,6 +800,17 @@ class ExorGroupManager
 		ExorGroup g = FindByPlayer(sid);
 		if (!g)
 		{
+			// STALE GROUP ID: el personaje persiste su m_ExorGroupId en el save. Si el grupo
+			// dejo de existir (disuelto, o borrado del disco) pero el id quedo pegado al
+			// personaje, ExorHasGroup() sigue devolviendo true -> al construir un mastil la
+			// logica cree que "ya tiene territorio" y no crea grupo nuevo -> el mastil queda
+			// con grupo='' y el detector de anomalias lo borra al instante (el jugador NO
+			// puede volver a construir). Limpiar el id stale lo destraba.
+			if (player.ExorGetGroupId() != "")
+			{
+				Print(string.Format("%1 Party: %2 tenia groupId stale '%3' (grupo inexistente) -> limpiado", ExorStorageConstants.LOG, sid, player.ExorGetGroupId()));
+				player.ExorSetGroupId("");
+			}
 			SyncToPlayer(player, null);	// limpia el roster del cliente
 			return;
 		}

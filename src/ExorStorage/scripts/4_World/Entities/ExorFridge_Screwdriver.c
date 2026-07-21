@@ -13,5 +13,6 @@ modded class Screwdriver
 	{
 		super.SetActions();
 		AddAction(ExorActionPackFridge);
+		AddAction(ExorActionPackParking);
 	}
 }

@@ -1,0 +1,113 @@
+PanelWidgetClass ExorLockKeyRoot
+{
+	visible 1
+	position 0 0
+	size 1 1
+	color 0 0 0 0.6
+	style rover_sim_colorable
+	hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+	{
+		PanelWidgetClass ExorLockKeyPanel
+		{
+			visible 1
+			position 0.34 0.32 size 0.32 0.36
+			color 0.06 0.07 0.12 1
+			style rover_sim_colorable
+			halign left_ref valign top_ref
+			hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+			{
+				TextWidgetClass ExorLockKeyTitle
+				{
+					visible 1
+					position 0.05 0.04 size 0.9 0.1
+					hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+					color 1 1 1 1
+					text "CLAVE DEL LOCKER"
+					font "gui/fonts/Metron-Bold58"
+					"exact text" 1 "exact text size" 22
+					"text halign" center "text valign" center
+				}
+				TextWidgetClass ExorLockKeySub
+				{
+					visible 1
+					position 0.05 0.15 size 0.9 0.07
+					hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+					color 0.75 0.75 0.8 1
+					text "Ingresá la clave"
+					font "gui/fonts/MetronBook16"
+					"exact text" 1 "exact text size" 15
+					"text halign" center
+					wrap 1
+				}
+
+				PanelWidgetClass ExorLockKeyBox1
+				{
+					visible 1
+					position 0.1 0.28 size 0.8 0.11
+					color 0.14 0.15 0.2 1
+					style rover_sim_colorable
+					hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+					{
+						EditBoxWidgetClass ExorLockKeyInput1
+						{
+							visible 1
+							position 0.03 0.1 size 0.94 0.8
+							hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+							color 1 1 1 1
+							text ""
+							font "gui/fonts/MetronBook16"
+							"text halign" center
+							"exact text size" 20 "exact text" 1
+						}
+					}
+				}
+				PanelWidgetClass ExorLockKeyBox2
+				{
+					visible 1
+					position 0.1 0.43 size 0.8 0.11
+					color 0.14 0.15 0.2 1
+					style rover_sim_colorable
+					hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+					{
+						EditBoxWidgetClass ExorLockKeyInput2
+						{
+							visible 1
+							position 0.03 0.1 size 0.94 0.8
+							hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+							color 1 1 1 1
+							text ""
+							font "gui/fonts/MetronBook16"
+							"text halign" center
+							"exact text size" 20 "exact text" 1
+						}
+					}
+				}
+
+				TextWidgetClass ExorLockKeyError
+				{
+					visible 0
+					position 0.05 0.57 size 0.9 0.06
+					hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+					color 0.9 0.35 0.35 1
+					text ""
+					font "gui/fonts/MetronBook16"
+					"exact text" 1 "exact text size" 14
+					"text halign" center
+				}
+
+				ButtonWidgetClass ExorLockKeyBtnOk
+				{
+					visible 1 position 0.1 0.75 size 0.37 0.13 color 0.15 0.35 0.15 1
+					style rover_sim_colorable text "OK" font "gui/fonts/MetronBook16"
+					"text halign" center
+				}
+				ButtonWidgetClass ExorLockKeyBtnCancel
+				{
+					visible 1 position 0.53 0.75 size 0.37 0.13 color 0.3 0.15 0.15 1
+					style rover_sim_colorable text "Cancelar" font "gui/fonts/MetronBook16"
+					"text halign" center
+				}
+			}
+		}
+	}
+}

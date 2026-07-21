@@ -10,6 +10,7 @@ modded class CarScript
 {
 	protected int m_ExorLastActiveMs;
 	protected bool m_ExorSleeping;
+	protected int m_ExorLastNearMs;		// ultimo ms con un jugador cerca (para auto-virtualizar)
 
 	override void EEInit()
 	{
@@ -17,6 +18,7 @@ modded class CarScript
 		if (GetGame().IsServer())
 		{
 			m_ExorLastActiveMs = GetGame().GetTime();
+			m_ExorLastNearMs = GetGame().GetTime();	// arranca "recien usado" -> no se auto-virtualiza al toque
 			m_ExorSleeping = false;
 			ExorVO_Manager.RegisterVehicle(this);
 
@@ -69,5 +71,15 @@ modded class CarScript
 	int ExorGetLastActive()
 	{
 		return m_ExorLastActiveMs;
+	}
+
+	// --- auto-virtualizado: timer de "ultimo jugador cerca" ---
+	void ExorSetLastNear(int now)
+	{
+		m_ExorLastNearMs = now;
+	}
+	int ExorGetLastNear()
+	{
+		return m_ExorLastNearMs;
 	}
 }

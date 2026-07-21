@@ -135,6 +135,24 @@ class ExorTerritoryManager
 		return null;
 	}
 
+	// GRUPO dueño del territorio que contiene 'pos' (mastil construido a <=Radius). "" si el
+	// punto no esta en ningun territorio. Lo usa el auto-virtualizado para taggear el auto con
+	// el clan de la base donde esta el parking (sin persistir el grupo en el parking).
+	string GroupAtPos(vector pos)
+	{
+		float radius = ExorTerritoryRules.Radius();
+		int i;
+		for (i = 0; i < m_Masts.Count(); i++)
+		{
+			TerritoryFlag m = m_Masts.Get(i);
+			if (!m || !m.ExorIsBuilt())
+				continue;
+			if (ExorTerritoryRules.Dist2D(pos, m.GetPosition()) <= radius)
+				return m.ExorGetGroupId();
+		}
+		return "";
+	}
+
 	// como FindMastByGroup pero SOLO devuelve un mastil REAL (con el poste construido);
 	// ignora los "fantasmas" (registrados pero sin construir tras un crash/load fallido).
 	TerritoryFlag FindBuiltMastByGroup(string groupId)

@@ -141,6 +141,10 @@ modded class MissionGameplay
 			return new ExorMapMenu();
 		if (id == ExorMenuIDs.SERVERINFO)
 			return new ExorServerInfoMenu();
+		if (id == ExorMenuIDs.PARKING)
+			return new ExorParkingMenu();
+		if (id == ExorMenuIDs.LOCKKEY)
+			return new ExorLockKeyMenu();
 		return super.CreateScriptedMenu(id);
 	}
 

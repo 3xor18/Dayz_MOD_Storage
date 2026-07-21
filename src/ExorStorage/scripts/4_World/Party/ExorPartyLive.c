@@ -275,20 +275,13 @@ class ExorPartyLive
 		ExorGroup g = ExorGroupManager.Get().FindByPlayer(ExorGroupManager.SteamId(player));
 		if (!g)
 			return;
-		// borra TUS marcas (las que pusiste vos, identificadas por steamid)
-		string sid = ExorGroupManager.SteamId(player);
+		// Borra TODAS las marcas del party (las tuyas Y las de todos los miembros). Las marcas
+		// son compartidas por grupo, asi que cualquier miembro puede limpiar el tablero entero.
 		ExorMarkersDTO m;
 		if (m_MarkersByGroup.Find(g.id, m))
-		{
-			int i;
-			for (i = m.markers.Count() - 1; i >= 0; i--)
-			{
-				if (m.markers.Get(i).owner == sid)
-					m.markers.Remove(i);
-			}
-		}
+			m.markers.Clear();
 		BroadcastMarkers(g);
-		player.MessageImportant("Tus marcas limpiadas.");
+		player.MessageImportant("Marcas del party limpiadas.");
 	}
 
 	// Borra las marcas con mas de MARK_TTL_MS (10 min) de antiguedad y re-broadcastea

@@ -4,12 +4,12 @@
 class ExorStorageConstants
 {
 	static const string MOD_NAME = "3xor_Vanilla_Optimization";
-	static const string MOD_VERSION = "2.9.1";
+	static const string MOD_VERSION = "2.10.0";
 	// Sello de build: SUBIRLO EN CADA EMPAQUE, aunque no cambie MOD_VERSION. Sirve para
 	// saber desde el RPT que PBO esta corriendo el server (el de version sola no alcanza:
 	// se desplego 2.9.1 con MOD_VERSION todavia en "2.8.0" y los logs pre/post deploy
 	// salieron identicos -> imposible confirmar si el deploy habia entrado).
-	static const string MOD_BUILD = "2026-07-20";
+	static const string MOD_BUILD = "2026-07-21";
 	static const string LOG = "[3xorVO]";
 	// DEBUG temporal del ciclo de vida del barril (setear/levantar/abrir/cerrar/item
 	// in-out/virtualizar/restaurar/load/save/shutdown). Poner en false (o borrar las
@@ -67,6 +67,9 @@ class ExorStorageConstants
 
 	// Log de auditoria del server (1 archivo por dia: audit_YYYY-MM-DD.txt, auto-purga)
 	static const string AUDITLOG_DIR = "$profile:3xorVanillaOptimization\\ServerAuditLog";
+	// Garage: vehiculos virtualizados. Un JSON por auto, con el groupId embebido para saber
+	// de que clan es (asi el menu del mastil solo muestra los TUYOS).
+	static const string VEHICLES_DIR = "$profile:3xorVanillaOptimization\\vehiculos_virt";
 
 	// Ledger anti-farmeo de kills: por par killer->victima (steamid), timestamps de los
 	// kills recientes. Persiste para sobrevivir los reinicios cada 4h (si no, la ventana
@@ -124,6 +127,16 @@ class ExorStorageConstants
 	// escribe UNA linea con el desglose por bloque (grep "3xorVO TICK-LENTO"). En operacion
 	// normal el tick tarda pocos ms -> no escribe nada.
 	static const int TICK_WARN_MS = 25;
+
+	// PESO de una operacion de MUEBLE en el presupuesto por tick. Confirmado por el log
+	// TICK-LENTO en produccion: una op de mueble (virtualizar/snapshot de un locker con
+	// armas+ropa+cargo anidado = 50-100+ entidades a recrear) cuesta ~7-12ms, contra ~0.5ms
+	// de un barril. El presupuesto contaba las dos igual, asi que un tick podia apilar 3-4
+	// muebles = 40ms de golpe (los slow ticks observados). Con este peso, una op de mueble
+	// consume WEIGHT del cupo -> un tick nunca apila varios muebles caros (el resto espera al
+	// proximo, el cursor rotativo garantiza que a todos les toca). NO se aplica al reconcile
+	// (cupo chico y critico para el loot post-crash). Ajustar si los slow ticks persisten.
+	static const int MUEBLE_BUDGET_WEIGHT = 4;
 
 	// Debounce del guardado EN VIVO mientras el contenedor esta ABIERTO. Cada snapshot
 	// reserializa el contenedor ENTERO y reescribe su archivo (los JSON de produccion van

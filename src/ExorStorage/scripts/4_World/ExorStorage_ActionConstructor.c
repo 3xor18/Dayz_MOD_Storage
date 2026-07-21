@@ -24,5 +24,8 @@ modded class ActionConstructor
 		actions.Insert(ExorActionKickMember);
 		actions.Insert(ExorActionPlaceMarker);
 		actions.Insert(ExorActionClearMarkers);
+		actions.Insert(ExorActionOpenParking);
+		actions.Insert(ExorActionPackParking);
+		actions.Insert(ExorActionSetLockerKey);
 	}
 }

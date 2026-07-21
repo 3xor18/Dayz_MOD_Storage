@@ -14,6 +14,7 @@ modded class PlayerBase
 	// --- Killfeed (server): ultimo daño recibido, para saber arma/atacante al morir ---
 	protected EntityAI m_ExorKfSource;           // entidad que causo el ultimo daño (arma/atacante)
 	protected string m_ExorKfAmmo;               // tipo de municion/daño del ultimo golpe (clasifica gas/mina/explosivo)
+	protected int m_ExorKfMs;                    // uptime ms del ultimo golpe (para no clasificar como "caida" un F11/suicidio despues de una caida vieja)
 
 	// --- Bolsa de cadaver (server): ropa copiada + armas/manos (entidades reales a mover) ---
 	protected ref array<ref ExorVO_ItemData> m_ExorDeathLoot;
@@ -320,6 +321,7 @@ modded class PlayerBase
 			return;
 		m_ExorKfSource = source;
 		m_ExorKfAmmo = ammo;	// para clasificar muerte por gas/mina/claymore/explosivo improvisado
+		m_ExorKfMs = GetGame().GetTime();	// cuando fue (para descartar caidas viejas al morir por F11/suicidio)
 
 		// forense de la tumba: cachear la identidad AHORA (el player esta vivo). En muertes
 		// por explosivo/granada GetIdentity() ya es null en EEKilled -> sin este cache el
@@ -596,8 +598,12 @@ modded class PlayerBase
 		else if (isMine)      cause = "una mina";
 		else if (isTrap)      cause = "una trampa de osos";
 
-		// caida de altura: el daño llega con ammo "FallDamage" (sin entidad atacante)
-		if (cause == "" && am.Contains("fall"))
+		// caida de altura: el daño llega con ammo "FallDamage" (sin entidad atacante).
+		// SOLO si el golpe fue RECIENTE: una caida mata al instante, asi que si el ultimo
+		// golpe registrado (una caida que NO mato) fue hace rato y el jugador muere ahora
+		// (F11/respawn o suicidio), NO es una caida -> no usar el ammo viejo y stale.
+		bool recentHit = (m_ExorKfMs > 0 && GetGame().GetTime() - m_ExorKfMs < 2500);
+		if (cause == "" && am.Contains("fall") && recentHit)
 			cause = "una caída";
 
 		// ---- GRANADA de fragmentacion: atribuir al LANZADOR (frag de mano o lanzagranadas) ----
@@ -865,6 +871,12 @@ modded class PlayerBase
 			case ExorRPC.SPAWN_OPEN:
 				ExorOnSpawnOpen(ctx);
 				break;
+			case ExorRPC.PARKING_OPEN:
+				ExorOnParkingOpen(ctx);
+				break;
+			case ExorRPC.LOCK_MODAL_OPEN:
+				ExorOnLockModalOpen(ctx);
+				break;
 			case ExorRPC.CONFIG_SYNC:
 				ExorOnConfigSync(ctx);
 				break;
@@ -991,6 +1003,30 @@ modded class PlayerBase
 					Param1<string> pk = new Param1<string>("");
 					if (ctx.Read(pk))
 						ExorGroupManager.Get().Kick(this, pk.param1);
+				}
+				break;
+			case ExorRPC.PARKING_VIRT:
+				if (GetGame().IsServer())
+				{
+					Param2<int, int> pkvp = new Param2<int, int>(0, 0);
+					if (ctx.Read(pkvp))
+						ExorDoParkingVirt(pkvp.param1, pkvp.param2);
+				}
+				break;
+			case ExorRPC.PARKING_SPAWN:
+				if (GetGame().IsServer())
+				{
+					Param1<string> pksp = new Param1<string>("");
+					if (ctx.Read(pksp))
+						ExorDoParkingSpawn(pksp.param1);
+				}
+				break;
+			case ExorRPC.LOCK_MODAL_SUBMIT:
+				if (GetGame().IsServer())
+				{
+					Param2<int, string> lkp = new Param2<int, string>(0, "");
+					if (ctx.Read(lkp))
+						ExorDoLockSubmit(lkp.param1, lkp.param2);
 				}
 				break;
 		}
@@ -1171,5 +1207,213 @@ modded class PlayerBase
 		if (abierto)
 			return;
 		ui.EnterScriptedMenu(ExorMenuIDs.SPAWN, null);
+	}
+
+	// ========================================================================
+	//  PARKING (administrar autos del clan) - menu con 2 paneles
+	// ========================================================================
+	// SERVER: parking que este jugador esta gestionando (para refrescar/actuar tras cada click).
+	protected vector	m_ExorParkingPos;
+	protected bool		m_ExorParkingActive;
+
+	// SERVER: el jugador interactuo con un parking (permiso ya chequeado en la accion).
+	// Guarda el parking y le manda la lista de autos al cliente.
+	void ExorOpenParkingManager(vector pos)
+	{
+		if (!GetGame().IsServer())
+			return;
+		m_ExorParkingPos = pos;
+		m_ExorParkingActive = true;
+		ExorSendParkingList();
+	}
+
+	// SERVER: arma el JSON (almacenados + reales) y lo manda al cliente (en trozos).
+	// El mismo RPC ABRE el menu (si no estaba) o lo REFRESCA (si ya estaba).
+	void ExorSendParkingList()
+	{
+		if (!GetGame().IsServer() || !m_ExorParkingActive)
+			return;
+		string json = ExorParkingNet.BuildJson(m_ExorParkingPos, ExorGetGroupId());
+		ExorNetChunk.Send(this, GetIdentity(), ExorRPC.PARKING_OPEN, json);
+	}
+
+	// SERVER: virtualizar (guardar) el auto real con ese network id. Re-escanea el radio
+	// del parking guardado y lo re-ubica por netId (robusto ante indices que se movieron).
+	void ExorDoParkingVirt(int netLow, int netHigh)
+	{
+		if (!GetGame().IsServer() || !m_ExorParkingActive)
+			return;
+		// re-chequear permiso (el jugador pudo salir del clan / cambiar el horario)
+		string deny;
+		if (!ExorMuebleRules.CanLootAtPos(this, m_ExorParkingPos, deny))
+		{
+			ExorMuebleRules.SendRed(this, deny);
+			return;
+		}
+		array<CarScript> cars;
+		ExorVehicleGarage.NearbyReal(m_ExorParkingPos, ExorParkingNet.ScanRadius(), cars);
+		CarScript target;
+		int i;
+		for (i = 0; i < cars.Count(); i++)
+		{
+			CarScript car = cars.Get(i);
+			if (!car)
+				continue;
+			int lo, hi;
+			car.GetNetworkID(lo, hi);
+			if (lo == netLow && hi == netHigh)
+			{
+				target = car;
+				break;
+			}
+		}
+		if (!target)
+		{
+			ExorSendParkingList();	// ya no esta: refrescar y salir
+			return;
+		}
+		string reason = ExorVehicleGarage.Virtualize(target, ExorGetGroupId());
+		if (reason != "")
+			ExorMuebleRules.SendRed(this, "No se pudo guardar el auto: " + reason);
+		else
+			ExorMuebleRules.SendChat(this, "Auto guardado en el parking.");
+		ExorSendParkingList();	// refrescar ambas listas
+	}
+
+	// SERVER: desvirtualizar (sacar) el auto almacenado con ese id. Reaparece donde estaba.
+	void ExorDoParkingSpawn(string id)
+	{
+		if (!GetGame().IsServer() || !m_ExorParkingActive)
+			return;
+		string deny;
+		if (!ExorMuebleRules.CanLootAtPos(this, m_ExorParkingPos, deny))
+		{
+			ExorMuebleRules.SendRed(this, deny);
+			return;
+		}
+		string reason = ExorVehicleGarage.Spawn(id, ExorGetGroupId());
+		if (reason != "")
+			ExorMuebleRules.SendRed(this, "No se pudo sacar el auto: " + reason);
+		else
+			ExorMuebleRules.SendChat(this, "Auto sacado del parking.");
+		ExorSendParkingList();	// refrescar ambas listas
+	}
+
+	// CLIENTE: pide guardar/sacar un auto (los llama el menu).
+	void ExorReqParkingVirt(int netLow, int netHigh)
+	{
+		RPCSingleParam(ExorRPC.PARKING_VIRT, new Param2<int, int>(netLow, netHigh), true, null);
+	}
+	void ExorReqParkingSpawn(string id)
+	{
+		RPCSingleParam(ExorRPC.PARKING_SPAWN, new Param1<string>(id), true, null);
+	}
+
+	// CLIENTE: llega la lista de autos -> cachearla y abrir/refrescar el menu.
+	void ExorOnParkingOpen(ParamsReadContext ctx)
+	{
+		string full = ExorBigStringRx.Feed(ExorRPC.PARKING_OPEN, ctx);
+		if (full == "")
+			return;	// aun faltan trozos
+		ExorParkingMenuDTO dto = new ExorParkingMenuDTO();
+		JsonSerializer js = new JsonSerializer();
+		string err;
+		if (!js.ReadFromString(dto, full, err))
+			return;
+		ExorParkingClient.Set(dto);	// bump de version -> el menu se auto-refresca en su Update
+
+		UIManager ui = GetGame().GetUIManager();
+		if (!ui)
+			return;
+		// Si el menu YA esta abierto no lo re-abrimos (el bump de version de arriba hace que
+		// se refresque solo). Usamos el tipo base UIScriptedMenu: el menu concreto vive en
+		// 5_Mission y no es referenciable desde 4_World.
+		UIScriptedMenu open = ui.FindMenu(ExorMenuIDs.PARKING);
+		if (!open)
+			ui.EnterScriptedMenu(ExorMenuIDs.PARKING, null);
+	}
+
+	// ========================================================================
+	//  CLAVE de lockers (code-lock)
+	// ========================================================================
+	// SERVER: locker sobre el que este jugador esta poniendo/metiendo clave (guardado entre
+	// que abre el modal y confirma). Es estatico/indestructible -> ref seguro con null-check.
+	protected Exor_OpenableStorage m_ExorKeyTarget;
+
+	// SERVER: abre el modal de clave en el cliente (mode 0=meter, 1=setear). Guarda el locker.
+	void ExorOpenLockKeyModal(Exor_OpenableStorage fur, int mode)
+	{
+		if (!GetGame().IsServer() || !fur)
+			return;
+		m_ExorKeyTarget = fur;
+		RPCSingleParam(ExorRPC.LOCK_MODAL_OPEN, new Param1<int>(mode), true, GetIdentity());
+	}
+
+	// SERVER: el jugador confirmo el modal.
+	void ExorDoLockSubmit(int mode, string key)
+	{
+		if (!GetGame().IsServer())
+			return;
+		Exor_OpenableStorage fur = m_ExorKeyTarget;
+		if (!fur)
+			return;
+		string sid = ExorGroupManager.SteamId(this);
+
+		if (mode == ExorLockKeyClient.MODE_SET)
+		{
+			// re-chequear permiso (miembro/staff) + que cambiar tenga la clave previa
+			string denyS;
+			if (!ExorMuebleRules.CanPackAtPos(this, fur.GetPosition(), denyS))
+			{
+				ExorMuebleRules.SendRed(this, "Solo los miembros del clan pueden ponerle clave.");
+				return;
+			}
+			if (fur.ExorHasKey() && !fur.ExorIsUnlockedBy(sid))
+			{
+				ExorMuebleRules.SendRed(this, "Necesitás ingresar la clave actual antes de cambiarla.");
+				return;
+			}
+			if (key == "")
+			{
+				ExorMuebleRules.SendRed(this, "La clave no puede estar vacía.");
+				return;
+			}
+			fur.ExorSetKey(key, sid);
+			ExorMuebleRules.SendChat(this, "Clave del locker guardada.");
+		}
+		else	// MODE_ENTER: meter la clave para abrir
+		{
+			if (fur.ExorKeyMatches(key))
+			{
+				fur.ExorMarkUnlocked(sid);
+				fur.Open();
+			}
+			else
+			{
+				ExorMuebleRules.SendRed(this, "Clave incorrecta.");
+			}
+		}
+		m_ExorKeyTarget = null;
+	}
+
+	// CLIENTE: pide confirmar el modal (lo llama el menu).
+	void ExorReqLockSubmit(int mode, string key)
+	{
+		RPCSingleParam(ExorRPC.LOCK_MODAL_SUBMIT, new Param2<int, string>(mode, key), true, null);
+	}
+
+	// CLIENTE: llega la orden de abrir el modal -> cachear el modo y abrirlo.
+	void ExorOnLockModalOpen(ParamsReadContext ctx)
+	{
+		Param1<int> p = new Param1<int>(0);
+		if (!ctx.Read(p))
+			return;
+		ExorLockKeyClient.Set(p.param1);	// modo + bump de version (redibuja si ya estaba abierto)
+		UIManager ui = GetGame().GetUIManager();
+		if (!ui)
+			return;
+		UIScriptedMenu open = ui.FindMenu(ExorMenuIDs.LOCKKEY);
+		if (!open)
+			ui.EnterScriptedMenu(ExorMenuIDs.LOCKKEY, null);
 	}
 }

@@ -12,16 +12,17 @@ class Exor_Locker : Exor_OpenableStorage
 {
 	override string ExorGetPackedType() { return "Exor_Locker_Packed"; }
 
+	// tiene candado: aparece la accion "Poner/Cambiar clave" y pide clave al abrir (a miembros).
+	override bool ExorHasCodeLock() { return true; }
+
 	// Virtualizar TAMBIEN la ropa/gear de los slots de equipo (attachments) al cerrar/
 	// alejarse: se guardan en JSON y se sacan del mundo (0 carga con 55 players).
 	override bool ExorVirtualizeAttachments() { return true; }
 
-	// Guarda ropa/armas/gear; NO comida (Edible_Base) ni bebida/agua (Bottle_Base).
+	// Guarda ropa/armas/gear/MEDICO; NO comida ni bebida/agua (esas van a la nevera).
 	override bool ExorCanStore(EntityAI item)
 	{
-		if (item.IsInherited(Edible_Base) || item.IsInherited(Bottle_Base))
-			return false;
-		return true;
+		return ExorLockerCanStore(item);
 	}
 
 	// DOS puertas: sources "L_Door" y "R_Door" (ver model.cfg + config AnimationSources).

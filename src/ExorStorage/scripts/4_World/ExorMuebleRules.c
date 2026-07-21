@@ -13,7 +13,35 @@
 class ExorMuebleRules
 {
 	// -------- mensaje ROJO al chat del mod (kind=2) --------
+	// Mensaje al CHAT del mod, verde (kind=1). Para info (no error).
+	static void SendChat(PlayerBase p, string text)
+	{
+		SendMsg(p, text, 1);
+	}
+
 	static void SendRed(PlayerBase p, string text)
+	{
+		SendMsg(p, text, 2);
+	}
+
+	// EMPACAR/sacar un objeto de la base: solo MIEMBROS del territorio o STAFF (bypass).
+	// NO usa el horario libre (a diferencia de lootear): en raid igual no te lo pueden sacar.
+	static bool CanPackAtPos(PlayerBase player, vector pos, out string reason)
+	{
+		reason = "";
+		if (!player)
+			return false;
+		ExorCfgStorage s = GetExorConfig().storage;
+		if (s && s.bypass_lootear_steamids && s.bypass_lootear_steamids.Find(ExorGroupManager.SteamId(player)) != -1)
+			return true;	// staff
+		ExorTerritoryManager tm = ExorTerritoryManager.Get();
+		if (tm && tm.IsInOwnGroupTerritory(player, pos))
+			return true;	// miembro del clan de esta base
+		reason = "Solo los miembros del clan pueden sacar el parking.";
+		return false;
+	}
+
+	static void SendMsg(PlayerBase p, string text, int kind)
 	{
 		if (!p || !p.GetIdentity() || !GetGame().IsServer() || text == "")
 			return;
@@ -23,7 +51,7 @@ class ExorMuebleRules
 		m.channel = 0;
 		m.dur = 8;
 		m.max = 3;
-		m.kind = 2;      // 2 = ROJO (error/aviso)
+		m.kind = kind;   // 1 = verde (info), 2 = rojo (error)
 		m.chars = 60;
 		m.maxlin = 3;
 		JsonSerializer js = new JsonSerializer();
@@ -171,6 +199,29 @@ class ExorMuebleRules
 	}
 
 	// -------- puede 'player' LOOTEAR (abrir) el mueble 'fur'? --------
+	// Misma regla que CanLootMueble pero por POSICION (para objetos que no son
+	// Exor_OpenableStorage, ej. el parking): solo miembros salvo en horario libre.
+	static bool CanLootAtPos(PlayerBase player, vector pos, out string reason)
+	{
+		reason = "";
+		ExorCfgStorage s = GetExorConfig().storage;
+		if (!s || !s.solo_miembros_lotean_muebles || !player)
+			return true;
+		if (s.bypass_lootear_steamids && s.bypass_lootear_steamids.Find(ExorGroupManager.SteamId(player)) != -1)
+			return true;
+		if (IsLootFreeNow())
+			return true;	// horario libre -> cualquiera
+		ExorTerritoryManager tm = ExorTerritoryManager.Get();
+		if (tm && tm.IsInOwnGroupTerritory(player, pos))
+			return true;	// miembro de esta base
+		if (tm && tm.FindEnemyTerritoryAt(player, pos))
+		{
+			reason = "Solo los miembros del clan pueden usar el parking.";
+			return false;
+		}
+		return true;	// fuera de todo territorio
+	}
+
 	static bool CanLootMueble(PlayerBase player, Exor_OpenableStorage fur, out string reason)
 	{
 		reason = "";

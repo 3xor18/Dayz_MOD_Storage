@@ -56,6 +56,24 @@ class ExorCfgStorage
 	// 0 = la bateria no se descarga nunca.
 	float nevera_bateria_dias = 3.0;
 
+	// EN HORARIO DE RAID (las ventanas de horario_looteo_libre) PAUSAR la auto-virtualizacion
+	// de barriles Y muebles: los que estan reales se quedan reales (abrir = instantaneo, sin
+	// restaurar) y no se gasta CPU virtualizando/re-virtualizando en el pico del raid. NADA
+	// desaparece (los items siguen ahi) y el snapshot a disco (crash-safety) sigue corriendo.
+	// Al terminar el raid la virtualizacion se retoma sola. Abrir/restaurar bajo demanda anda
+	// igual. Solo actua si hay horario_looteo_libre configurado (si no, no cambia nada).
+	bool pausar_virt_en_raid = true;
+
+	// AUTO-VIRTUALIZADO DE AUTOS: un auto que lleva 'parking_auto_minutos' sin ningun jugador
+	// a 'parking_radio_metros' Y esta dentro del radio de un PARKING (en una base) se virtualiza
+	// SOLO -> sale de la red (la entidad mas cara con muchos players). Se taggea con el grupo
+	// dueño del territorio del parking, asi se recupera desde el menu de ESE parking. Los autos
+	// sueltos por el mapa NO se auto-virtualizan (no habria como recuperarlos). Guards: sin
+	// tripulantes, motor apagado, y sin jugadores AJENOS a <=10m (no robar autos de otros).
+	bool parking_auto_virtualizar = true;
+	int parking_auto_minutos = 5;        // minutos sin jugador cerca antes de auto-virtualizar
+	float parking_radio_metros = 30.0;   // radio del parking (auto a mostrar + "sin jugador cerca")
+
 	// ---- LIMITES DE MUEBLES / TERRITORIO (todo se chequea SOLO en eventos: colocar
 	// mueble, poner mastil, quitar mastil -> cero costo por-frame) ----
 	bool setear_muebles_solo_cerca_mastil = false;  // muebles solo se colocan dentro del radio del mastil de TU grupo
@@ -85,6 +103,10 @@ class ExorCfgStorage
 		permitir_ropa_con_items = true;
 		cooldown_abrir_segundos = 3;
 		nevera_bateria_dias = 3.0;
+		pausar_virt_en_raid = true;
+		parking_auto_virtualizar = true;
+		parking_auto_minutos = 5;
+		parking_radio_metros = 30.0;
 		setear_muebles_solo_cerca_mastil = false;
 		cantidad_maxima_muebles_por_base = 10;
 		solo_miembros_lotean_muebles = false;

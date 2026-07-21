@@ -63,6 +63,25 @@ class ExorActionOpenCloseFridge : ActionInteractBase
 			ExorMuebleRules.SendRed(action_data.m_Player, denyReason);
 			return;
 		}
+
+		// CLAVE (locker): si tiene candado + clave seteada, se le pide la clave AL MIEMBRO que
+		// abre y que todavia no la ingreso (se abre el modal, no se abre el locker). A los AJENOS
+		// NO se les pide (en horario de raid ya pasaron el CanLootMueble): el locker se les abre
+		// directo mostrando el loot. Una vez que el miembro mete la clave, no se le pide mas.
+		PlayerBase player = action_data.m_Player;
+		if (fur.ExorHasCodeLock() && fur.ExorHasKey())
+		{
+			bool isMember = false;
+			ExorTerritoryManager tm = ExorTerritoryManager.Get();
+			if (tm && tm.IsInOwnGroupTerritory(player, fur.GetPosition()))
+				isMember = true;
+			string sid = ExorGroupManager.SteamId(player);
+			if (isMember && !fur.ExorIsUnlockedBy(sid))
+			{
+				player.ExorOpenLockKeyModal(fur, ExorLockKeyClient.MODE_ENTER);
+				return;	// no abrir hasta que ingrese la clave correcta
+			}
+		}
 		fur.Open();
 	}
 }
