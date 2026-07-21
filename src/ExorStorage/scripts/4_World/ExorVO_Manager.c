@@ -38,11 +38,10 @@ class ExorVO_Manager
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().Tick, ExorStorageConstants.TICK_MS, true);
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().BarrelTick, ExorStorageConstants.BARREL_TICK_MS, true);
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().WakeTick, ExorStorageConstants.WAKE_TICK_MS, true);
-		// SELF-HEAL de muebles despawneados por el motor: 1 SOLA pasada DIFERIDA 90s tras arrancar
-		// (esperar a que cargue toda la persistencia -> no recrear duplicados de los que iban a
-		// cargar). El despawn pasa en el ARRANQUE (clip con pared / limpieza de CE), asi que con la
-		// pasada de arranque alcanza -> no hace falta un scan periodico (ahorra recursos).
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().HealTick, 90000, false);
+		// SELF-HEAL DESACTIVADO (21-jul): el registro por-mueble en la carga se correlacionaba
+		// con un OOM al arrancar en el server del amigo (v2.10.0 booteaba, v2.10.1/2 no). Se saca
+		// para descartar. Si el despawn de muebles vuelve, reactivar con un enfoque mas liviano.
+		// GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().HealTick, 90000, false);
 		Print(string.Format("%1 Manager iniciado (tick %2 ms, barrel-tick %3 ms, wake-tick %4 ms)", ExorStorageConstants.LOG, ExorStorageConstants.TICK_MS, ExorStorageConstants.BARREL_TICK_MS, ExorStorageConstants.WAKE_TICK_MS));
 	}
 
@@ -508,15 +507,6 @@ class ExorVO_Manager
 		{
 			Print(string.Format("%1 Vehiculos dormidos: +%2 (total %3 de %4)", ExorStorageConstants.LOG, dormidos, totalDormidos, m_Vehicles.Count()));
 		}
-	}
-
-	// SELF-HEAL: recrea los muebles que el motor despawneo (registro vs vivos). 1 vez al arrancar
-	// (diferido) + cada 6h. El grueso del trabajo esta en ExorMuebleRegistry.HealScan (barato).
-	void HealTick()
-	{
-		if (!GetGame().IsServer())
-			return;
-		ExorMuebleRegistry.HealScan();
 	}
 
 	// ------------------------- tick rapido (5s): despertar + auto-virtualizar -------------------------

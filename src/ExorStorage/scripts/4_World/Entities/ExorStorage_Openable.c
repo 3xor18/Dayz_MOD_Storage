@@ -269,7 +269,6 @@ class Exor_OpenableStorage : Container_Base
 				GetInventory().LockInventory(HIDE_INV_FROM_SCRIPT);
 			ExorLockAttachments(true);	// las armas cargadas de persistencia arrancan bloqueadas
 			m_ExorVirtualizedSync = ExorHasContent();
-			ExorMuebleRegistry.Register(this);	// refrescar el registro del self-heal (id/pos actuales)
 			SetSynchDirty();
 		}
 		ExorUpdateDoorAnim();
@@ -478,11 +477,6 @@ class Exor_OpenableStorage : Container_Base
 		dBodyDynamic(e, false);							// cuerpo ESTATICO: solido, no se simula ni se hunde
 		e.SetHealth01("", "", health);
 		ExorSweepGhosts(pb, pos, e);					// limpiar la proyeccion ghost (no dejar caja huerfana)
-		// registrar el mueble para el self-heal (id/tipo/pos/orient) -> si el motor lo despawnea,
-		// el scan lo recrea. Se da de baja SOLO al empaquetarlo (accion del player).
-		Exor_OpenableStorage furReg = Exor_OpenableStorage.Cast(e);
-		if (furReg)
-			ExorMuebleRegistry.Register(furReg);
 		return e;
 	}
 
