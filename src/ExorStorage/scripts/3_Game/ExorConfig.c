@@ -56,6 +56,13 @@ class ExorCfgStorage
 	// 0 = la bateria no se descarga nunca.
 	float nevera_bateria_dias = 3.0;
 
+	// VALVULA DE EMERGENCIA: si el server NO arranca por UNA nevera con inventario corrupto
+	// (linea "!!! Corrupted inventory Exor_Fridge:X" justo antes del Killed), poner esto en
+	// true SALTEA la carga de TODAS las neveras (arrancan VACIAS, el self-heal las recrea).
+	// Garantiza el arranque sin build nuevo. Dejar en false en operacion normal (el canary
+	// por secuencia aisla solo la corrupta automaticamente). Es el ultimo recurso.
+	bool saltear_carga_neveras = false;
+
 	// EN HORARIO DE RAID (las ventanas de horario_looteo_libre) PAUSAR la auto-virtualizacion
 	// de barriles Y muebles: los que estan reales se quedan reales (abrir = instantaneo, sin
 	// restaurar) y no se gasta CPU virtualizando/re-virtualizando en el pico del raid. NADA
@@ -103,6 +110,7 @@ class ExorCfgStorage
 		permitir_ropa_con_items = true;
 		cooldown_abrir_segundos = 3;
 		nevera_bateria_dias = 3.0;
+		saltear_carga_neveras = false;
 		pausar_virt_en_raid = true;
 		parking_auto_virtualizar = true;
 		parking_auto_minutos = 5;
