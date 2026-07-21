@@ -128,10 +128,22 @@ modded class MissionServer
 			string siJson = GetExorConfig().BuildServerInfoJson();
 			ExorNetChunk.Send(player, identity, ExorRPC.SERVERINFO_SYNC, siJson);
 
-			// avisar al cliente si es VIP (para features VIP client-side, ej. distancia en marcas)
+			// avisar al cliente si es VIP (para features VIP client-side, ej. distancia en marcas).
+			// Se manda AHORA + REENVIADO a los 3s y 8s (igual que el roster): al conectar, el HUD
+			// del cliente puede no estar listo y el 1er envio se pierde -> la distancia VIP en las
+			// marcas dejaba de verse. Los reenvios diferidos aseguran que el flag llegue.
 			bool isVip = GetExorConfig().vip.IsVip(identity.GetPlainId());
 			player.RPCSingleParam(ExorRPC.VIP_STATUS, new Param1<bool>(isVip), true, identity);
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorResendVip, 3000, false, player, isVip);
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorResendVip, 8000, false, player, isVip);
 		}
+	}
+
+	// reenvio diferido del flag VIP (ver arriba: cubre el timing del HUD del cliente al conectar)
+	void ExorResendVip(PlayerBase player, bool isVip)
+	{
+		if (player && player.GetIdentity())
+			player.RPCSingleParam(ExorRPC.VIP_STATUS, new Param1<bool>(isVip), true, player.GetIdentity());
 	}
 
 	// #4a: al desconectarse, si esta dentro de territorio ajeno, dejar rastro forense.

@@ -189,9 +189,12 @@ class ExorVehicleGarage
 	}
 
 	// hay algun jugador AJENO (que NO sea del clan 'groupId') vivo a <=radius de 'pos'?
-	// El propio operador y sus compañeros de clan NO cuentan (comparten groupId).
+	// El propio operador y sus compañeros de clan NO cuentan (comparten groupId). Los STAFF
+	// del array de bypass (admins) TAMPOCO cuentan como ajenos -> su presencia no bloquea el
+	// virtualizado (pueden estar administrando la base sin trabar la accion).
 	static bool ExorEnemyNear(vector pos, float radius, string groupId)
 	{
+		ExorCfgStorage s = GetExorConfig().storage;
 		array<Man> players = new array<Man>;
 		GetGame().GetPlayers(players);
 		int i;
@@ -204,6 +207,9 @@ class ExorVehicleGarage
 				continue;
 			// mismo clan (o sin clan definido) -> no es un ajeno
 			if (groupId != "" && pb.ExorGetGroupId() == groupId)
+				continue;
+			// STAFF (bypass) -> no cuenta como ajeno
+			if (s && s.bypass_lootear_steamids && s.bypass_lootear_steamids.Find(ExorGroupManager.SteamId(pb)) != -1)
 				continue;
 			return true;	// jugador ajeno cerca
 		}

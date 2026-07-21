@@ -88,7 +88,7 @@ class ExorSpawnMenu extends UIScriptedMenu
 
 	// Pinta texto/color/disponibilidad de cada boton segun el cooldown actual.
 	// En cooldown: fondo gris + LETRA ROJA. Disponible: color propio + letra clara.
-	void Refresh()
+	override void Refresh()
 	{
 		int colRed = ARGB(255, 225, 70, 70);
 		int colTxt = ARGB(255, 235, 235, 235);

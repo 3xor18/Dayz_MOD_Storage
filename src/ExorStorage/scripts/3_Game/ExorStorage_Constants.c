@@ -4,7 +4,7 @@
 class ExorStorageConstants
 {
 	static const string MOD_NAME = "3xor_Vanilla_Optimization";
-	static const string MOD_VERSION = "2.10.0";
+	static const string MOD_VERSION = "2.10.1";
 	// Sello de build: SUBIRLO EN CADA EMPAQUE, aunque no cambie MOD_VERSION. Sirve para
 	// saber desde el RPT que PBO esta corriendo el server (el de version sola no alcanza:
 	// se desplego 2.9.1 con MOD_VERSION todavia en "2.8.0" y los logs pre/post deploy
@@ -58,6 +58,11 @@ class ExorStorageConstants
 
 	// Datos de virtualizacion (contenido de barriles)
 	static const string STORAGE_DIR = "$profile:3xorVanillaOptimization\\storage";
+
+	// REGISTRO de muebles colocados (id/tipo/pos/orient). Un JSON por mueble. Se escribe al
+	// colocar/cargar y se BORRA solo al empaquetar (accion del player). Sirve al self-heal:
+	// un mueble en el registro que NO esta spawneado = lo despawneo el motor -> recrearlo.
+	static const string MUEBLES_REG_DIR = "$profile:3xorVanillaOptimization\\muebles_reg";
 
 	// Datos de virtualizacion del contenido de bolsas de cadaver
 	static const string BODYBAG_DIR = "$profile:3xorVanillaOptimization\\bodybags";

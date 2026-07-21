@@ -38,6 +38,11 @@ class ExorVO_Manager
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().Tick, ExorStorageConstants.TICK_MS, true);
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().BarrelTick, ExorStorageConstants.BARREL_TICK_MS, true);
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().WakeTick, ExorStorageConstants.WAKE_TICK_MS, true);
+		// SELF-HEAL de muebles despawneados por el motor: 1 SOLA pasada DIFERIDA 90s tras arrancar
+		// (esperar a que cargue toda la persistencia -> no recrear duplicados de los que iban a
+		// cargar). El despawn pasa en el ARRANQUE (clip con pared / limpieza de CE), asi que con la
+		// pasada de arranque alcanza -> no hace falta un scan periodico (ahorra recursos).
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().HealTick, 90000, false);
 		Print(string.Format("%1 Manager iniciado (tick %2 ms, barrel-tick %3 ms, wake-tick %4 ms)", ExorStorageConstants.LOG, ExorStorageConstants.TICK_MS, ExorStorageConstants.BARREL_TICK_MS, ExorStorageConstants.WAKE_TICK_MS));
 	}
 
@@ -288,6 +293,12 @@ class ExorVO_Manager
 				Exor_OpenableStorage fur = m_Openables.Get((furStart + k) % furCount);
 				if (!fur)
 					continue;
+				// FAST-SKIP: si el mueble esta idle (cerrado+virtualizado+limpio, sin periodica
+				// propia) no hay NADA que hacer -> saltarlo sin entrar a ExorTick/PeriodicTick.
+				// Con cientos de muebles casi todos estan idle -> el tick deja de recorrerlos de
+				// verdad (era el nuevo cuello: 47ms por 1-2 ops sobre 92 muebles).
+				if (fur.ExorIsIdle())
+					continue;
 				if (fur.ExorNeedsReconcile())
 				{
 					if (reconcileBudget <= 0)
@@ -497,6 +508,15 @@ class ExorVO_Manager
 		{
 			Print(string.Format("%1 Vehiculos dormidos: +%2 (total %3 de %4)", ExorStorageConstants.LOG, dormidos, totalDormidos, m_Vehicles.Count()));
 		}
+	}
+
+	// SELF-HEAL: recrea los muebles que el motor despawneo (registro vs vivos). 1 vez al arrancar
+	// (diferido) + cada 6h. El grueso del trabajo esta en ExorMuebleRegistry.HealScan (barato).
+	void HealTick()
+	{
+		if (!GetGame().IsServer())
+			return;
+		ExorMuebleRegistry.HealScan();
 	}
 
 	// ------------------------- tick rapido (5s): despertar + auto-virtualizar -------------------------

@@ -33,6 +33,10 @@ class Exor_Fridge : Exor_OpenableStorage
 	override string ExorGetDoorAnimSource()	{ return "Lid"; }
 	override string ExorGetPackedType()		{ return "Exor_Refrigerador_Packed"; }
 
+	// La nevera NUNCA es idle: aunque este cerrada+virtualizada, su ExorPeriodicTick tiene que
+	// correr para descargar la bateria. Si se salteara, la bateria no se drenaria.
+	override bool ExorIsIdle() { return false; }
+
 	// FILTRO: comida (vegetales, carnes, latas, sodas = Edible_Base) + agua
 	// (cantimplora, botella, water pouch, olla = Bottle_Base, NO heredan Edible_Base).
 	override bool ExorCanStore(EntityAI item)

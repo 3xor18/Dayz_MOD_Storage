@@ -64,7 +64,47 @@ class Exor_OpenableStorage : Container_Base
 		if (m_ExorUnlockedBy)
 			m_ExorUnlockedBy.Clear();
 		if (key != "" && setterSteamId != "")
-			ExorMarkUnlocked(setterSteamId);
+			m_ExorUnlockedBy.Insert(setterSteamId);
+		ExorPersistKey();
+	}
+
+	// vuelca la clave (o la borra si quedo vacia) al JSON aparte, keyed por el ID del mueble.
+	void ExorPersistKey()
+	{
+		if (!GetGame().IsServer())
+			return;
+		string id = ExorGetID();
+		if (m_ExorLockKey == "")
+		{
+			ExorLockKeyStore.Delete(id);
+			return;
+		}
+		ExorLockKeyFile f = new ExorLockKeyFile();
+		f.key = m_ExorLockKey;
+		f.setter = m_ExorKeySetterSid;
+		int i;
+		for (i = 0; i < m_ExorUnlockedBy.Count(); i++)
+			f.unlocked.Insert(m_ExorUnlockedBy.Get(i));
+		ExorLockKeyStore.Save(id, f);
+	}
+
+	// carga la clave desde el JSON (al arrancar, tras conocer el ID). La llama AfterStoreLoad.
+	void ExorLoadKey()
+	{
+		if (!GetGame().IsServer())
+			return;
+		ExorLockKeyFile f = ExorLockKeyStore.Load(m_ExorID);
+		if (!f)
+			return;
+		m_ExorLockKey = f.key;
+		m_ExorKeySetterSid = f.setter;
+		m_ExorUnlockedBy.Clear();
+		if (f.unlocked)
+		{
+			int i;
+			for (i = 0; i < f.unlocked.Count(); i++)
+				m_ExorUnlockedBy.Insert(f.unlocked.Get(i));
+		}
 	}
 
 	string ExorGetKeySetterSid() { return m_ExorKeySetterSid; }
@@ -86,7 +126,10 @@ class Exor_OpenableStorage : Container_Base
 		if (!m_ExorUnlockedBy)
 			m_ExorUnlockedBy = new TStringArray;
 		if (steamId != "" && m_ExorUnlockedBy.Find(steamId) == -1)
+		{
 			m_ExorUnlockedBy.Insert(steamId);
+			ExorPersistKey();	// persistir el desbloqueo -> no se re-pide tras reiniciar
+		}
 	}
 
 	bool ExorIsUnlockedBy(string steamId)
@@ -204,21 +247,16 @@ class Exor_OpenableStorage : Container_Base
 		super.EEDelete(parent);
 	}
 
+	// PERSISTENCIA: SOLO el ID (formato idéntico a v2.9.1). La clave del locker NO se guarda
+	// aca -> va en un JSON aparte (ExorLockKeyStore, keyed por el ID), igual que el contenido
+	// virtualizado. Por que: agregar campos al stream del mueble ROMPE la carga de los muebles
+	// guardados por una version anterior (leer un campo que el save viejo no tiene consume bytes
+	// de mas -> "String CORRUPTED" -> el motor resetea TODOS los scripted vars, incluido el ID
+	// -> el mueble pierde el link con su contenido). Visto en el upgrade 2.9.1->2.10.0 (76 muebles).
 	override void OnStoreSave(ParamsWriteContext ctx)
 	{
 		super.OnStoreSave(ctx);
 		ctx.Write(m_ExorID);
-		ctx.Write(m_ExorLockKey);		// clave del locker (campo agregado despues del ID)
-		ctx.Write(m_ExorKeySetterSid);	// quien la puso
-		// LISTA de quienes ya metieron la clave: se PERSISTE para que, una vez ingresada, no se
-		// vuelva a pedir NI aunque reinicie el server. Se guarda count + cada steamid.
-		int uc = 0;
-		if (m_ExorUnlockedBy)
-			uc = m_ExorUnlockedBy.Count();
-		ctx.Write(uc);
-		int u;
-		for (u = 0; u < uc; u++)
-			ctx.Write(m_ExorUnlockedBy.Get(u));
 	}
 
 	override bool OnStoreLoad(ParamsReadContext ctx, int version)
@@ -229,28 +267,6 @@ class Exor_OpenableStorage : Container_Base
 		if (!ctx.Read(id))
 			return false;
 		m_ExorID = id;
-		// CLAVE: lectura OPCIONAL. Los lockers guardados ANTES de esta feature no la tienen;
-		// si no esta, ctx.Read devuelve false y queda "" (sin candado) -> NO rompe la carga.
-		string key;
-		if (ctx.Read(key))
-		{
-			m_ExorLockKey = key;
-			string setter;
-			if (ctx.Read(setter))
-				m_ExorKeySetterSid = setter;
-			// lista de desbloqueos (opcional: lockers guardados antes de esto no la tienen)
-			int uc;
-			if (ctx.Read(uc))
-			{
-				int u;
-				for (u = 0; u < uc; u++)
-				{
-					string usid;
-					if (ctx.Read(usid) && usid != "")
-						m_ExorUnlockedBy.Insert(usid);
-				}
-			}
-		}
 		return true;
 	}
 
@@ -265,6 +281,8 @@ class Exor_OpenableStorage : Container_Base
 				GetInventory().LockInventory(HIDE_INV_FROM_SCRIPT);
 			ExorLockAttachments(true);	// las armas cargadas de persistencia arrancan bloqueadas
 			m_ExorVirtualizedSync = ExorHasContent();
+			ExorLoadKey();	// cargar la clave (si tiene) del JSON aparte, ya con el ID conocido
+			ExorMuebleRegistry.Register(this);	// refrescar el registro del self-heal (id/pos actuales)
 			SetSynchDirty();
 		}
 		ExorUpdateDoorAnim();
@@ -473,6 +491,11 @@ class Exor_OpenableStorage : Container_Base
 		dBodyDynamic(e, false);							// cuerpo ESTATICO: solido, no se simula ni se hunde
 		e.SetHealth01("", "", health);
 		ExorSweepGhosts(pb, pos, e);					// limpiar la proyeccion ghost (no dejar caja huerfana)
+		// registrar el mueble para el self-heal (id/tipo/pos/orient) -> si el motor lo despawnea,
+		// el scan lo recrea. Se da de baja SOLO al empaquetarlo (accion del player).
+		Exor_OpenableStorage furReg = Exor_OpenableStorage.Cast(e);
+		if (furReg)
+			ExorMuebleRegistry.Register(furReg);
 		return e;
 	}
 
@@ -571,6 +594,14 @@ class Exor_OpenableStorage : Container_Base
 	string ExorGetStoragePath()
 	{
 		return string.Format("%1\\%2.json", ExorStorageConstants.STORAGE_DIR, ExorGetID());
+	}
+
+	// re-liga un id conocido (lo usa el SELF-HEAL al recrear un mueble despawneado, para que
+	// recupere su contenido virtualizado del JSON que quedo en disco con ese id).
+	void ExorSetIDForHeal(string id)
+	{
+		if (id != "")
+			m_ExorID = id;
 	}
 
 	bool ExorIsVirtualized() { return m_ExorVirt; }
@@ -923,6 +954,25 @@ class Exor_OpenableStorage : Container_Base
 			removed++;
 		}
 		return removed;
+	}
+
+	// FAST-SKIP para el tick del manager: un mueble "idle" no necesita NINGUN trabajo este tick
+	// (ni auto-cierre, ni snapshot, ni virtualizar) -> el manager lo saltea SIN entrar a ExorTick.
+	// Idle = ya reconciliado + CERRADO + ya virtualizado + sin cambios pendientes + no necesita
+	// reconcile. Con cientos de muebles, la mayoria esta idle casi siempre -> el tick deja de
+	// recorrerlos de verdad (antes entraba a ExorTick en los 92 aunque solo 1-2 hicieran algo).
+	// La subclase con periodica propia (ej bateria de la nevera) NO es idle (override abajo).
+	bool ExorIsIdle()
+	{
+		if (!m_ExorLoadDone || ExorNeedsReconcile())
+			return false;
+		if (m_IsOpened)
+			return false;			// abierto: hay que chequear auto-cierre
+		if (m_ExorSnapDirty)
+			return false;			// cambios sin volcar al JSON
+		if (!m_ExorVirt)
+			return false;			// cerrado pero sin virtualizar todavia -> hay trabajo
+		return true;				// cerrado, virtualizado, limpio -> nada que hacer
 	}
 
 	// ======================= TICK (auto-cierre + virtualizar) =======================
