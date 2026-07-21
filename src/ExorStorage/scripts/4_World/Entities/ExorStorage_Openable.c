@@ -65,46 +65,7 @@ class Exor_OpenableStorage : Container_Base
 			m_ExorUnlockedBy.Clear();
 		if (key != "" && setterSteamId != "")
 			m_ExorUnlockedBy.Insert(setterSteamId);
-		ExorPersistKey();
-	}
-
-	// vuelca la clave (o la borra si quedo vacia) al JSON aparte, keyed por el ID del mueble.
-	void ExorPersistKey()
-	{
-		if (!GetGame().IsServer())
-			return;
-		string id = ExorGetID();
-		if (m_ExorLockKey == "")
-		{
-			ExorLockKeyStore.Delete(id);
-			return;
-		}
-		ExorLockKeyFile f = new ExorLockKeyFile();
-		f.key = m_ExorLockKey;
-		f.setter = m_ExorKeySetterSid;
-		int i;
-		for (i = 0; i < m_ExorUnlockedBy.Count(); i++)
-			f.unlocked.Insert(m_ExorUnlockedBy.Get(i));
-		ExorLockKeyStore.Save(id, f);
-	}
-
-	// carga la clave desde el JSON (al arrancar, tras conocer el ID). La llama AfterStoreLoad.
-	void ExorLoadKey()
-	{
-		if (!GetGame().IsServer())
-			return;
-		ExorLockKeyFile f = ExorLockKeyStore.Load(m_ExorID);
-		if (!f)
-			return;
-		m_ExorLockKey = f.key;
-		m_ExorKeySetterSid = f.setter;
-		m_ExorUnlockedBy.Clear();
-		if (f.unlocked)
-		{
-			int i;
-			for (i = 0; i < f.unlocked.Count(); i++)
-				m_ExorUnlockedBy.Insert(f.unlocked.Get(i));
-		}
+		// la clave se PERSISTE por el stream (OnStoreSave, formato v2.10.0), no por JSON aparte.
 	}
 
 	string ExorGetKeySetterSid() { return m_ExorKeySetterSid; }
@@ -126,10 +87,7 @@ class Exor_OpenableStorage : Container_Base
 		if (!m_ExorUnlockedBy)
 			m_ExorUnlockedBy = new TStringArray;
 		if (steamId != "" && m_ExorUnlockedBy.Find(steamId) == -1)
-		{
-			m_ExorUnlockedBy.Insert(steamId);
-			ExorPersistKey();	// persistir el desbloqueo -> no se re-pide tras reiniciar
-		}
+			m_ExorUnlockedBy.Insert(steamId);	// se persiste por el stream (OnStoreSave)
 	}
 
 	bool ExorIsUnlockedBy(string steamId)
@@ -247,16 +205,26 @@ class Exor_OpenableStorage : Container_Base
 		super.EEDelete(parent);
 	}
 
-	// PERSISTENCIA: SOLO el ID (formato idéntico a v2.9.1). La clave del locker NO se guarda
-	// aca -> va en un JSON aparte (ExorLockKeyStore, keyed por el ID), igual que el contenido
-	// virtualizado. Por que: agregar campos al stream del mueble ROMPE la carga de los muebles
-	// guardados por una version anterior (leer un campo que el save viejo no tiene consume bytes
-	// de mas -> "String CORRUPTED" -> el motor resetea TODOS los scripted vars, incluido el ID
-	// -> el mueble pierde el link con su contenido). Visto en el upgrade 2.9.1->2.10.0 (76 muebles).
+	// PERSISTENCIA — formato FIJO: [id][clave][setter][count][sids...]. ⚠️ NO CAMBIAR este orden
+	// ni AGREGAR/QUITAR campos: la data guardada por una version distinta se lee con ESTE mismo
+	// codigo, y leer de MAS (campo que el save no tiene) O de MENOS (dejar bytes sin consumir)
+	// dispara "Scripted variables corrupted" -> el motor NO carga el mueble. Paso el 21-jul:
+	// v2.10.0 agrego los campos de clave (rompio la migracion desde v2.9.1 = 76 muebles); v2.10.1
+	// los saco (rompio la carga de la data v2.10.0 = server del amigo no arrancaba). Para agregar
+	// datos NUEVOS a futuro usar un JSON aparte keyed por el id, NUNCA tocar este stream.
 	override void OnStoreSave(ParamsWriteContext ctx)
 	{
 		super.OnStoreSave(ctx);
 		ctx.Write(m_ExorID);
+		ctx.Write(m_ExorLockKey);
+		ctx.Write(m_ExorKeySetterSid);
+		int uc = 0;
+		if (m_ExorUnlockedBy)
+			uc = m_ExorUnlockedBy.Count();
+		ctx.Write(uc);
+		int u;
+		for (u = 0; u < uc; u++)
+			ctx.Write(m_ExorUnlockedBy.Get(u));
 	}
 
 	override bool OnStoreLoad(ParamsReadContext ctx, int version)
@@ -267,6 +235,26 @@ class Exor_OpenableStorage : Container_Base
 		if (!ctx.Read(id))
 			return false;
 		m_ExorID = id;
+		// campos de clave (formato v2.10.0). La data del server ya los tiene -> se leen SIEMPRE.
+		string key;
+		if (ctx.Read(key))
+		{
+			m_ExorLockKey = key;
+			string setter;
+			if (ctx.Read(setter))
+				m_ExorKeySetterSid = setter;
+			int uc;
+			if (ctx.Read(uc))
+			{
+				int u;
+				for (u = 0; u < uc; u++)
+				{
+					string usid;
+					if (ctx.Read(usid) && usid != "")
+						m_ExorUnlockedBy.Insert(usid);
+				}
+			}
+		}
 		return true;
 	}
 
@@ -281,7 +269,6 @@ class Exor_OpenableStorage : Container_Base
 				GetInventory().LockInventory(HIDE_INV_FROM_SCRIPT);
 			ExorLockAttachments(true);	// las armas cargadas de persistencia arrancan bloqueadas
 			m_ExorVirtualizedSync = ExorHasContent();
-			ExorLoadKey();	// cargar la clave (si tiene) del JSON aparte, ya con el ID conocido
 			ExorMuebleRegistry.Register(this);	// refrescar el registro del self-heal (id/pos actuales)
 			SetSynchDirty();
 		}

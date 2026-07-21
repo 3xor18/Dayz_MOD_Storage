@@ -103,11 +103,9 @@ class ExorActionPackFridge : ActionContinuousBase
 		packed.SetHealth01("", "", health);
 
 		// BAJA del registro del self-heal: el player lo saca a proposito -> NO recrearlo.
-		// (Cualquier otra desaparicion deja el registro -> el self-heal lo recrea.) Tambien
-		// borrar el JSON de clave si tenia (no dejar huerfano).
+		// (Cualquier otra desaparicion deja el registro -> el self-heal lo recrea.)
 		string furId = fur.ExorGetID();
 		ExorMuebleRegistry.Unregister(furId);
-		ExorLockKeyStore.Delete(furId);
 
 		GetGame().ObjectDelete(fur);
 		Print("[3xorStorage] Mueble empaquetado -> " + packedType + " en " + pos.ToString());
