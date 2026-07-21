@@ -29,37 +29,58 @@ class Exor_Fridge : Exor_OpenableStorage
 	// temperatura "fria pero NO congelada" que se pone a la comida al restaurarla con bateria
 	protected const float	EXOR_FRIDGE_COLD_TEMP = 3.0;
 
+	// posicion capturada en EEInit (para el canary): EEInit corre ANTES de OnStoreLoad y la
+	// posicion ya esta seteada (el CE crea la entidad en su pos). Fallback por si GetPosition()
+	// no estuviera lista en OnStoreLoad antes de super.
+	protected vector m_ExorCanaryPos;
+
+	override void EEInit()
+	{
+		super.EEInit();
+		if (GetGame().IsServer())
+			m_ExorCanaryPos = GetPosition();
+	}
+
+	// posicion mas confiable para el canary (la de EEInit, o GetPosition si aquella es 0)
+	vector ExorCanaryPos()
+	{
+		if (m_ExorCanaryPos[0] != 0 || m_ExorCanaryPos[2] != 0)
+			return m_ExorCanaryPos;
+		return GetPosition();
+	}
+
 	// --- hooks de la base ---
 	override string ExorGetDoorAnimSource()	{ return "Lid"; }
 	override string ExorGetPackedType()		{ return "Exor_Refrigerador_Packed"; }
 
-	// GUARD AUTO-RECUPERACION: una nevera con cargo CORRUPTO crashea el server al cargar. El
-	// canary (ver ExorFridgeCanary) detecta CUAL fue -> aca se DESCARTA solo esa (return false)
-	// para que el motor no cargue su cargo corrupto y el server arranque. Las demas cargan normal.
-	// La nevera descartada la recrea VACIA el self-heal en su posicion. Automatico, sin config.
+	// GUARD AUTO-RECUPERACION (por POSICION): una nevera con cargo CORRUPTO crashea el server
+	// al cargar su inventario, y ese crash ocurre DENTRO de super.OnStoreLoad (el motor deserializa
+	// el cargo ahi) -> ANTES de que podamos escribir nada DESPUES de super. Por eso el canary usa
+	// la POSICION (disponible ANTES de super) y se chequea/escribe ANTES de super:
+	//   - Si el canary ya tiene MI posicion (crashee el boot pasado) -> return false SIN llamar a
+	//     super -> el motor NO deserializa mi cargo corrupto -> el server ARRANCA. El self-heal me
+	//     recrea VACIA. La aisla SOLO a mi; las demas neveras cargan normal.
+	//   - Si no, escribo mi posicion (marca "cargando esta") ANTES de super. Si super crashea, el
+	//     canary queda con mi posicion -> el proximo arranque me descarta. Si super carga OK, borro
+	//     el canary. El manager tambien lo borra al 1er tick (carga completa OK).
 	override bool OnStoreLoad(ParamsReadContext ctx, int version)
 	{
-		if (!super.OnStoreLoad(ctx, version))	// consumir nuestro stream (no desalinear)
-			return false;
-		if (GetGame().IsServer() && m_ExorID != "")
+		if (GetGame().IsServer())
 		{
-			// esta nevera crasheo el server el arranque pasado (cargo corrupto)?
-			if (ExorFridgeCanary.Read() == m_ExorID)
+			string poskey = ExorFridgeCanary.PosKey(ExorCanaryPos());
+			if (poskey != "" && ExorFridgeCanary.Read() == poskey)
 			{
-				ExorFridgeCanary.Clear();	// ya la aislamos; seguir con las demas
-				// borrar su JSON de contenido: asi el self-heal la recrea VACIA y no re-crashea
-				// intentando restaurar contenido posiblemente corrupto.
-				string sp = ExorGetStoragePath();
-				if (FileExist(sp))
-					DeleteFile(sp);
-				Print(string.Format("%1 nevera con cargo CORRUPTO descartada (id=%2) -> se recreara VACIA", ExorStorageConstants.LOG, m_ExorID));
-				return false;	// descartar -> el motor no carga su cargo corrupto
+				ExorFridgeCanary.Clear();
+				Print(string.Format("%1 nevera con cargo CORRUPTO descartada por posicion %2 -> se recrea VACIA", ExorStorageConstants.LOG, poskey));
+				return false;	// NO llamar a super -> el motor no deserializa el cargo corrupto
 			}
-			// marcar que el motor esta por cargar el cargo de ESTA nevera. Si crashea, el
-			// canary queda con este id -> el proximo arranque la descarta. El manager borra
-			// el canary al llegar al 1er tick (= la carga termino OK).
-			ExorFridgeCanary.Write(m_ExorID);
+			if (poskey != "")
+				ExorFridgeCanary.Write(poskey);	// marca: cargando ESTA nevera (antes de super)
 		}
+		if (!super.OnStoreLoad(ctx, version))	// AQUI puede crashear el motor con el cargo corrupto
+			return false;
+		if (GetGame().IsServer())
+			ExorFridgeCanary.Clear();			// cargo OK -> limpiar la marca
 		return true;
 	}
 

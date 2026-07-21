@@ -23,6 +23,15 @@ class ExorFridgeCanary
 		return ExorStorageConstants.CONFIG_DIR + "\\fridge_loading.txt";
 	}
 
+	// clave por POSICION (x_z redondeados): identifica una nevera de forma estable entre
+	// arranques (la posicion persiste igual). "" si la posicion es invalida (0,0).
+	static string PosKey(vector p)
+	{
+		if (p[0] == 0 && p[2] == 0)
+			return "";
+		return Math.Round(p[0]).ToString() + "_" + Math.Round(p[2]).ToString();
+	}
+
 	// id de la nevera cuyo cargo se esta cargando ahora (o "" si ninguna / se borro).
 	static string Read()
 	{
