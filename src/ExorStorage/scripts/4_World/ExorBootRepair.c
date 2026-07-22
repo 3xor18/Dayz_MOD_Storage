@@ -137,13 +137,12 @@ class ExorBootRepair
 		}
 		else if (etapa == 3)
 		{
-			RestaurarRespaldos("001");
+			Cuarentena();
 		}
 		else
 		{
-			Print(string.Format("%1 BootRepair: AGOTADO. Los respaldos del engine (.002 y .001) tampoco arrancan.", ExorStorageConstants.LOG));
-			Print(string.Format("%1 BootRepair: hace falta decision manual: borrar el dynamic_XXX.bin que muere (se pierde lo que haya en esa celda del mapa) o restaurar un backup del hosting.", ExorStorageConstants.LOG));
-			Print(string.Format("%1 BootRepair: los .bin originales quedaron guardados como *.exorbad al lado.", ExorStorageConstants.LOG));
+			Print(string.Format("%1 BootRepair: AGOTADO. Ni los respaldos del engine ni la cuarentena levantaron el server.", ExorStorageConstants.LOG));
+			Print(string.Format("%1 BootRepair: hace falta decision manual (restaurar un backup del hosting). Todo lo apartado quedo como *.exorbad / *.exorquarantine al lado, nada se borro.", ExorStorageConstants.LOG));
 		}
 		Print("[3xorVO] ============================================================");
 
@@ -171,6 +170,10 @@ class ExorBootRepair
 
 		int copiados = 0;
 		int sinRespaldo = 0;
+		string listaSinRespaldo = "";
+		// TODOS los .bin de la carpeta, no solo los dynamic_*: types/events/building/vehicles
+		// tambien pueden estar podridos. Los unicos que el engine NO respalda son animals.bin
+		// y zombies.bin (se regeneran solos), asi que esos se saltean por no tener de donde.
 		array<string> bins = ListarArchivos(dataDir, "*.bin");
 		int i;
 		for (i = 0; i < bins.Count(); i++)
@@ -186,14 +189,17 @@ class ExorBootRepair
 			if (!FileExist(bakPath))
 			{
 				sinRespaldo++;
+				listaSinRespaldo = listaSinRespaldo + " " + nombre;
 				continue;
 			}
 
-			// resguardo del .bin actual ANTES de pisarlo (auditable / reversible a mano)
+			// Resguardo del .bin ORIGINAL antes de pisarlo (auditable / reversible a mano).
+			// Si ya existe NO se pisa: en una escalada de etapas, el .exorbad de la primera
+			// pasada es el .bin autentico del server; sobrescribirlo en la segunda pasada lo
+			// reemplazaria por un respaldo ya restaurado y se perderia el original.
 			string malPath = dataDir + "\\" + baseName + ".exorbad";
-			if (FileExist(malPath))
-				DeleteFile(malPath);
-			CopyFile(binPath, malPath);
+			if (!FileExist(malPath))
+				CopyFile(binPath, malPath);
 
 			if (CopyFile(bakPath, binPath))
 			{
@@ -206,9 +212,183 @@ class ExorBootRepair
 			}
 		}
 
-		Print(string.Format("%1 BootRepair: %2 archivo(s) restaurados, %3 sin respaldo .%4", ExorStorageConstants.LOG, copiados, sinRespaldo, ext));
+		Print(string.Format("%1 BootRepair: %2 archivo(s) restaurados", ExorStorageConstants.LOG, copiados));
+		if (sinRespaldo > 0)
+			Print(string.Format("%1 BootRepair: %2 sin respaldo .%3 (el engine no los respalda, se regeneran solos):%4", ExorStorageConstants.LOG, sinRespaldo, ext, listaSinRespaldo));
 		if (copiados == 0)
 			Print(string.Format("%1 BootRepair: no habia respaldos utilizables -> el proximo arranque escala de etapa", ExorStorageConstants.LOG));
+	}
+
+	// ----------------------------------------------------------------------------
+	// CUARENTENA (ultimo recurso automatico).
+	//
+	// Aprendido en produccion (22-jul): restaurar los respaldos NO siempre alcanza. Si el
+	// item podrido lleva varios ciclos de guardado escrito, esta en el .bin Y en el .001 Y
+	// en el .002 -> los tres matan el arranque. Ademas el engine elige solo el archivo con
+	// el stamp mas nuevo de los tres, asi que pisar el .bin con uno mas viejo no fuerza
+	// nada (se vio "Restoring file .../dynamic_007.002" despues de copiar el .001 encima).
+	//
+	// Entonces: se APARTA el archivo entero (sus 3 copias) para que el CE se saltee esa
+	// celda del mapa y el server levante. Se pierde lo que hubiera ahi (loot y bases de esa
+	// celda), pero NADA se borra: las 3 copias quedan como *.exorquarantine y un admin
+	// puede devolverlas si consigue repararlas.
+	//
+	// COMO SE SABE CUAL: del RPT del arranque anterior. La ultima linea
+	// "[CE][Storage] Restoring file ".../dynamic_XXX.bin"" es justo el archivo que estaba
+	// cargando cuando murio. Se busca el RPT mas nuevo que TENGA esa linea (el del arranque
+	// actual todavia no llego a cargar la persistencia, asi que se descarta solo).
+	// ----------------------------------------------------------------------------
+	static void Cuarentena()
+	{
+		string dataDir = BuscarDataDir();
+		if (dataDir == "")
+		{
+			Print(string.Format("%1 BootRepair: NO se encontro la carpeta de persistencia -> no puedo poner en cuarentena", ExorStorageConstants.LOG));
+			return;
+		}
+
+		string baseName = DetectarArchivoQueMata();
+		if (baseName == "")
+		{
+			Print(string.Format("%1 BootRepair: no pude identificar en el RPT que archivo mata el arranque -> sin cuarentena automatica", ExorStorageConstants.LOG));
+			return;
+		}
+
+		Print(string.Format("%1 BootRepair: CUARENTENA de '%2' (es el archivo que estaba cargando cuando murio)", ExorStorageConstants.LOG, baseName));
+		Print(string.Format("%1 BootRepair: se pierde lo que hubiera en esa celda del mapa, pero las copias quedan como %2.*.exorquarantine", ExorStorageConstants.LOG, baseName));
+
+		int apartados = 0;
+		apartados += ApartarUno(dataDir, baseName, "bin");
+		apartados += ApartarUno(dataDir, baseName, "001");
+		apartados += ApartarUno(dataDir, baseName, "002");
+		Print(string.Format("%1 BootRepair: %2 copia(s) de '%3' apartadas", ExorStorageConstants.LOG, apartados, baseName));
+	}
+
+	// mueve <dir>\<base>.<ext> a <dir>\<base>.<ext>.exorquarantine. Devuelve 1 si lo hizo.
+	static int ApartarUno(string dir, string baseName, string ext)
+	{
+		string src = dir + "\\" + baseName + "." + ext;
+		if (!FileExist(src))
+			return 0;
+		string dst = src + ".exorquarantine";
+		if (FileExist(dst))
+			DeleteFile(dst);
+		if (!CopyFile(src, dst))
+		{
+			Print(string.Format("%1 BootRepair: FALLO copiando '%2' a cuarentena -> NO se borra el original", ExorStorageConstants.LOG, src));
+			return 0;
+		}
+		DeleteFile(src);	// solo despues de tener la copia: nunca se pierde data
+		return 1;
+	}
+
+	// nombre base (ej "dynamic_007") del ultimo archivo que el CE estaba restaurando en el
+	// arranque que murio, leido del RPT. "" si no se pudo determinar.
+	static string DetectarArchivoQueMata()
+	{
+		array<string> rpts = ListarArchivos("$profile:", "*.RPT");
+		if (rpts.Count() == 0)
+			return "";
+
+		// los nombres llevan fecha-hora (DayZServer_2026-07-22_12-00-36.RPT) -> el orden
+		// alfabetico DESCENDENTE es el cronologico inverso. Se mira del mas nuevo al mas
+		// viejo y se corta en el primero que tenga lineas de carga de persistencia.
+		OrdenarDesc(rpts);
+
+		int mirados = 0;
+		int i;
+		for (i = 0; i < rpts.Count(); i++)
+		{
+			if (mirados >= 4)	// no escanear el historial entero: los 4 mas nuevos alcanzan
+				break;
+			mirados++;
+			string encontrado = UltimoRestoringFile("$profile:" + rpts.Get(i));
+			if (encontrado != "")
+			{
+				Print(string.Format("%1 BootRepair: segun '%2', murio cargando '%3'", ExorStorageConstants.LOG, rpts.Get(i), encontrado));
+				return encontrado;
+			}
+		}
+		return "";
+	}
+
+	// Lee el RPT y devuelve el archivo cuya carga QUEDO A MEDIAS, o "" si la carga
+	// termino bien (ese arranque no murio cargando).
+	//
+	// CLAVE (bug detectado en el test local): no alcanza con el ultimo "Restoring file".
+	// En un arranque EXITOSO tambien hay uno ultimo -simplemente el ultimo de la secuencia-
+	// y quedaria acusado un archivo sano. El CE loguea "Restoring file X" y despues
+	// "N items loaded" cuando lo TERMINO. Si el server murio adentro, el "items loaded"
+	// nunca sale -> ese archivo quedo pendiente y ES el culpable.
+	static string UltimoRestoringFile(string rptPath)
+	{
+		FileHandle fh = OpenFile(rptPath, FileMode.READ);
+		if (fh == 0)
+			return "";
+		string pendiente = "";
+		string linea;
+		while (FGets(fh, linea) >= 0)
+		{
+			if (linea.IndexOf("Restoring file") >= 0)
+			{
+				string b = BaseNameDeLinea(linea);
+				if (b != "")
+					pendiente = b;
+				continue;
+			}
+			if (linea.IndexOf("items loaded") >= 0)
+				pendiente = "";		// ese archivo termino de cargar OK
+		}
+		CloseFile(fh);
+		return pendiente;
+	}
+
+	// De: [CE][Storage] Restoring file "/ruta/storage_1/data/dynamic_007.bin" 941 items.
+	// saca: dynamic_007
+	static string BaseNameDeLinea(string linea)
+	{
+		int q1 = linea.IndexOf("\"");
+		if (q1 < 0)
+			return "";
+		string resto = linea.Substring(q1 + 1, linea.Length() - q1 - 1);
+		int q2 = resto.IndexOf("\"");
+		if (q2 <= 0)
+			return "";
+		string ruta = resto.Substring(0, q2);
+
+		// quedarse con el nombre de archivo (la ruta puede venir con / o con \)
+		int corte = ruta.LastIndexOf("/");
+		int corte2 = ruta.LastIndexOf("\\");
+		if (corte2 > corte)
+			corte = corte2;
+		string nombre = ruta;
+		if (corte >= 0)
+			nombre = ruta.Substring(corte + 1, ruta.Length() - corte - 1);
+
+		// sacarle la extension (.bin / .001 / .002)
+		int dot = nombre.LastIndexOf(".");
+		if (dot <= 0)
+			return "";
+		return nombre.Substring(0, dot);
+	}
+
+	// orden alfabetico DESCENDENTE (burbuja: son pocos archivos)
+	static void OrdenarDesc(array<string> a)
+	{
+		int i;
+		int j;
+		for (i = 0; i < a.Count(); i++)
+		{
+			for (j = i + 1; j < a.Count(); j++)
+			{
+				if (a.Get(j) > a.Get(i))
+				{
+					string tmp = a.Get(i);
+					a.Set(i, a.Get(j));
+					a.Set(j, tmp);
+				}
+			}
+		}
 	}
 
 	// ----------------------------------------------------------------------------
