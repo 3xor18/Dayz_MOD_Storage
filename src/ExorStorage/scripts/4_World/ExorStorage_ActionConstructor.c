@@ -27,5 +27,6 @@ modded class ActionConstructor
 		actions.Insert(ExorActionOpenParking);
 		actions.Insert(ExorActionPackParking);
 		actions.Insert(ExorActionSetLockerKey);
+		actions.Insert(ExorActionAdminRemove);	// borrar barril/mueble sin que el self-heal lo recree (solo staff)
 	}
 }

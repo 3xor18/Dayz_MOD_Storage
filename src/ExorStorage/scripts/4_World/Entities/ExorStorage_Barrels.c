@@ -26,6 +26,11 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	// porque justo al soltarlo su posicion todavia no se asento (puede estar en la del player
 	// o del auto) y guardariamos una posicion mala. Un par de ticks y ya esta quieto.
 	protected int m_ExorRegPendingTicks;
+	// Ultima posicion con la que quedo escrito el registro. Sirve para detectar que el barril
+	// SE MOVIO y refrescar el registro, sin tener que leer el JSON de todos los barriles en
+	// cada arranque. Ver ExorRegSyncParented.
+	protected vector m_ExorRegLastPos;
+	protected bool m_ExorRegPosInit;
 	protected bool m_ExorVirt;        // los items reales estan SACADOS del mundo (estan en el JSON)
 	protected bool m_ExorSnapDirty;   // hubo cambios de cargo sin volcar todavia al JSON
 	protected bool m_ExorLoadDone;    // ya se reconcilio JSON vs persistencia tras cargar
@@ -167,6 +172,10 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	// PERF: corre en el tick del barril, pero solo compara un puntero (GetHierarchyParent) contra
 	// el ultimo estado conocido. Toca disco UNICAMENTE en el instante del cambio -> con 700
 	// barriles quietos el costo es 700 comparaciones cada 5s y CERO I/O.
+	// cuanto se tiene que haber movido un barril para volver a escribir su registro. 1.5m es
+	// mas que cualquier reasentado del motor y menos que una reubicacion real.
+	static const float EXOR_REG_MOVE_M = 1.5;
+
 	void ExorRegSyncParented()
 	{
 		if (!GetGame().IsServer())
@@ -180,7 +189,35 @@ class Exor_Barrel_Base : Barrel_ColorBase
 			{
 				m_ExorRegPendingTicks--;
 				if (m_ExorRegPendingTicks == 0 && !atadoAhora)
+				{
 					ExorMuebleRegistry.RegisterBarrel(this);	// ya quieto: guardar su posicion real
+					m_ExorRegLastPos = GetPosition();
+					m_ExorRegPosInit = true;
+				}
+				return;
+			}
+
+			// SE MOVIO? (el motor lo corrio, quedo reasentado, etc.). Los MUEBLES resuelven
+			// esto reescribiendo su registro en CADA arranque; con 700 barriles eso serian
+			// 700 escrituras de golpe al arrancar, justo lo que se quiere evitar. Aca se
+			// compara contra la posicion con la que quedo escrito -en memoria, sin tocar
+			// disco- y se reescribe SOLO si de verdad se movio. Ademas capta movimientos
+			// DURANTE la sesion, que el metodo de los muebles no ve hasta el proximo reinicio.
+			if (!atadoAhora)
+			{
+				if (!m_ExorRegPosInit)
+				{
+					// primer tick: tomar la posicion actual como referencia SIN escribir nada
+					// (el registro ya la tiene; si faltara, lo cubre el backfill).
+					m_ExorRegLastPos = GetPosition();
+					m_ExorRegPosInit = true;
+				}
+				else if (vector.Distance(m_ExorRegLastPos, GetPosition()) > EXOR_REG_MOVE_M)
+				{
+					ExorMuebleRegistry.RegisterBarrel(this);
+					m_ExorRegLastPos = GetPosition();
+					ExorDbg("registro refrescado: el barril se movio");
+				}
 			}
 			return;		// sin cambios: no se toca el disco
 		}
@@ -194,6 +231,7 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		else
 		{
 			m_ExorRegPendingTicks = 2;						// volvio al piso: dar de alta en 2 ticks (~10s)
+			m_ExorRegPosInit = false;						// la referencia de posicion se toma al dar de alta
 		}
 	}
 
