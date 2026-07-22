@@ -643,7 +643,26 @@ Escalado en tumbas (`Exor_BodyBag.ExorRestore`): JSON ilegible → se borra el a
 
 Todo queda auditable en el RPT con el prefijo `[3xorVO] GUARD:`.
 
-**Recuperar un server ya roto por esto** (los guards previenen, no reparan el `.bin` corrupto). En `mpmissions/<misión>/storage_1/data/`, con backup previo de `storage_1`:
-1. `cp dynamic_XXX.002 dynamic_XXX.bin` (respaldo rotativo del engine) → arrancar.
-2. Si sigue: `cp dynamic_XXX.001 dynamic_XXX.bin` → arrancar.
-3. Último recurso: borrar `dynamic_XXX.bin/.001/.002` — arranca seguro, pero se pierde lo que hubiera en esa celda del mapa.
+**Recuperación automática (v2.10.8): el mod se repara solo.** No hace falta que nadie entre por FTP/SSH a tocar `mpmissions/<misión>/storage_X/data/`. `ExorBootRepair` corre al principio de `OnInit` — **antes** de que el CE restaure la persistencia — y usa los **respaldos rotativos que el propio engine ya guarda** (`.001` / `.002`):
+
+| Etapa | Situación | Qué hace |
+|---|---|---|
+| 0 | arranque normal | escribe el marcador `boot_repair.txt` y lo borra a los 3 min si el server sigue vivo. |
+| 1 | murió cargando 1 vez | **reintenta sin tocar la data** (un crash puede ser transitorio). |
+| 2 | volvió a morir | restaura **todos** los `*.bin` desde su `.002` (retrocede un ciclo de guardado, unos minutos). |
+| 3 | sigue muriendo | ídem desde `.001`. |
+| 4 | agotado | log claro para el admin. **No borra nada solo** — perder una celda del mapa lo decide una persona. |
+
+El `.bin` que se pisa **nunca se pierde**: queda al lado como `.exorbad`.
+
+Solo cuenta como fallo de carga si el server muere **durante** la carga (ventana de 3 min); un crash a las 5 horas de juego no escala de etapa.
+
+En el RPT:
+```
+[3xorVO] BootRepair: el arranque ANTERIOR murio cargando la persistencia (etapa 2)
+[3xorVO] BootRepair: 'dynamic_007.bin' <- 'dynamic_007.002' (el anterior quedo como dynamic_007.exorbad)
+[3xorVO] BootRepair: 16 archivo(s) restaurados, 2 sin respaldo .002
+[3xorVO] BootRepair: persistencia cargada OK -> marcador limpiado
+```
+
+Si aun así hay que meter mano (etapa 4), en `storage_X/data/`: borrar el `dynamic_XXX.bin` que muere — arranca seguro, pero se pierde lo que hubiera en esa celda del mapa.

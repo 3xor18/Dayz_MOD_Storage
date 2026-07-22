@@ -11,6 +11,11 @@ modded class MissionServer
 	{
 		super.OnInit();
 
+		// PRIMERO DE TODO: auto-reparacion de la persistencia. OnInit corre ANTES de que el
+		// CE restaure los dynamic_*.bin, asi que este es el unico momento en que se puede
+		// arreglar un archivo podrido que hace morir el arranque. Ver ExorBootRepair.
+		ExorBootRepair.Run();
+
 		ExorConfig cfg = GetExorConfig();
 		ExorVO_AutoPopulateAmmo(cfg.municion);
 		ExorVO_Manager.Start();
