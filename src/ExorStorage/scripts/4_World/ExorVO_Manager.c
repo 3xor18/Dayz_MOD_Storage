@@ -568,14 +568,27 @@ class ExorVO_Manager
 	// proximo reinicio (hasta 4 horas sin su locker). Con el scan ya optimizado (los vivos se
 	// descartan por el nombre del archivo, sin abrir un solo JSON) repetirlo sale casi gratis.
 	static const int EXOR_HEAL_PERIOD_MS = 1800000;	// 30 min
+	// Si un pase se saltea (raid / server exigido) NO se espera media hora: se reintenta
+	// pronto, asi el mueble del player vuelve apenas se despeja el momento pico.
+	static const int EXOR_HEAL_RETRY_MS = 300000;	// 5 min
+	bool m_HealFirstDone = false;
 
 	void HealTick()
 	{
 		if (!GetGame().IsServer())
 			return;
 
-		// re-agendarse SIEMPRE, incluso si este pase se saltea
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(HealTick, EXOR_HEAL_PERIOD_MS, false);
+		// EL PRIMER PASE (90s tras arrancar) CORRE SIEMPRE, sin guards. Es el que devuelve lo
+		// que se perdio en el reinicio y todavia no hay jugadores a los que molestar. Ademas
+		// justo ahi el factor adaptativo esta bajo POR el arranque mismo (se midio 0.25), asi
+		// que aplicarle el guard lo saltaba siempre: el pase importante nunca corria.
+		if (!m_HealFirstDone)
+		{
+			m_HealFirstDone = true;
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(HealTick, EXOR_HEAL_PERIOD_MS, false);
+			ExorMuebleRegistry.HealScan();
+			return;
+		}
 
 		// PROTECCION 1 - EN RAID NO. En las ventanas de looteo libre (= horario de raid) es
 		// cuando hay mas gente junta y mas presion; es exactamente el momento en que NO se
@@ -583,7 +596,8 @@ class ExorVO_Manager
 		// que la pausa de virtualizacion.
 		if (GetExorConfig().storage.pausar_virt_en_raid && ExorMuebleRules.IsLootFreeNow())
 		{
-			Print(string.Format("%1 SELF-HEAL: pase periodico SALTEADO (horario de raid) -> se reintenta en 30 min", ExorStorageConstants.LOG));
+			Print(string.Format("%1 SELF-HEAL: pase periodico SALTEADO (horario de raid) -> se reintenta en 5 min", ExorStorageConstants.LOG));
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(HealTick, EXOR_HEAL_RETRY_MS, false);
 			return;
 		}
 
@@ -591,10 +605,12 @@ class ExorVO_Manager
 		// los cupos del tick: si viene castigado, este pase se pospone.
 		if (s_BudgetFactor < 0.9)
 		{
-			Print(string.Format("%1 SELF-HEAL: pase periodico SALTEADO (server exigido, factor %2) -> se reintenta en 30 min", ExorStorageConstants.LOG, s_BudgetFactor));
+			Print(string.Format("%1 SELF-HEAL: pase periodico SALTEADO (server exigido, factor %2) -> se reintenta en 5 min", ExorStorageConstants.LOG, s_BudgetFactor));
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(HealTick, EXOR_HEAL_RETRY_MS, false);
 			return;
 		}
 
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(HealTick, EXOR_HEAL_PERIOD_MS, false);
 		ExorMuebleRegistry.HealScan();
 	}
 

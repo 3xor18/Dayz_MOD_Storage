@@ -563,7 +563,7 @@ class ExorCofre
 		int i;
 		for (i = 0; i < n; i++)
 			self.m_Zones.Insert(new ExorCofreZone(i));
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(self.Tick, 1000, true);
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(self.TickTimed, 1000, true);
 		// scan de la mesa cada minuto: despawnea cofres abiertos y vacios (barato para 50 players)
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(self.ScanTablesEmpty, 60000, true);
 		// limpiar los cofres/cajas del evento que quedaron persistidos de la sesion anterior
@@ -740,6 +740,15 @@ class ExorCofre
 				return true;
 		}
 		return false;
+	}
+
+	// Envoltorio cronometrado: mide cuanto tarda ESTE subsistema por tick y solo loguea
+	// si se pasa del umbral. Se agenda este en vez de Tick() directo. Ver ExorPerfMonitor.
+	void TickTimed()
+	{
+		int t = ExorPerfMonitor.Now();
+		Tick();
+		ExorPerfMonitor.Fin("cofre", t);
 	}
 
 	void Tick()

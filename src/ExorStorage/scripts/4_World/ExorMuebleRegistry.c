@@ -160,6 +160,7 @@ class ExorMuebleRegistry
 		int healed = 0;
 		int saltados = 0;
 		int fallidos = 0;
+		int pendientes = 0;
 		string pattern = string.Format("%1\\*.json", ExorStorageConstants.MUEBLES_REG_DIR);
 		string fileName;
 		FileAttr attr;
@@ -206,6 +207,17 @@ class ExorMuebleRegistry
 						saltados++;
 						Print(string.Format("%1 SELF-HEAL: '%2' (%3) NO se recrea: ya hay otro %3 vivo encima de %4", ExorStorageConstants.LOG, f.id, f.type, pos.ToString()));
 					}
+					else if (healed >= EXOR_HEAL_MAX_POR_PASE)
+					{
+						// TOPE POR PASE. Recrear una entidad con fisica es LO CARO de todo esto.
+						// Si faltan muchas a la vez (tipico despues de una cuarentena de
+						// persistencia: se cayo una celda entera con 30+ muebles) crearlas todas
+						// en el mismo frame es un pico de verdad -medido: 22 recreaciones se
+						// fueron a ~117ms-. Se hacen de a poco: las que no entran esperan al
+						// proximo pase (30 min). Nada se pierde, solo tarda un poco mas en
+						// volver, y el server no se clava.
+						pendientes++;
+					}
 					else if (ExorRecreate(f))
 					{
 						healed++;
@@ -228,6 +240,8 @@ class ExorMuebleRegistry
 
 		if (healed > 0)
 			Print(string.Format("%1 SELF-HEAL: %2 mueble(s)/barril(es) recreados (despawneados por el motor)", ExorStorageConstants.LOG, healed));
+		if (pendientes > 0)
+			Print(string.Format("%1 SELF-HEAL: %2 quedaron PENDIENTES por el tope de %3 por pase -> vuelven en el proximo pase (30 min). Nada se pierde.", ExorStorageConstants.LOG, pendientes, EXOR_HEAL_MAX_POR_PASE));
 		if (saltados > 0 || fallidos > 0)
 			Print(string.Format("%1 SELF-HEAL: %2 salteados (ya habia algo en su lugar) y %3 fallidos. Si un player se queja de un mueble que no vuelve, la razon esta en las lineas de arriba.", ExorStorageConstants.LOG, saltados, fallidos));
 		return healed;
@@ -236,6 +250,11 @@ class ExorMuebleRegistry
 	// A partir de cuantas reparaciones se considera que el mueble esta MAL PUESTO (el motor lo
 	// borra una y otra vez). 3 = ya no es casualidad.
 	static const int EXOR_HEALS_AVISO = 3;
+
+	// Maximo de muebles/barriles que se RECREAN en un mismo pase. Recrear una entidad con
+	// fisica es lo caro; el resto del scan es casi gratis. Los que no entran vuelven en el
+	// proximo pase (30 min). Acota el pico cuando falta media base de golpe.
+	static const int EXOR_HEAL_MAX_POR_PASE = 8;
 
 	// Suma una reparacion al registro del mueble y, si ya lleva varias, AVISA AL CLAN dueño del
 	// territorio por el chat del mod. El self-heal lo devuelve siempre, asi que el player no

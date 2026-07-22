@@ -20,6 +20,34 @@ class ExorPerfMonitor
 	// una senal fresca para ajustar el presupuesto sin esperar al log.
 	static float s_WorstSinceRead;
 
+	// ------------------------------------------------------------------------
+	// CRONOMETRO POR SUBSISTEMA
+	// ------------------------------------------------------------------------
+	// Hasta ahora solo los barriles/muebles median su tiempo (TICK-LENTO). El resto de las
+	// tareas periodicas -party en vivo (1/s), KOTH (1/s), cofre (1/s), el tick lento- no
+	// median NADA: cuando el server lagea con 50 jugadores no habia forma de saber cual de
+	// todas se lo estaba comiendo, solo suponerlo.
+	//
+	// Uso:   int t = ExorPerfMonitor.Now();   ...trabajo...   ExorPerfMonitor.Fin("party", t);
+	//
+	// Costo: 2 llamadas a GetTime() por tarea por tick. Solo IMPRIME si la tarea se paso del
+	// umbral, asi que en operacion normal no escribe una sola linea al RPT.
+	static const int LENTO_MS = 20;
+
+	static int Now()
+	{
+		return GetGame().GetTime();
+	}
+
+	// Loguea SOLO si tardo >= LENTO_MS. Devuelve los ms, por si el caller quiere sumarlos.
+	static int Fin(string tarea, int desde)
+	{
+		int dur = GetGame().GetTime() - desde;
+		if (dur >= LENTO_MS)
+			Print(string.Format("%1 SUBSISTEMA-LENTO: '%2' tardo %3 ms en un tick", ExorStorageConstants.LOG, tarea, dur));
+		return dur;
+	}
+
 	// Devuelve el peor frame (ms) desde la llamada anterior y resetea el acumulador.
 	// 0 = todavia no hubo muestra. Lo consume ExorVO_Manager.AdaptBudgetFactor().
 	static float ConsumeWorstMs()

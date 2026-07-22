@@ -619,9 +619,18 @@ class ExorKoth
 			Get().m_Runs.Insert(run);
 			run.Start();
 		}
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().Tick, 1000, true);
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().TickTimed, 1000, true);
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().CleanupOrphans, 15000, false);
 		Print(string.Format("%1 KOTH iniciado (%2 koth configurados)", ExorStorageConstants.LOG, cfg.colores.Count()));
+	}
+
+	// Envoltorio cronometrado: mide cuanto tarda ESTE subsistema por tick y solo loguea
+	// si se pasa del umbral. Se agenda este en vez de Tick() directo. Ver ExorPerfMonitor.
+	void TickTimed()
+	{
+		int t = ExorPerfMonitor.Now();
+		Tick();
+		ExorPerfMonitor.Fin("koth", t);
 	}
 
 	void Tick()

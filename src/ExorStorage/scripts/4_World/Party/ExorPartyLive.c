@@ -87,7 +87,16 @@ class ExorPartyLive
 		// burbuja (ver ExorNameplates + nid). Este sync solo alimenta a los LEJANOS (HUD/
 		// distancia), donde 1 Hz sobra. Bajado de 4 Hz (250 ms) a 1 Hz: a 60 jugadores el push
 		// era el mayor emisor de red (O(jugadores*party)) y de CPU (serializacion) del server.
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().Tick, 1000, true);
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().TickTimed, 1000, true);
+	}
+
+	// Envoltorio cronometrado: mide cuanto tarda ESTE subsistema por tick y solo loguea
+	// si se pasa del umbral. Se agenda este en vez de Tick() directo. Ver ExorPerfMonitor.
+	void TickTimed()
+	{
+		int t = ExorPerfMonitor.Now();
+		Tick();
+		ExorPerfMonitor.Fin("party-live", t);
 	}
 
 	void Tick()
