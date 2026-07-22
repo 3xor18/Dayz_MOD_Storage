@@ -563,10 +563,38 @@ class ExorVO_Manager
 
 	// SELF-HEAL: recrea (vacios) los muebles del registro que el motor despawneo / el canary
 	// descarto. 1 pasada diferida al arrancar. El grueso esta en ExorMuebleRegistry.HealScan.
+	// Cada cuanto se repite el self-heal despues del pase inicial. Antes corria SOLO al
+	// arrancar: un mueble que el motor despawneaba en medio de la sesion no volvia hasta el
+	// proximo reinicio (hasta 4 horas sin su locker). Con el scan ya optimizado (los vivos se
+	// descartan por el nombre del archivo, sin abrir un solo JSON) repetirlo sale casi gratis.
+	static const int EXOR_HEAL_PERIOD_MS = 1800000;	// 30 min
+
 	void HealTick()
 	{
 		if (!GetGame().IsServer())
 			return;
+
+		// re-agendarse SIEMPRE, incluso si este pase se saltea
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(HealTick, EXOR_HEAL_PERIOD_MS, false);
+
+		// PROTECCION 1 - EN RAID NO. En las ventanas de looteo libre (= horario de raid) es
+		// cuando hay mas gente junta y mas presion; es exactamente el momento en que NO se
+		// quiere meter un barrido de disco. Se salta y se reintenta en 30 min. Mismo criterio
+		// que la pausa de virtualizacion.
+		if (GetExorConfig().storage.pausar_virt_en_raid && ExorMuebleRules.IsLootFreeNow())
+		{
+			Print(string.Format("%1 SELF-HEAL: pase periodico SALTEADO (horario de raid) -> se reintenta en 30 min", ExorStorageConstants.LOG));
+			return;
+		}
+
+		// PROTECCION 2 - SI EL SERVER SUFRE, TAMPOCO. El mismo factor adaptativo que recorta
+		// los cupos del tick: si viene castigado, este pase se pospone.
+		if (s_BudgetFactor < 0.9)
+		{
+			Print(string.Format("%1 SELF-HEAL: pase periodico SALTEADO (server exigido, factor %2) -> se reintenta en 30 min", ExorStorageConstants.LOG, s_BudgetFactor));
+			return;
+		}
+
 		ExorMuebleRegistry.HealScan();
 	}
 

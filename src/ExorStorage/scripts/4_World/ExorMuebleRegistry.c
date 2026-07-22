@@ -24,6 +24,11 @@ class ExorMuebleRegFile
 	float	pitch;
 	float	roll;
 	float	health;
+	// Cuantas veces el self-heal tuvo que recrear ESTE mueble. Si sube y sube, el mueble esta
+	// mal puesto (clipeado en una pared, en una pos que el motor rechaza) y el server lo va a
+	// seguir borrando: hay que avisarle al player que lo corra de lugar. Los registros viejos
+	// no traen el campo y se leen como 0 -> compatible con lo que ya esta en disco.
+	int		heals;
 }
 
 class ExorMuebleRegistry
@@ -77,7 +82,21 @@ class ExorMuebleRegistry
 	{
 		if (!GetGame().IsServer() || !e || id == "")
 			return;
+
+		// CONSERVAR el contador de reparaciones: si no, cada re-registro (los muebles se
+		// re-registran al cargar) lo volveria a 0 y nunca detectariamos al mueble problematico,
+		// que es justo el que se recrea una y otra vez ENTRE reinicios.
+		int healsPrevios = 0;
+		string path = PathFor(id);
+		if (FileExist(path))
+		{
+			ExorMuebleRegFile viejo = new ExorMuebleRegFile();
+			JsonFileLoader<ExorMuebleRegFile>.JsonLoadFile(path, viejo);
+			healsPrevios = viejo.heals;
+		}
+
 		ExorMuebleRegFile f = new ExorMuebleRegFile();
+		f.heals = healsPrevios;
 		f.id = id;
 		f.type = e.GetType();
 		vector pos = e.GetPosition();
@@ -132,6 +151,12 @@ class ExorMuebleRegistry
 			}
 		}
 
+		// Instrumentacion: cuanto tarda el scan de verdad. Con 700 barriles + 700 muebles esto
+		// recorre ~1400 archivos, asi que hay que poder VERLO y no suponerlo. Solo loguea si se
+		// pasa del umbral -> en operacion normal no escribe nada.
+		int tScanStart = GetGame().GetTime();
+		int revisados = 0;
+
 		int healed = 0;
 		int saltados = 0;
 		int fallidos = 0;
@@ -146,6 +171,7 @@ class ExorMuebleRegistry
 		{
 			if (fileName != "")
 			{
+				revisados++;
 				// ATAJO DE PERF (clave al sumar los barriles: el registro paso de ~114 a ~670
 				// archivos): el NOMBRE del archivo ES el id ("<id>.json"), asi que se puede
 				// descartar a los que estan VIVOS sin abrir ni parsear el JSON. En operacion
@@ -183,6 +209,7 @@ class ExorMuebleRegistry
 					else if (ExorRecreate(f))
 					{
 						healed++;
+						ExorContarReparacion(f);
 					}
 					else
 					{
@@ -194,11 +221,72 @@ class ExorMuebleRegistry
 			more = FindNextFile(h, fileName, attr);
 		}
 		CloseFindFile(h);
+
+		int dur = GetGame().GetTime() - tScanStart;
+		if (dur >= 25)
+			Print(string.Format("%1 SELF-HEAL LENTO: %2 ms revisando %3 registros (recreados %4). Si esto crece, hay que repartir el scan en varios ticks.", ExorStorageConstants.LOG, dur, revisados, healed));
+
 		if (healed > 0)
 			Print(string.Format("%1 SELF-HEAL: %2 mueble(s)/barril(es) recreados (despawneados por el motor)", ExorStorageConstants.LOG, healed));
 		if (saltados > 0 || fallidos > 0)
 			Print(string.Format("%1 SELF-HEAL: %2 salteados (ya habia algo en su lugar) y %3 fallidos. Si un player se queja de un mueble que no vuelve, la razon esta en las lineas de arriba.", ExorStorageConstants.LOG, saltados, fallidos));
 		return healed;
+	}
+
+	// A partir de cuantas reparaciones se considera que el mueble esta MAL PUESTO (el motor lo
+	// borra una y otra vez). 3 = ya no es casualidad.
+	static const int EXOR_HEALS_AVISO = 3;
+
+	// Suma una reparacion al registro del mueble y, si ya lleva varias, AVISA AL CLAN dueño del
+	// territorio por el chat del mod. El self-heal lo devuelve siempre, asi que el player no
+	// pierde nada, pero la causa (mueble clipeado en una pared / en una pos que el motor
+	// rechaza) solo la puede arreglar el que lo puso, moviendolo de lugar.
+	static void ExorContarReparacion(ExorMuebleRegFile f)
+	{
+		if (!f || f.id == "")
+			return;
+		f.heals = f.heals + 1;
+		JsonFileLoader<ExorMuebleRegFile>.JsonSaveFile(PathFor(f.id), f);
+
+		if (f.heals < EXOR_HEALS_AVISO)
+			return;
+
+		vector pos = Vector(f.x, f.y, f.z);
+		Print(string.Format("%1 SELF-HEAL: OJO -> '%2' (%3) ya se recreo %4 veces en %5. Ese mueble esta MAL PUESTO (el motor lo borra siempre); hay que moverlo de lugar.", ExorStorageConstants.LOG, f.id, f.type, f.heals, pos.ToString()));
+
+		ExorAvisarAlClan(f, pos);
+	}
+
+	// Manda el aviso por el chat del mod a los miembros CONECTADOS del clan dueño de esa base.
+	// Si no hay nadie online, no pasa nada: el proximo pase (cada 30 min) lo vuelve a intentar.
+	static void ExorAvisarAlClan(ExorMuebleRegFile f, vector pos)
+	{
+		ExorTerritoryManager tm = ExorTerritoryManager.Get();
+		if (!tm)
+			return;
+		string gid = tm.GroupAtPos(pos);
+		if (gid == "")
+			return;		// el mueble no esta en ningun territorio -> no hay a quien avisarle
+
+		ExorGroupManager gm = ExorGroupManager.Get();
+		if (!gm)
+			return;
+		ExorGroup g = gm.FindById(gid);
+		if (!g || !g.members)
+			return;
+
+		string texto = string.Format("Uno de tus muebles se sigue despawneando solo (ya %1 veces). Esta muy pegado a una pared u objeto: sacalo y volvelo a poner un poco mas separado. Por ahora te lo devolvemos con todo adentro.", f.heals);
+
+		int i;
+		for (i = 0; i < g.members.Count(); i++)
+		{
+			ExorGroupMember m = g.members.Get(i);
+			if (!m || m.steamid == "")
+				continue;
+			PlayerBase p = gm.FindOnline(m.steamid);
+			if (p)
+				ExorMuebleRules.SendMsg(p, texto, 2);	// 2 = rojo (algo que hay que atender)
+		}
 	}
 
 	// Radio del guard anti-dupe. Chico A PROPOSITO: en una base los muebles van pegados, asi
