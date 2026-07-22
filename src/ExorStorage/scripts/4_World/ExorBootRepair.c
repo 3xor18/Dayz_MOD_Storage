@@ -40,7 +40,18 @@ class ExorBootRepair
 	// La carga del CE tarda ~30s en un server poblado. 3 min da margen de sobra sin
 	// tragarse un crash tardio (que no es problema de persistencia).
 	static const int VENTANA_MS = 180000;
-	static const int ETAPA_MAX = 4;
+	static const int ETAPA_MAX = 7;
+
+	// true = este arranque NO carga el cargo de ninguna nevera (lo consulta Exor_Fridge).
+	// Se prende en la etapa 3 cuando el RPT del arranque muerto acusa a una nevera.
+	static bool s_SaltearNeveras = false;
+	static bool SaltearNeveras()
+	{
+		return s_SaltearNeveras;
+	}
+
+	// build del mod que dejo el marcador (para detectar que se actualizo el mod)
+	static string s_BuildDelMarcador = "";
 
 	static string PathFor()
 	{
@@ -58,7 +69,11 @@ class ExorBootRepair
 			return 0;
 		string line = "";
 		FGets(fh, line);
+		string buildLine = "";
+		FGets(fh, buildLine);		// 2da linea: build del mod que dejo el marcador
 		CloseFile(fh);
+		buildLine.Trim();
+		s_BuildDelMarcador = buildLine;
 		line.Trim();
 		if (line == "")
 			return 0;
@@ -87,6 +102,7 @@ class ExorBootRepair
 		if (fh == 0)
 			return;
 		FPrintln(fh, etapa.ToString());
+		FPrintln(fh, ExorStorageConstants.MOD_BUILD);	// para detectar que se actualizo el mod
 		CloseFile(fh);
 	}
 
@@ -115,6 +131,17 @@ class ExorBootRepair
 
 		int etapa = LeerEtapa();
 
+		// EL MOD SE ACTUALIZO: el marcador lo dejo otra build. Una build nueva puede traer
+		// justo el arreglo que faltaba, asi que la escalada arranca DE CERO en vez de quedar
+		// clavada en "agotado" por lo que no pudo la version vieja. (Paso en produccion: el
+		// server llego a etapa 4 con la build anterior y la nueva -que ya tenia cuarentena-
+		// entro directo al mensaje de rendirse sin llegar a usarla nunca.)
+		if (etapa > 0 && s_BuildDelMarcador != "" && s_BuildDelMarcador != ExorStorageConstants.MOD_BUILD)
+		{
+			Print(string.Format("%1 BootRepair: el mod se actualizo (%2 -> %3) -> la escalada empieza de nuevo", ExorStorageConstants.LOG, s_BuildDelMarcador, ExorStorageConstants.MOD_BUILD));
+			etapa = 1;
+		}
+
 		if (etapa == 0)
 		{
 			// arranque normal: armar el marcador por las dudas y seguir
@@ -137,11 +164,33 @@ class ExorBootRepair
 		}
 		else if (etapa == 3)
 		{
+			// PASO BARATO ANTES DE PERDER UNA CELDA DEL MAPA: si el que revienta es un mueble
+			// del mod (nevera), no hace falta tirar el archivo entero -donde ademas viven
+			// bases, carpas y loot de otra gente-. Alcanza con no cargar el cargo de las
+			// neveras en ESTE arranque: el server levanta y solo se sacrifica lo que hubiera
+			// adentro de las neveras. Si el RPT no acusa a una nevera, se pasa de largo.
+			if (AcusaNevera())
+			{
+				s_SaltearNeveras = true;
+				Print(string.Format("%1 BootRepair: el RPT acusa a una NEVERA corrupta -> este arranque NO carga el contenido de las neveras", ExorStorageConstants.LOG));
+				Print(string.Format("%1 BootRepair: se pierde lo que hubiera DENTRO de las neveras, pero NO se toca ningun archivo (bases, carpas y loot intactos)", ExorStorageConstants.LOG));
+			}
+			else
+			{
+				Print(string.Format("%1 BootRepair: el RPT no acusa a una nevera -> paso directo a la cuarentena del archivo", ExorStorageConstants.LOG));
+				Cuarentena();
+			}
+		}
+		else if (etapa <= 6)
+		{
+			// Cuarentena, hasta 3 archivos: cada pasada aparta el que mata el arranque. Si tras
+			// sacar uno muere en otro, la siguiente pasada saca ese. Con tope, para no ir
+			// comiendose el mapa entero en un bucle.
 			Cuarentena();
 		}
 		else
 		{
-			Print(string.Format("%1 BootRepair: AGOTADO. Ni los respaldos del engine ni la cuarentena levantaron el server.", ExorStorageConstants.LOG));
+			Print(string.Format("%1 BootRepair: AGOTADO. Ni los respaldos, ni saltear las neveras, ni la cuarentena levantaron el server.", ExorStorageConstants.LOG));
 			Print(string.Format("%1 BootRepair: hace falta decision manual (restaurar un backup del hosting). Todo lo apartado quedo como *.exorbad / *.exorquarantine al lado, nada se borro.", ExorStorageConstants.LOG));
 		}
 		Print("[3xorVO] ============================================================");
@@ -280,6 +329,65 @@ class ExorBootRepair
 		}
 		DeleteFile(src);	// solo despues de tener la copia: nunca se pierde data
 		return 1;
+	}
+
+	// El arranque que murio, acuso a una NEVERA? El engine loguea la entidad concreta cuando
+	// no puede deserializar su inventario:
+	//    !!! Corrupted inventory "Exor_Fridge:19765"
+	//    Scripted variables corrupted upon "Exor_Fridge".
+	// Si aparece, sabemos que el problema es una nevera y alcanza con no cargar su contenido:
+	// no hay que sacrificar el archivo de persistencia entero.
+	static bool AcusaNevera()
+	{
+		array<string> rpts = ListarArchivos("$profile:", "*.RPT");
+		if (rpts.Count() == 0)
+			return false;
+		OrdenarDesc(rpts);
+
+		int mirados = 0;
+		int i;
+		for (i = 0; i < rpts.Count(); i++)
+		{
+			if (mirados >= 4)
+				break;
+			// solo miran los RPT que tienen carga de persistencia (el del arranque actual no)
+			if (UltimoRestoringFile("$profile:" + rpts.Get(i)) == "")
+				continue;
+			mirados++;
+			if (ContieneNeveraCorrupta("$profile:" + rpts.Get(i)))
+			{
+				Print(string.Format("%1 BootRepair: segun '%2', el que revienta es una nevera", ExorStorageConstants.LOG, rpts.Get(i)));
+				return true;
+			}
+			return false;	// ese arranque murio pero NO por una nevera
+		}
+		return false;
+	}
+
+	static bool ContieneNeveraCorrupta(string rptPath)
+	{
+		FileHandle fh = OpenFile(rptPath, FileMode.READ);
+		if (fh == 0)
+			return false;
+		bool found = false;
+		string linea;
+		while (FGets(fh, linea) >= 0)
+		{
+			if (linea.IndexOf("Exor_Fridge") < 0)
+				continue;
+			if (linea.IndexOf("Corrupted inventory") >= 0)
+			{
+				found = true;
+				break;
+			}
+			if (linea.IndexOf("corrupted upon") >= 0)
+			{
+				found = true;
+				break;
+			}
+		}
+		CloseFile(fh);
+		return found;
 	}
 
 	// nombre base (ej "dynamic_007") del ultimo archivo que el CE estaba restaurando en el

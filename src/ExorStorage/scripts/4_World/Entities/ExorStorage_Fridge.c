@@ -57,6 +57,15 @@ class Exor_Fridge : Exor_OpenableStorage
 				Print(string.Format("%1 nevera SALTEADA por config saltear_carga_neveras -> arranca vacia", ExorStorageConstants.LOG));
 				return false;
 			}
+			// AUTO: el arranque anterior murio y el RPT acusaba a una nevera corrupta. Saltear
+			// el contenido de TODAS las neveras por este arranque levanta el server sin tocar
+			// ningun archivo de persistencia (bases/carpas/loot de la zona quedan intactos).
+			// Es mas barato que la cuarentena. Ver ExorBootRepair, etapa 3.
+			if (ExorBootRepair.SaltearNeveras())
+			{
+				Print(string.Format("%1 nevera SALTEADA por BootRepair (nevera corrupta detectada en el arranque anterior) -> arranca vacia", ExorStorageConstants.LOG));
+				return false;
+			}
 			int myseq = ExorFridgeCanary.NextSeq();		// soy la nevera N-esima en cargar
 			if (ExorFridgeCanary.ReadSeq() == myseq)
 			{
