@@ -18,6 +18,14 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	// NUEVO MODELO (idea del user): el JSON es la VERDAD permanente del contenido,
 	// se actualiza en VIVO en cada cambio de cargo (throttle por tick) y se borra solo
 	// al levantar el barril. Estado runtime:
+	// Ultimo estado conocido "estoy ATADO a algo" (slot de barril de un auto, cargo, manos).
+	// Sirve para mantener el registro del self-heal al dia SIN tocar disco todos los ticks:
+	// solo se escribe/borra cuando el estado CAMBIA. Ver ExorRegSyncParented.
+	protected bool m_ExorRegParented;
+	// ticks que faltan para dar de alta al barril que acaba de volver al piso. Se difiere
+	// porque justo al soltarlo su posicion todavia no se asento (puede estar en la del player
+	// o del auto) y guardariamos una posicion mala. Un par de ticks y ya esta quieto.
+	protected int m_ExorRegPendingTicks;
 	protected bool m_ExorVirt;        // los items reales estan SACADOS del mundo (estan en el JSON)
 	protected bool m_ExorSnapDirty;   // hubo cambios de cargo sin volcar todavia al JSON
 	protected bool m_ExorLoadDone;    // ya se reconcilio JSON vs persistencia tras cargar
@@ -144,6 +152,49 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	string ExorGetStoragePath()
 	{
 		return string.Format("%1\\%2.json", ExorStorageConstants.STORAGE_DIR, ExorGetID());
+	}
+
+	// ------------------------- registro del self-heal: atado vs en el piso -------------------------
+	// PROBLEMA (lo cazo el user): no alcanza con "no registrar los que estan atados". Un barril
+	// que estaba EN EL PISO ya quedo registrado; si despues alguien lo mete al slot de barril de
+	// un auto y ese auto se virtualiza, el barril se guarda DENTRO del JSON del auto y su entidad
+	// se borra -> el self-heal veria el registro viejo, no lo veria vivo, y lo recrearia en la
+	// posicion vieja del piso = DOS barriles con el mismo contenido.
+	//
+	// SOLUCION: seguir el estado. Al ATARSE se da de baja del registro; al volver AL PISO se da
+	// de alta con su posicion nueva. Lo maneja el mod solo: no hay que editar ni llevar nada.
+	//
+	// PERF: corre en el tick del barril, pero solo compara un puntero (GetHierarchyParent) contra
+	// el ultimo estado conocido. Toca disco UNICAMENTE en el instante del cambio -> con 700
+	// barriles quietos el costo es 700 comparaciones cada 5s y CERO I/O.
+	void ExorRegSyncParented()
+	{
+		if (!GetGame().IsServer())
+			return;
+		bool atadoAhora = (GetHierarchyParent() != null);
+
+		if (atadoAhora == m_ExorRegParented)
+		{
+			// sin cambio de estado. Solo queda resolver un alta diferida pendiente.
+			if (m_ExorRegPendingTicks > 0)
+			{
+				m_ExorRegPendingTicks--;
+				if (m_ExorRegPendingTicks == 0 && !atadoAhora)
+					ExorMuebleRegistry.RegisterBarrel(this);	// ya quieto: guardar su posicion real
+			}
+			return;		// sin cambios: no se toca el disco
+		}
+
+		m_ExorRegParented = atadoAhora;
+		if (atadoAhora)
+		{
+			m_ExorRegPendingTicks = 0;						// se lo llevaron: cancelar el alta pendiente
+			ExorMuebleRegistry.Unregister(ExorGetID());		// paso a estar adentro de algo -> fuera del registro
+		}
+		else
+		{
+			m_ExorRegPendingTicks = 2;						// volvio al piso: dar de alta en 2 ticks (~10s)
+		}
 	}
 
 	// Re-liga el id al recrear el barril desde el registro (self-heal): con el id viejo,

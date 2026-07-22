@@ -9,7 +9,7 @@ class ExorStorageConstants
 	// saber desde el RPT que PBO esta corriendo el server (el de version sola no alcanza:
 	// se desplego 2.9.1 con MOD_VERSION todavia en "2.8.0" y los logs pre/post deploy
 	// salieron identicos -> imposible confirmar si el deploy habia entrado).
-	static const string MOD_BUILD = "2026-07-22e";
+	static const string MOD_BUILD = "2026-07-22f";
 	static const string LOG = "[3xorVO]";
 	// DEBUG temporal del ciclo de vida del barril (setear/levantar/abrir/cerrar/item
 	// in-out/virtualizar/restaurar/load/save/shutdown). Poner en false (o borrar las
@@ -49,7 +49,7 @@ class ExorStorageConstants
 	// Stats persistentes para el Score del panel de server info
 	static const string STATS_FILE = "$profile:3xorVanillaOptimization\\stats.json";
 
-	// Marcas personales del mapa (PIN) — guardadas en el CLIENTE ($profile del cliente),
+	// Marcas personales del mapa (PIN) ??? guardadas en el CLIENTE ($profile del cliente),
 	// privadas de cada jugador, no van al server. Las maneja ExorMapPins (5_Mission).
 	static const string MAP_PINS_FILE = "$profile:3xorVanillaOptimization\\my_map_pins.json";
 

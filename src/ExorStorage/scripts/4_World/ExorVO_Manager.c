@@ -256,6 +256,10 @@ class ExorVO_Manager
 				continue;
 			}
 
+			// Mantener el registro al dia si el barril paso del piso a un auto (o al reves).
+			// Solo compara un puntero; toca disco unicamente en el instante del cambio.
+			barrel.ExorRegSyncParented();
+
 			if (backfillBudget > 0)
 			{
 				backfillVistos++;
