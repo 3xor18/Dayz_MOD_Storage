@@ -49,8 +49,19 @@ class ExorActionAdminRemove : ActionContinuousBase
 		return true;
 	}
 
-	// solo para los SteamID de staff (bypass_lootear_steamids)
+	// solo staff. OJO: NO se puede chequear por SteamID aca. ActionCondition se evalua tambien
+	// en el CLIENTE para decidir si mostrar la accion, y del lado cliente GetIdentity() es null
+	// -> SteamId() devuelve "" -> el chequeo fallaba SIEMPRE y la accion no aparecia nunca en el
+	// menu (asi se descubrio). Se usa el bool que el SERVER sincroniza al conectar.
 	static bool ExorEsStaff(PlayerBase player)
+	{
+		if (!player)
+			return false;
+		return player.ExorIsStaff();
+	}
+
+	// Chequeo DURO por SteamID, solo para el server al ejecutar (no depende de lo sincronizado)
+	static bool ExorEsStaffServer(PlayerBase player)
 	{
 		if (!player)
 			return false;
@@ -76,7 +87,9 @@ class ExorActionAdminRemove : ActionContinuousBase
 	override void OnFinishProgressServer(ActionData action_data)
 	{
 		PlayerBase player = action_data.m_Player;
-		if (!ExorEsStaff(player))	// re-validar en server (el cliente no decide esto)
+		// re-validar CONTRA EL CONFIG en el server: el bool sincronizado sirve para MOSTRAR la
+		// accion, pero quien la ejecuta se chequea contra la lista real (el cliente no decide).
+		if (!ExorEsStaffServer(player))
 			return;
 
 		Object o = action_data.m_Target.GetObject();

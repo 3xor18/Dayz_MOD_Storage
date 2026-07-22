@@ -95,6 +95,15 @@ modded class MissionServer
 		if (!player)
 			return;
 		PlayerIdentity identity = player.GetIdentity();
+		// STAFF -> al cliente. El cliente no puede resolverlo solo (GetIdentity() es null ahi),
+		// asi que lo decide el server y se lo sincroniza. Lo usan las acciones que solo tiene
+		// que ver el staff, ej "Eliminar definitivamente (admin)".
+		ExorCfgStorage exorStaffCfg = GetExorConfig().storage;
+		bool exorEsStaff = false;
+		if (exorStaffCfg && exorStaffCfg.bypass_lootear_steamids)
+			exorEsStaff = exorStaffCfg.bypass_lootear_steamids.Find(ExorGroupManager.SteamId(player)) != -1;
+		player.ExorSetStaff(exorEsStaff);
+
 		ExorGroupManager.Get().OnPlayerConnected(player);
 		ExorTerritoryManager.Get().SyncToPlayer(player);
 		// SELF-HEAL del mastil: si el grupo del jugador perdio su mastil (se cayo tras un crash

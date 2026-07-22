@@ -133,6 +133,8 @@ class ExorMuebleRegistry
 		}
 
 		int healed = 0;
+		int saltados = 0;
+		int fallidos = 0;
 		string pattern = string.Format("%1\\*.json", ExorStorageConstants.MUEBLES_REG_DIR);
 		string fileName;
 		FileAttr attr;
@@ -164,10 +166,28 @@ class ExorMuebleRegistry
 				if (f.id != "" && f.type != "" && !alive.Get(f.id))
 				{
 					vector pos = Vector(f.x, f.y, f.z);
-					if (!ExorMuebleAtPos(pos, 1.5))	// guard anti-dupe: nada vivo en esa pos
+					// DIAGNOSTICO: antes, un mueble que no volvia lo hacia EN SILENCIO y no
+					// habia forma de saber por que (players reportaron muebles que no
+					// reaparecian tras reiniciar). Ahora cada caso deja rastro en el RPT.
+					// GUARD ANTI-DUPE. Antes miraba CUALQUIER mueble/barril vivo a 1.5m, y eso
+					// se comia el caso normal: en una base los muebles van PEGADOS entre si, asi
+					// que un locker despawneado nunca volvia porque su vecino estaba a menos de
+					// 1.5m. Era la causa del "hay muebles que no reaparecen tras el reinicio".
+					// Ahora solo bloquea si hay algo DEL MISMO TIPO practicamente encima (0.5m),
+					// que es el unico caso que seria un duplicado de verdad.
+					if (ExorMuebleAtPos(pos, EXOR_DUPE_M, f.type))
 					{
-						if (ExorRecreate(f))
-							healed++;
+						saltados++;
+						Print(string.Format("%1 SELF-HEAL: '%2' (%3) NO se recrea: ya hay otro %3 vivo encima de %4", ExorStorageConstants.LOG, f.id, f.type, pos.ToString()));
+					}
+					else if (ExorRecreate(f))
+					{
+						healed++;
+					}
+					else
+					{
+						fallidos++;
+						Print(string.Format("%1 SELF-HEAL: FALLO al recrear '%2' (%3) en %4 -> revisar el classname", ExorStorageConstants.LOG, f.id, f.type, pos.ToString()));
 					}
 				}
 			}
@@ -175,13 +195,21 @@ class ExorMuebleRegistry
 		}
 		CloseFindFile(h);
 		if (healed > 0)
-			Print(string.Format("%1 SELF-HEAL: %2 mueble(s) recreados (despawneados por el motor)", ExorStorageConstants.LOG, healed));
+			Print(string.Format("%1 SELF-HEAL: %2 mueble(s)/barril(es) recreados (despawneados por el motor)", ExorStorageConstants.LOG, healed));
+		if (saltados > 0 || fallidos > 0)
+			Print(string.Format("%1 SELF-HEAL: %2 salteados (ya habia algo en su lugar) y %3 fallidos. Si un player se queja de un mueble que no vuelve, la razon esta en las lineas de arriba.", ExorStorageConstants.LOG, saltados, fallidos));
 		return healed;
 	}
 
-	// hay algun mueble (openable) o BARRIL vivo a <=radius de pos? (anti-dupe del self-heal:
-	// si ya hay algo puesto ahi, NO recrear -> nunca duplica un barril/mueble existente)
-	static bool ExorMuebleAtPos(vector pos, float radius)
+	// Radio del guard anti-dupe. Chico A PROPOSITO: en una base los muebles van pegados, asi
+	// que un radio grande impide devolver el que falta. A 0.5m del mismo tipo ya estarian
+	// literalmente uno adentro del otro = duplicado real.
+	static const float EXOR_DUPE_M = 0.5;
+
+	// Hay algo vivo DEL MISMO TIPO a <=radius de pos? (anti-dupe del self-heal). El tipo
+	// importa: un barril al lado de un locker no tiene que impedir que el locker vuelva.
+	// tipo == "" -> mira cualquier mueble/barril (comportamiento viejo, por si hace falta).
+	static bool ExorMuebleAtPos(vector pos, float radius, string tipo)
 	{
 		ExorVO_Manager vo = ExorVO_Manager.Get();
 		if (!vo)
@@ -192,7 +220,11 @@ class ExorMuebleRegistry
 			for (i = 0; i < vo.m_Openables.Count(); i++)
 			{
 				Exor_OpenableStorage o = vo.m_Openables.Get(i);
-				if (o && vector.Distance(o.GetPosition(), pos) <= radius)
+				if (!o)
+					continue;
+				if (tipo != "" && o.GetType() != tipo)
+					continue;
+				if (vector.Distance(o.GetPosition(), pos) <= radius)
 					return true;
 			}
 		}
@@ -201,7 +233,11 @@ class ExorMuebleRegistry
 			for (i = 0; i < vo.m_Barrels.Count(); i++)
 			{
 				Exor_Barrel_Base b = vo.m_Barrels.Get(i);
-				if (b && vector.Distance(b.GetPosition(), pos) <= radius)
+				if (!b)
+					continue;
+				if (tipo != "" && b.GetType() != tipo)
+					continue;
+				if (vector.Distance(b.GetPosition(), pos) <= radius)
 					return true;
 			}
 		}
@@ -213,7 +249,14 @@ class ExorMuebleRegistry
 	static bool ExorRecreate(ExorMuebleRegFile f)
 	{
 		vector pos = Vector(f.x, f.y, f.z);
-		Object o = GetGame().CreateObject(f.type, pos, false, false, false);
+		// BUG QUE ESTABA ACA: se creaba con CreateObject(..., create_physics=FALSE) y sin
+		// congelar el cuerpo, o sea DISTINTO a como lo coloca un player. El propio comentario
+		// del camino de colocacion lo advierte: sin ECE_CREATEPHYSICS la colision no se
+		// registra hasta el proximo guardado/recarga -> el mueble recreado quedaba
+		// ATRAVESABLE, y sin dBodyDynamic(false) tampoco quedaba anclado (se podia hundir o
+		// caer, que es justo de lo que se quejaban los players con los muebles pegados a
+		// paredes). Ahora se recrea EXACTAMENTE igual que cuando lo pone un jugador.
+		Object o = GetGame().CreateObjectEx(f.type, pos, ECE_CREATEPHYSICS);
 		if (!o)
 			return false;
 
@@ -222,6 +265,7 @@ class ExorMuebleRegistry
 		{
 			fur.SetPosition(pos);
 			fur.SetOrientation(Vector(f.yaw, f.pitch, f.roll));
+			dBodyDynamic(fur, false);	// cuerpo ESTATICO: solido, no se simula ni se hunde
 			fur.ExorSetIDForHeal(f.id);	// re-ligar el id -> ExorReconcileOnLoad recupera su JSON
 			fur.SetHealth01("", "", f.health);
 			return true;

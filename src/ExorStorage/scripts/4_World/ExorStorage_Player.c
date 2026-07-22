@@ -31,6 +31,7 @@ modded class PlayerBase
 	// --- Camara en vehiculo (cliente): el conductor elige 1ra/3ra con V ---
 	protected bool m_ExorVeh1pp;        // el conductor eligio 1ra persona (default false = 3ra)
 	protected bool m_ExorVehVPrev;      // estado previo de la tecla V (deteccion de flanco)
+	protected bool m_ExorIsStaff;       // sincronizado: esta en bypass_lootear_steamids (staff)
 
 	void PlayerBase()
 	{
@@ -38,6 +39,27 @@ modded class PlayerBase
 		// al cliente con esta variable -> ambos lados aplican el MISMO speed -> sin rubber-band
 		// (glisheo atras-adelante). Ver ExorAutoRunTick.
 		RegisterNetSyncVariableBool("m_ExorArTired");
+		// STAFF sincronizado: el CLIENTE no puede saber si sos staff. GetIdentity() es null del
+		// lado cliente, asi que cualquier chequeo por SteamID ahi da "" y falla en silencio (era
+		// por esto que la accion de admin no aparecia en el menu). El SERVER lo resuelve al
+		// conectar y lo sincroniza; el cliente solo lee este bool.
+		RegisterNetSyncVariableBool("m_ExorIsStaff");
+	}
+
+	// true = este jugador esta en storage.json -> bypass_lootear_steamids. Valido en AMBOS
+	// lados (el server lo setea, el cliente lo recibe sincronizado).
+	bool ExorIsStaff()
+	{
+		return m_ExorIsStaff;
+	}
+
+	// lo llama el server al conectar/respawnear
+	void ExorSetStaff(bool v)
+	{
+		if (m_ExorIsStaff == v)
+			return;
+		m_ExorIsStaff = v;
+		SetSynchDirty();
 	}
 
 	// ------------------------- TEST LOCAL: equipar NPC dummy de VPP -------------------------
@@ -235,6 +257,10 @@ modded class PlayerBase
 		super.SetActions(InputActionMap);
 
 		AddAction(ExorActionPackBarrel, InputActionMap);
+		// "Eliminar definitivamente (admin)": se hace MIRANDO el barril/mueble con las manos
+		// vacias, asi que va aca (registrarla solo en ActionConstructor NO alcanza: no aparece).
+		// La accion misma solo se muestra a los SteamID de staff. Ver ExorActionAdminRemove.
+		AddAction(ExorActionAdminRemove, InputActionMap);
 		AddAction(ExorActionFlipVehicle, InputActionMap);
 		AddAction(ExorActionOpenInvite, InputActionMap);
 		AddAction(ExorActionJoinGroup, InputActionMap);
