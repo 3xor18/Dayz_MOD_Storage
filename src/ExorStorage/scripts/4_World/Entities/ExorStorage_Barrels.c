@@ -557,6 +557,12 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		// m_ExorRestoring: los EECargoIn de la restauracion NO marcan dirty -> el JSON no se
 		// reescribe por el restore (solo por cambios REALES del player despues).
 		ExorDbg(string.Format("ExorDoRestore INICIO: recreando %1 items del JSON al barril", f.items.Count()));
+		// GUARD: podar de la data guardada lo imposible de restaurar (classname fantasma,
+		// cargador que no calza en su arma) -> no crear entidades a medio armar que despues
+		// se persisten y tumban el arranque. Ver ExorVO_Serializer.Sanitize.
+		int podados = ExorVO_Serializer.Sanitize(f.items, "", false);
+		if (podados > 0)
+			Print(string.Format("%1 GUARD: barril %2 -> %3 item(s) corruptos descartados antes de restaurar", ExorStorageConstants.LOG, ExorGetID(), podados));
 		m_ExorRestoring = true;
 		ExorVO_Serializer.RestoreItemsBigFirst(f.items, this, hidden);
 		m_ExorRestoring = false;

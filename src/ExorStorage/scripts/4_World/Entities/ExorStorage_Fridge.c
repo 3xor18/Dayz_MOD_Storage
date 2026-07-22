@@ -33,23 +33,44 @@ class Exor_Fridge : Exor_OpenableStorage
 	override string ExorGetDoorAnimSource()	{ return "Lid"; }
 	override string ExorGetPackedType()		{ return "Exor_Refrigerador_Packed"; }
 
-	// WIPE UNICO (SOLO neveras): habia neveras con persistencia CORRUPTA que crasheaban el server
-	// al cargar. No se puede identificar cual desde script antes del crash. Solucion elegida: en la
-	// 1ra pasada tras este cambio, TODAS las neveras se DESCARTAN (return false SIN super -> el motor
-	// no carga su cargo -> se purgan de la persistencia; el self-heal NO las recrea). Al completarse
-	// (apagado limpio) se marca hecho y de ahi en adelante las neveras cargan NORMAL y funcionan sin
-	// perder loot. La corrupcion no vuelve porque ExorCanStore ya rechaza contenedores (ollas/Pot).
-	// IMPORTANTE: esto es SOLO en Exor_Fridge -> NO toca barriles, lockers, ni ningun otro mueble o
-	// entidad del server. Ver ExorFridgeWipe.
+	// GUARD AUTO-RECUPERACION (por SECUENCIA): una nevera con cargo CORRUPTO crashea el server
+	// al cargar su inventario, y ese crash ocurre DENTRO de super.OnStoreLoad (el motor deserializa
+	// el cargo ahi). NO podemos escribir NADA util DESPUES de super (nunca vuelve), asi que hay que
+	// identificar la nevera ANTES de super. La POSICION NO sirve (no esta seteada antes de super en
+	// una entidad persistida). Lo que SI esta disponible es un contador de secuencia (el N-esimo
+	// fridge en cargar, en orden determinista). Ver ExorFridgeCanary.
+	//   - VALVULA DE EMERGENCIA (config saltear_carga_neveras=true): descarto TODAS las neveras sin
+	//     tocar su cargo -> arranque garantizado (arrancan vacias). Ultimo recurso, sin build nuevo.
+	//   - Si el canary tiene MI numero N (crashee el boot pasado cargando la N) -> return false SIN
+	//     llamar a super -> el motor NO deserializa mi cargo corrupto -> el server ARRANCA. El
+	//     self-heal me recrea VACIA. Aisla SOLO a mi; las demas neveras cargan normal.
+	//   - Si no, escribo mi N (marca "cargando la N-esima") ANTES de super. Si super crashea, el
+	//     canary queda con N -> el proximo arranque descarta la N-esima. Si la carga completa
+	//     sobrevive, el manager borra el canary al 1er tick.
 	override bool OnStoreLoad(ParamsReadContext ctx, int version)
 	{
-		if (GetGame().IsServer() && ExorFridgeWipe.ShouldWipe())
+		if (GetGame().IsServer())
 		{
-			Print(string.Format("%1 nevera ELIMINADA (wipe unico de data corrupta) -> no se recrea", ExorStorageConstants.LOG));
-			return false;	// NO llamar a super -> el motor no deserializa el cargo (posible corrupto)
+			// valvula de emergencia: saltear la carga de TODAS las neveras
+			if (GetExorConfig().storage.saltear_carga_neveras)
+			{
+				Print(string.Format("%1 nevera SALTEADA por config saltear_carga_neveras -> arranca vacia", ExorStorageConstants.LOG));
+				return false;
+			}
+			int myseq = ExorFridgeCanary.NextSeq();		// soy la nevera N-esima en cargar
+			if (ExorFridgeCanary.ReadSeq() == myseq)
+			{
+				ExorFridgeCanary.Clear();
+				Print(string.Format("%1 nevera #%2 con cargo CORRUPTO descartada -> se recrea VACIA", ExorStorageConstants.LOG, myseq));
+				return false;	// NO llamar a super -> el motor no deserializa el cargo corrupto
+			}
+			ExorFridgeCanary.WriteSeq(myseq);	// marca: cargando la N-esima (antes de super)
 		}
-		if (!super.OnStoreLoad(ctx, version))
+		if (!super.OnStoreLoad(ctx, version))	// AQUI puede crashear el motor con el cargo corrupto
 			return false;
+		// NOTA: NO se borra el canary aca por-nevera. La marca queda con la ultima N cargada; el
+		// manager la borra al 1er tick (= carga completa OK). Asi, si el crash ocurre EN medio de
+		// la carga, el canary conserva la N de la nevera que lo causo.
 		return true;
 	}
 

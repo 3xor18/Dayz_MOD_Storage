@@ -339,17 +339,53 @@ class Exor_BodyBag extends Container_Base
 
 		ExorVO_ContainerFile f = new ExorVO_ContainerFile();
 		JsonFileLoader<ExorVO_ContainerFile>.JsonLoadFile(path, f);
+
+		// GUARD DE TUMBA (1): JSON ilegible/vacio -> la tumba no tiene nada que devolver y
+		// quedaria de adorno. Se borra el archivo Y la tumba (no dejar fantasmas colgados).
+		if (!f || !f.items)
+		{
+			DeleteFile(path);
+			Print(string.Format("%1 GUARD: BodyBag %2 con JSON corrupto/ilegible -> tumba ELIMINADA", ExorStorageConstants.LOG, ExorGetID()));
+			GetGame().ObjectDelete(this);
+			return;
+		}
+
+		// GUARD DE TUMBA (2): podar de la data guardada lo imposible de restaurar (classnames
+		// que ya no existen, cargadores que no calzan en su arma). Es la limpieza de la data
+		// YA MALA: sin esto, restaurarla dejaba entidades a medio armar que se persistian y
+		// tumbaban el arranque del server.
+		int podados = ExorVO_Serializer.Sanitize(f.items, "", false);
+		if (podados > 0)
+			Print(string.Format("%1 GUARD: BodyBag %2 -> %3 item(s) corruptos descartados antes de restaurar", ExorStorageConstants.LOG, ExorGetID(), podados));
+
 		// armar el loot EN LA POSICION de la bolsa (NO bajo tierra: a -1000m el motor lo limpia
 		// por out-of-bounds antes de que entre al cargo -> se perdia el loot) y moverlo a la bolsa
 		vector hidden = GetPosition();
+		int pedidos = f.items.Count();
+		int ok = 0;
 		int i;
-		for (i = 0; i < f.items.Count(); i++)
-			ExorVO_Serializer.RestoreItem(f.items.Get(i), this, hidden);
+		for (i = 0; i < pedidos; i++)
+		{
+			if (ExorVO_Serializer.RestoreItem(f.items.Get(i), this, hidden))
+				ok++;
+		}
 
 		DeleteFile(path);	// consumido tras restaurar (anti-dupe)
 		m_ExorVirtualizedSync = false;
 		SetSynchDirty();
-		ExorDbg(string.Format("restaurada: %1 items", f.items.Count()));	// rutina -> a debug
+
+		// GUARD DE TUMBA (3): tenia loot y no se pudo restaurar NADA -> la tumba queda vacia
+		// y sin sentido. Eliminarla en vez de dejar una lapida vacia para siempre.
+		if (pedidos > 0 && ok == 0)
+		{
+			Print(string.Format("%1 GUARD: BodyBag %2 no pudo restaurar ninguno de sus %3 items -> tumba ELIMINADA", ExorStorageConstants.LOG, ExorGetID(), pedidos));
+			GetGame().ObjectDelete(this);
+			return;
+		}
+		if (ok < pedidos)
+			Print(string.Format("%1 AVISO: BodyBag %2 restauro %3/%4 items (el resto era data invalida)", ExorStorageConstants.LOG, ExorGetID(), ok, pedidos));
+
+		ExorDbg(string.Format("restaurada: %1 items", ok));	// rutina -> a debug
 	}
 
 	// NO MOVIBLE: no se puede levantar a las manos ni meter en otro contenedor.
@@ -389,6 +425,14 @@ class Exor_BodyBag extends Container_Base
 	{
 		if (!GetGame() || !GetGame().IsServer())
 			return null;
+
+		// GUARD PREVENTIVO: podar el loot capturado ANTES de crear la tumba. Asi nunca se
+		// escribe en la persistencia una combinacion imposible (cargador que no calza en el
+		// arma, classname fantasma) que despues rompe el arranque del server.
+		int podados = ExorVO_Serializer.Sanitize(loot, "", false);
+		if (podados > 0)
+			Print(string.Format("%1 GUARD: %2 item(s) invalidos descartados del loot ANTES de crear la tumba", ExorStorageConstants.LOG, podados));
+
 		Exor_BodyBag bag = Exor_BodyBag.Cast(GetGame().CreateObjectEx("Exor_BodyBag", pos, ECE_PLACE_ON_SURFACE));
 		if (!bag)
 		{

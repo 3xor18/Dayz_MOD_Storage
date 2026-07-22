@@ -144,6 +144,13 @@ class ExorVO_Vehicle
 		car.SetPosition(pos);
 		car.SetOrientation(Vector(f.ori_yaw, f.ori_pitch, f.ori_roll));
 
+		// GUARD: podar de la data guardada lo imposible de restaurar (classname fantasma,
+		// cargador que no calza en su arma) -> no crear entidades a medio armar que despues
+		// se persisten y tumban el arranque. Ver ExorVO_Serializer.Sanitize.
+		int podados = ExorVO_Serializer.Sanitize(f.att, "", true) + ExorVO_Serializer.Sanitize(f.cargo, "", false);
+		if (podados > 0)
+			Print(string.Format("%1 GUARD: auto '%2' -> %3 item(s) corruptos descartados antes de restaurar", ExorStorageConstants.LOG, f.type, podados));
+
 		// piezas: ruedas/motor/puertas/barril-del-slot van como ATTACHMENT (asAttachment=true).
 		// TakeEntityAsAttachment ubica cada una en su slot valido.
 		int i;

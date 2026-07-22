@@ -779,6 +779,12 @@ class Exor_OpenableStorage : Container_Base
 		}
 
 		vector hidden = GetPosition();
+		// GUARD: podar de la data guardada lo imposible de restaurar (classname fantasma,
+		// cargador que no calza en su arma). Sin esto se creaban entidades a medio armar que
+		// se persistian y tumbaban el arranque del server. Ver ExorVO_Serializer.Sanitize.
+		int podados = ExorVO_Serializer.Sanitize(f.att, "", true) + ExorVO_Serializer.Sanitize(f.items, "", false);
+		if (podados > 0)
+			Print(string.Format("%1 GUARD: mueble %2 -> %3 item(s) corruptos descartados antes de restaurar", ExorStorageConstants.LOG, ExorGetID(), podados));
 		m_ExorRestoring = true;
 		// attachments PRIMERO (armas/ropa a sus slots), luego el cargo
 		if (f.att)

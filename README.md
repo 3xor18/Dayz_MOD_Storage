@@ -482,7 +482,7 @@ Por defecto solo evalúa a los SteamIDs de `watchlist` (`solo_watchlist=true`); 
 - `ServerAuditLog/audit_AAAA-MM-DD.txt` — logs forenses anti-raid + anti-cheat (auto-purga)
 - `stats.json` — ranking (kills/deaths/suicidios)
 - `vip_state.json` — usos de equipamiento por VIP
-- `fridges_wiped.txt` — marca que el wipe único de neveras ya se hizo (ver [Solución de problemas](#solución-de-problemas--el-server-no-arranca)). Borrarlo fuerza otro wipe.
+- `fridge_loading.txt` — canary: nevera cuyo cargo se estaba cargando (ver [Solución de problemas](#solución-de-problemas--el-server-no-arranca)). Se borra solo al arrancar OK.
 
 ---
 
@@ -597,7 +597,7 @@ El PBO se firma en el build con `keys/3xorVO.biprivatekey` (privada, **no** est�
 
 ## Solución de problemas — el server NO arranca
 
-### Síntoma: crash al cargar la persistencia + `Scripted variables corrupted upon "Exor_Fridge"` o `!!! Corrupted inventory "Exor_Fridge:<id>"`
+### Síntoma A: crash al cargar la persistencia + `Scripted variables corrupted upon "Exor_Fridge"`
 
 En el RPT/crash log aparece una de estas líneas justo antes de que el server muera (a veces el panel del host reporta **"Out of memory"** de forma **engañosa** — la RAM real usada puede ser baja; es una nevera con inventario corrupto que hace explotar la carga):
 
@@ -608,15 +608,12 @@ En el RPT/crash log aparece una de estas líneas justo antes de que el server mu
 
 **Causa:** una nevera (`Exor_Fridge`) quedó con persistencia/inventario **corrupto** (típicamente por haber metido un **contenedor anidado** —una olla/`Pot`, bidón, etc.— dentro; ya no se permite). El motor crashea al deserializar su cargo.
 
-**Solución (automática, desde v2.10.7):** el mod hace un **WIPE ÚNICO de neveras**. La primera vez que arranca con esta versión, **elimina TODAS las neveras** (solo neveras — barriles, lockers, loot, autos y todo lo demás quedan intactos), purgando la data corrupta. Al primer **apagado limpio** se marca hecho (`fridges_wiped.txt`) y **de ahí en adelante las neveras vuelven a funcionar normal** (se colocan nuevas y guardan comida sin perder loot). La corrupción no vuelve porque la nevera ya **no acepta contenedores anidados**.
+**Solución (automática):** el **canary** aísla **solo la nevera problemática**, sin tocar las demás. Cada nevera escribe su número de secuencia antes de cargar; si el server muere ahí, al siguiente arranque esa nevera puntual se descarta (no se deserializa su cargo) y el **self-heal la recrea vacía**. Las otras neveras cargan normal, con su contenido.
 
 Confirmá en el RPT:
 ```
-[3xorVO] nevera ELIMINADA (wipe unico de data corrupta)     <- durante el 1er arranque
-[3xorVO] WIPE de neveras COMPLETADO (gen 1)                 <- al apagar limpio; ya no wipea mas
+[3xorVO] nevera #4 con cargo CORRUPTO descartada -> se recrea VACIA
 ```
-
-> Si entre el 1er arranque y el primer apagado limpio hay un reinicio **brusco** (crash/kill), vuelve a wipear (inofensivo). Con reinicios normales se hace **una sola vez**.
 
 ### Si aun así no arranca (último recurso, sin build nuevo)
 
@@ -626,6 +623,27 @@ En `<profile>/3xorVanillaOptimization/storage.json` poné:
 ```
 Eso **elimina todas las neveras en cada arranque** hasta que lo vuelvas a `0`. Sirve para levantar el server sí o sí; después volvés a `0` para que las neveras funcionen.
 
-### Forzar otro wipe en el futuro
+---
 
-Borrá `<profile>/3xorVanillaOptimization/fridges_wiped.txt` (o subí `GEN` en `ExorFridgeWipe` si es un cambio de código). El próximo arranque vuelve a hacer el wipe único.
+### Síntoma B: crash **nativo** cargando un `dynamic_XXX.bin` (sin error de script)
+
+El RPT se corta a mitad de línea durante `[CE][Storage] Restoring file ".../dynamic_XXX.bin"` y el crash log dice solo `Unhandled exception / Reason: Unknown`. Todos los arranques mueren en el **mismo punto**.
+
+**Causa:** un item quedó **a medio armar** en la persistencia. El caso real (22-jul-2026): al restaurar una tumba, un **cargador que no calzaba en el arma** hizo que `SpawnAttachedMagazine` de vanilla tirara `Failed to create and attach null` — el arma quedó incompleta, se guardó así, y el siguiente arranque murió leyéndola.
+
+**Prevención (v2.10.8):** guards en `ExorVO_Serializer`, aplicados en **tumbas, barriles, muebles y autos virtualizados**:
+
+| Guard | Qué hace |
+|---|---|
+| `ExorTypeExiste` | classname que no existe en ningún config → el item se descarta, no se crea nada a medias. |
+| `ExorMagCalza` | chequea `magazines[]` del arma **antes** de `SpawnAttachedMagazine`. Si el cargador no calza, **se descarta el cargador y el arma se restaura entera**. |
+| `Sanitize` | poda recursiva de la data **ya guardada** antes de tocar el mundo (limpia la corrupción existente). Trae una red de seguridad: si descartara **todo** el contenido de un nivel con varios items, **aborta y no borra nada** (asume falso positivo). |
+
+Escalado en tumbas (`Exor_BodyBag.ExorRestore`): JSON ilegible → se borra el archivo **y la tumba**; si tenía loot y no se pudo restaurar **ninguno** → **se elimina la tumba**; si fue parcial, loguea `restauro X/Y items`.
+
+Todo queda auditable en el RPT con el prefijo `[3xorVO] GUARD:`.
+
+**Recuperar un server ya roto por esto** (los guards previenen, no reparan el `.bin` corrupto). En `mpmissions/<misión>/storage_1/data/`, con backup previo de `storage_1`:
+1. `cp dynamic_XXX.002 dynamic_XXX.bin` (respaldo rotativo del engine) → arrancar.
+2. Si sigue: `cp dynamic_XXX.001 dynamic_XXX.bin` → arrancar.
+3. Último recurso: borrar `dynamic_XXX.bin/.001/.002` — arranca seguro, pero se pierde lo que hubiera en esa celda del mapa.

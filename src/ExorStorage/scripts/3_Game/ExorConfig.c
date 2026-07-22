@@ -56,11 +56,11 @@ class ExorCfgStorage
 	// 0 = la bateria no se descarga nunca.
 	float nevera_bateria_dias = 3.0;
 
-	// VALVULA DE EMERGENCIA (override manual del wipe de neveras): normalmente NO hace falta
-	// tocarla -> el WIPE UNICO de neveras corre solo la 1ra vez (ver ExorFridgeWipe) y despues
-	// las neveras cargan normal. Poner true SOLO si el server volviera a NO arrancar por una
-	// nevera corrupta: fuerza a ELIMINAR todas las neveras en cada arranque hasta que la vuelvas
-	// a poner en false. Es el ultimo recurso sin build nuevo.
+	// VALVULA DE EMERGENCIA: si el server NO arranca por UNA nevera con inventario corrupto
+	// (linea "!!! Corrupted inventory Exor_Fridge:X" justo antes del Killed), poner esto en
+	// true SALTEA la carga de TODAS las neveras (arrancan VACIAS, el self-heal las recrea).
+	// Garantiza el arranque sin build nuevo. Dejar en false en operacion normal (el canary
+	// por secuencia aisla solo la corrupta automaticamente). Es el ultimo recurso.
 	bool saltear_carga_neveras = false;
 
 	// EN HORARIO DE RAID (las ventanas de horario_looteo_libre) PAUSAR la auto-virtualizacion

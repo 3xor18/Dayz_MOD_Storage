@@ -147,10 +147,151 @@ class ExorVO_Serializer
 		}
 	}
 
+	// ------------------------- GUARDS ANTI DATA CORRUPTA -------------------------
+	// PROBLEMA REAL (22-jul): al restaurar una tumba, un cargador que NO calza en el arma
+	// hizo `SpawnAttachedMagazine` -> "Failed to create and attach null to P1" (ERROR de VM
+	// de vanilla). El arma quedaba a MEDIO ARMAR y ese estado se guardaba en la persistencia
+	// -> el siguiente arranque moria cargando ese dynamic_XXX.bin (crash NATIVO, sin log).
+	// REGLA: lo que no se puede restaurar SE DESCARTA. Se pierde ese item, nunca el server.
+
+	// el classname existe en los configs? (data vieja de un mod que ya no esta, o basura)
+	static bool ExorTypeExiste(string type)
+	{
+		if (type == "")
+			return false;
+		if (GetGame().ConfigIsExisting("CfgVehicles " + type))
+			return true;
+		if (GetGame().ConfigIsExisting("CfgWeapons " + type))
+			return true;
+		if (GetGame().ConfigIsExisting("CfgMagazines " + type))
+			return true;
+		return false;
+	}
+
+	// el cargador 'magType' esta declarado en el arma 'wpnType'? (magazines[] del config).
+	// Hay que chequearlo ANTES de SpawnAttachedMagazine: llamarlo con un mag que no calza
+	// tira el ERROR de VM y deja el arma a medias. Sin magazines[] (arma de recamara, o
+	// arma de mod raro) -> false: cae al camino de attachment normal, que es inofensivo.
+	static bool ExorMagCalza(string wpnType, string magType)
+	{
+		if (wpnType == "" || magType == "")
+			return false;
+		TStringArray mags = new TStringArray;
+		GetGame().ConfigGetTextArray("CfgWeapons " + wpnType + " magazines", mags);
+		if (mags.Count() == 0)
+			return false;
+		string mt = magType;
+		mt.ToLower();
+		int i;
+		for (i = 0; i < mags.Count(); i++)
+		{
+			string m = mags.Get(i);
+			m.ToLower();
+			if (m == mt)
+				return true;
+		}
+		return false;
+	}
+
+	// el hijo 'magType' es un CARGADOR que NO calza en el arma 'wpnType'? (= hay que
+	// descartarlo). Falso si el padre no es un arma o el hijo no es un cargador.
+	static bool ExorEsMagIncompatible(string wpnType, string magType)
+	{
+		if (wpnType == "")
+			return false;
+		if (!GetGame().ConfigIsExisting("CfgWeapons " + wpnType))
+			return false;
+		if (!GetGame().ConfigIsExisting("CfgMagazines " + magType))
+			return false;
+		return !ExorMagCalza(wpnType, magType);
+	}
+
+	// LIMPIEZA DE DATA YA MALA: poda un arbol guardado (JSON de tumba/barril/mueble/auto)
+	// sacando lo que es imposible de restaurar, ANTES de tocar el mundo:
+	//   - entradas nulas o con classname inexistente
+	//   - cargadores que no calzan en su arma (el caso que rompio el server)
+	// Devuelve cuantas entradas descarto. Recursivo (mochila dentro de mochila).
+	//
+	// RED DE SEGURIDAD (importante): se marca primero y se borra despues. Si el chequeo
+	// diera por malo TODO el contenido de un nivel con varios items, es mucho mas probable
+	// que el chequeo este roto (un ConfigIsExisting que falla) a que el jugador tuviera
+	// TODO corrupto -> se ABORTA la poda de ese nivel y no se borra nada. Vale mas dejar
+	// pasar data dudosa (RestoreItem tiene sus propios guards por item) que borrarle el
+	// barril entero a alguien por un bug mio.
+	static int Sanitize(array<ref ExorVO_ItemData> items, string parentType, bool sonAttachments)
+	{
+		if (!items)
+			return 0;
+		int total = items.Count();
+		if (total == 0)
+			return 0;
+
+		array<int> aBorrar = new array<int>;
+		array<string> motivos = new array<string>;
+		int i;
+		for (i = total - 1; i >= 0; i--)
+		{
+			ExorVO_ItemData d = items.Get(i);
+			if (!d)
+			{
+				aBorrar.Insert(i);
+				motivos.Insert("(null) [entrada vacia]");
+				continue;
+			}
+			if (!ExorTypeExiste(d.type))
+			{
+				aBorrar.Insert(i);
+				motivos.Insert(d.type + " [classname inexistente]");
+				continue;
+			}
+			if (sonAttachments && ExorEsMagIncompatible(parentType, d.type))
+			{
+				aBorrar.Insert(i);
+				motivos.Insert(d.type + " [cargador que no calza en el arma]");
+				continue;
+			}
+		}
+
+		// ABORTAR: descartaria TODO un nivel con varios items -> sospecha de bug propio.
+		if (aBorrar.Count() == total && total > 1)
+		{
+			Print(string.Format("%1 GUARD ABORTADO: la poda queria descartar los %2 items de '%3' -> NO se borra nada (posible falso positivo)", ExorStorageConstants.LOG, total, parentType));
+			return 0;
+		}
+
+		int quitados = 0;
+		for (i = 0; i < aBorrar.Count(); i++)
+		{
+			Print(string.Format("%1 GUARD: %2 DESCARTADO de la data guardada (padre '%3')", ExorStorageConstants.LOG, motivos.Get(i), parentType));
+			items.Remove(aBorrar.Get(i));	// indices en orden DESCENDENTE -> borrar no corre los siguientes
+			quitados++;
+		}
+
+		// recursion sobre lo que quedo
+		for (i = 0; i < items.Count(); i++)
+		{
+			ExorVO_ItemData k = items.Get(i);
+			if (!k)
+				continue;
+			quitados += Sanitize(k.attachments, k.type, true);
+			quitados += Sanitize(k.cargo, k.type, false);
+		}
+		return quitados;
+	}
+
 	static EntityAI RestoreItem(ExorVO_ItemData data, EntityAI parent, vector groundPos, EntityAI root = null, bool asAttachment = false)
 	{
 		if (!root)
 			root = parent;
+
+		// GUARD: sin data o con un classname que no existe -> no crear nada (CreateObjectEx
+		// con basura devuelve null y el resto del arbol quedaba a medias).
+		if (!data || !ExorTypeExiste(data.type))
+		{
+			if (data)
+				Print(string.Format("%1 GUARD: item '%2' DESCARTADO (classname inexistente)", ExorStorageConstants.LOG, data.type));
+			return null;
+		}
 
 		// ECE_KEEPHEIGHT (no traza a la superficie): los callers pasan una posicion BAJO
 		// TIERRA, asi el item se arma oculto y se mueve al contenedor sin que el player lo
@@ -187,6 +328,16 @@ class ExorVO_Serializer
 				// borramos el suelto que se habia armado en el piso.
 				Weapon_Base wpn = Weapon_Base.Cast(parent);
 				Magazine emag = Magazine.Cast(e);
+				// GUARD (crash 22-jul): SpawnAttachedMagazine con un mag que NO calza en el arma
+				// tira ERROR de VM ("Failed to create and attach null") y deja el arma a medio
+				// armar -> eso se persiste y el server no vuelve a arrancar. Si no calza,
+				// el cargador se DESCARTA y el arma se restaura entera e intacta.
+				if (wpn && emag && !ExorMagCalza(wpn.GetType(), data.type))
+				{
+					Print(string.Format("%1 GUARD: cargador '%2' no calza en '%3' -> DESCARTADO (el arma se restaura igual)", ExorStorageConstants.LOG, data.type, wpn.GetType()));
+					GetGame().ObjectDelete(e);
+					return null;
+				}
 				if (wpn && emag)
 				{
 					Magazine nm = wpn.SpawnAttachedMagazine(data.type);

@@ -65,7 +65,6 @@ modded class MissionServer
 		ExorTumbaForense.FlushPending();	// volcar el looteo de tumbas pendiente
 		ExorRaidLog.Flush();			// volcar el log de auditoria bufferizado antes de apagar
 		ExorKillFarm.FlushIfDirty();	// volcar el ledger anti-farmeo antes de apagar (ventana 4h vs reinicio)
-		ExorFridgeWipe.MarkDone();		// wipe unico de neveras: finalizar SOLO tras este guardado (data ya purgada)
 		super.OnMissionFinish();
 	}
 
