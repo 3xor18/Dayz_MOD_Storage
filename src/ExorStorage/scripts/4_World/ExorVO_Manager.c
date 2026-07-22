@@ -13,6 +13,11 @@ class ExorVO_Manager
 	ref array<CarScript> m_Vehicles;
 	ref array<Exor_BodyBag> m_BodyBags;
 
+	// Backfill del registro de barriles (self-heal): cuantos por tick como MUCHO, y si ya
+	// termino. Bajo a proposito: es trabajo de una sola vez y no compite con el juego.
+	static const int EXOR_REG_BACKFILL_PER_TICK = 3;
+	bool m_RegBackfillDone = false;
+
 	void ExorVO_Manager()
 	{
 		m_Barrels = new array<Exor_Barrel_Base>;
@@ -226,6 +231,22 @@ class ExorVO_Manager
 		int nBarrelWork = 0;
 		int nFurWork = 0;
 
+		// BACKFILL del registro de barriles (self-heal). Los barriles no tenian registro, asi
+		// que una cuarentena de persistencia se llevo 38 puestos sin forma de recrearlos (su
+		// JSON guarda el contenido pero NO la posicion).
+		// PERF, que es lo que importa con 700 barriles y 55 players en raid:
+		//   - NO se hace en la carga (serian ~700 escrituras de golpe en el arranque).
+		//   - Va con TOPE POR TICK y sale del MISMO presupuesto adaptativo que todo lo demas:
+		//     si el server esta sufriendo, el cupo se achica solo y esto se frena.
+		//   - Por barril el costo normal es un FileExist (stat, microsegundos). Solo escribe
+		//     el JSON el barril que todavia NO tiene registro -> es trabajo que se hace UNA
+		//     vez en la vida del barril y despues nunca mas.
+		int backfillBudget = 0;
+		if (!m_RegBackfillDone)
+			backfillBudget = ScaleBudget(EXOR_REG_BACKFILL_PER_TICK);
+		int backfillHechos = 0;
+		int backfillVistos = 0;
+
 		for (i = m_Barrels.Count() - 1; i >= 0; i--)
 		{
 			Exor_Barrel_Base barrel = m_Barrels.Get(i);
@@ -233,6 +254,19 @@ class ExorVO_Manager
 			{
 				m_Barrels.Remove(i);
 				continue;
+			}
+
+			if (backfillBudget > 0)
+			{
+				backfillVistos++;
+				// los atados (slot de auto / dentro de un cargo) NO se registran: los maneja
+				// el JSON del auto. RegisterBarrel igual lo re-chequea.
+				if (!barrel.GetHierarchyParent() && !ExorMuebleRegistry.TieneRegistro(barrel.ExorGetID()))
+				{
+					ExorMuebleRegistry.RegisterBarrel(barrel);
+					backfillBudget--;
+					backfillHechos++;
+				}
 			}
 			// RECONCILE caro (scan del piso tras crash): repartirlo. Si no hay cupo este
 			// tick, el barril espera al proximo (sigue sin tickear hasta reconciliar). Si
@@ -263,6 +297,14 @@ class ExorVO_Manager
 				snapBudget--;
 				nBarrelWork++;
 			}
+		}
+		// Backfill terminado: se recorrieron TODOS los barriles con cupo de sobra y ninguno
+		// necesito registro -> a partir de aca ni siquiera se hace el FileExist (costo cero
+		// en operacion normal). Un barril nuevo se registra al colocarlo, no aca.
+		if (!m_RegBackfillDone && backfillHechos == 0 && backfillBudget > 0 && backfillVistos >= m_Barrels.Count())
+		{
+			m_RegBackfillDone = true;
+			Print(string.Format("%1 Registro de barriles al dia (%2 barriles) -> backfill apagado", ExorStorageConstants.LOG, m_Barrels.Count()));
 		}
 		int tBarrels = GetGame().GetTime() - tStart;
 

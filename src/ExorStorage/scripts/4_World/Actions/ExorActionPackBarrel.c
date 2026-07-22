@@ -71,6 +71,11 @@ class ExorActionPackBarrel : ActionContinuousBase
 		packed.SetOrientation(ori);
 		packed.SetHealth01("", "", health);
 
+		// BAJA DEL REGISTRO del self-heal: el player lo saco A PROPOSITO. Sin esto el barril
+		// volveria a aparecer solo. Cualquier OTRA desaparicion (despawn del motor, cuarentena
+		// de persistencia) deja el registro -> se recrea con su contenido. Ver ExorMuebleRegistry.
+		ExorMuebleRegistry.Unregister(barrel.ExorGetID());
+
 		GetGame().ObjectDelete(barrel);
 		Print("[3xorStorage] Barril empaquetado -> " + packedType + " en " + pos.ToString());
 	}

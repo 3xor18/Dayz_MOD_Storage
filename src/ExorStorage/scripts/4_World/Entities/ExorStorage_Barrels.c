@@ -146,6 +146,15 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		return string.Format("%1\\%2.json", ExorStorageConstants.STORAGE_DIR, ExorGetID());
 	}
 
+	// Re-liga el id al recrear el barril desde el registro (self-heal): con el id viejo,
+	// ExorRestoreIfNeeded encuentra su JSON y le devuelve TODO el contenido. Solo lo llama
+	// ExorMuebleRegistry.ExorRecreate. Ver [[ExorMuebleRegistry]].
+	void ExorSetIDForHeal(string id)
+	{
+		if (id != "")
+			m_ExorID = id;
+	}
+
 	// virtualizado = items reales sacados del mundo (estan en el JSON). Estado runtime.
 	bool ExorIsVirtualized()
 	{
