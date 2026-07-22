@@ -108,11 +108,22 @@ class ExorMuebleRegistry
 				JsonFileLoader<ExorMuebleRegFile>.JsonLoadFile(string.Format("%1\\%2", ExorStorageConstants.MUEBLES_REG_DIR, fileName), f);
 				if (f.id != "" && f.type != "" && !alive.Get(f.id))
 				{
-					vector pos = Vector(f.x, f.y, f.z);
-					if (!ExorMuebleAtPos(pos, 1.5))	// guard anti-dupe: nada vivo en esa pos
+					// WIPE UNICO de NEVERAS (SOLO neveras, NO otros muebles): durante el wipe la nevera
+					// NO se recrea y se BORRA su registro -> queda eliminada (no vuelve como fantasma).
+					// Los demas muebles (barriles, lockers, etc.) se recrean normal como siempre.
+					if (ExorIsFridgeType(f.type) && ExorFridgeWipe.ShouldWipe())
 					{
-						if (ExorRecreate(f))
-							healed++;
+						DeleteFile(string.Format("%1\\%2", ExorStorageConstants.MUEBLES_REG_DIR, fileName));
+						Print(string.Format("%1 nevera ELIMINADA (registro %2 borrado, wipe unico)", ExorStorageConstants.LOG, f.id));
+					}
+					else
+					{
+						vector pos = Vector(f.x, f.y, f.z);
+						if (!ExorMuebleAtPos(pos, 1.5))	// guard anti-dupe: nada vivo en esa pos
+						{
+							if (ExorRecreate(f))
+								healed++;
+						}
 					}
 				}
 			}
@@ -122,6 +133,12 @@ class ExorMuebleRegistry
 		if (healed > 0)
 			Print(string.Format("%1 SELF-HEAL: %2 mueble(s) recreados (despawneados por el motor)", ExorStorageConstants.LOG, healed));
 		return healed;
+	}
+
+	// es una nevera? (el wipe unico aplica SOLO a este tipo, a ningun otro mueble)
+	static bool ExorIsFridgeType(string type)
+	{
+		return type == "Exor_Fridge";
 	}
 
 	// hay algun mueble (openable) vivo a <=radius de pos? (anti-dupe del self-heal)

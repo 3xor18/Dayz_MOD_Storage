@@ -1,82 +1,73 @@
 // ============================================================================
-// 3xor_Vanilla_Optimization - CANARY de carga de neveras (auto-recuperacion)
+// 3xor_Vanilla_Optimization - WIPE UNICO de neveras (limpieza de data corrupta)
 // ============================================================================
-// Una nevera con inventario CORRUPTO crashea el server al cargar su cargo (el motor
-// intenta reservar memoria basura -> pico -> "Out of memory" enganoso; la RAM real
-// usada era 3.5/12 GB). No se puede detectar cual es la corrupta desde script (los
-// scripted vars cargan bien; el cargo lo lee el MOTOR dentro de super.OnStoreLoad,
-// y el crash ocurre AHI DENTRO, antes de que podamos escribir nada DESPUES de super).
+// PROBLEMA: habia neveras con persistencia CORRUPTA (`Scripted variables corrupted upon
+// "Exor_Fridge"` / `Corrupted inventory`) que hacian crashear el server al cargar. No se
+// puede identificar cual desde script antes de que crashee (varios intentos fallaron).
 //
-// POR QUE FALLO el canary por POSICION (v2.10.5): en una entidad PERSISTIDA la posicion
-// NO esta disponible antes de super.OnStoreLoad (EEInit corre con la pos aun en 0,0,0;
-// la posicion se restaura DENTRO de super). -> PosKey daba "" -> el canary nunca se armaba
-// -> crasheaba SIEMPRE en la misma nevera. Confirmado con 2 arranques que murieron
-// identico en "Exor_Fridge:12769".
+// SOLUCION (elegida por el user): un WIPE UNICO. En la 1ra pasada tras este cambio, TODAS
+// las neveras se DESCARTAN (return false en OnStoreLoad -> el motor no las carga -> se purgan
+// de la persistencia en el guardado; el self-heal NO las recrea -> quedan eliminadas). Al
+// completarse (apagado limpio, que garantiza el guardado ya purgado), se escribe un MARCADOR.
+// De ahi en adelante las neveras cargan NORMAL y funcionan sin perder loot. La corrupcion no
+// vuelve porque la nevera ya NO acepta contenedores anidados (ollas/Pot) en ExorCanStore.
 //
-// TECNICA CORREGIDA (por SECUENCIA, disponible SIEMPRE antes de super):
-//   - Un contador estatico se resetea a 0 en cada arranque (se reinicia la VM de script).
-//   - En OnStoreLoad de CADA nevera, ANTES de super, se pide el proximo numero (1,2,3,...)
-//     -> es el N-esimo fridge en cargar. El orden de carga es DETERMINISTA entre arranques
-//     mientras la data no cambie (se lee secuencial de dynamic_XXX.bin).
-//   - Antes de super se escribe ese N al archivo canary. Si el server SOBREVIVE la carga
-//     completa, el manager BORRA el canary al 1er tick.
-//   - Si el server CRASHEA cargando el cargo de la nevera N, el canary queda con N.
-//   - Al proximo arranque, la nevera que saque el numero N ve N en el canary -> se DESCARTA
-//     (return false, sin llamar a super) -> el motor NO carga su cargo corrupto -> ARRANCA.
-//     El self-heal la recrea vacia. Las demas neveras cargan normal (con su contenido).
-// Aisla SOLO la nevera corrupta, automaticamente. SOLO server.
+// El wipe se dispara si: el marcador guardado < GEN (wipe pendiente) O el flag manual
+// saltear_carga_neveras esta en true (valvula de emergencia). MarkDone corre en OnMissionFinish
+// (apagado limpio) -> solo se "finaliza" DESPUES de un guardado durable (data ya purgada). Si el
+// server se mata sin apagado limpio, el marcador NO se escribe -> re-wipea al proximo arranque
+// (inofensivo: una nevera descartada nunca crashea). SOLO server.
+//
+// Para forzar OTRO wipe unico en el futuro: subir GEN.
 // ============================================================================
-class ExorFridgeCanary
+class ExorFridgeWipe
 {
-	// contador de neveras cargadas en ESTE arranque. Estatico -> se reinicia a 0 cada boot
-	// (nueva VM de script). No depende de posicion (que no existe antes de super).
-	static int s_Seq = 0;
-
-	// siguiente numero de secuencia para la nevera que esta por cargar (1,2,3,...).
-	static int NextSeq()
-	{
-		s_Seq = s_Seq + 1;
-		return s_Seq;
-	}
+	static const int GEN = 1;	// subir para forzar un nuevo wipe unico de neveras
 
 	static string PathFor()
 	{
-		return ExorStorageConstants.CONFIG_DIR + "\\fridge_loading.txt";
+		return ExorStorageConstants.CONFIG_DIR + "\\fridges_wiped.txt";
 	}
 
-	// numero de la nevera cuyo cargo se estaba cargando (o -1 si ninguno / se borro).
-	static int ReadSeq()
+	// generacion de wipe ya COMPLETADA (0 si nunca se hizo)
+	static int DoneGen()
 	{
 		string path = PathFor();
 		if (!FileExist(path))
-			return -1;
+			return 0;
 		FileHandle fh = OpenFile(path, FileMode.READ);
 		if (fh == 0)
-			return -1;
+			return 0;
 		string line = "";
 		FGets(fh, line);
 		CloseFile(fh);
 		line.Trim();
 		if (line == "")
-			return -1;
+			return 0;
 		return line.ToInt();
 	}
 
-	static void WriteSeq(int n)
+	// marca el wipe GEN como completado. Se llama en OnMissionFinish (apagado limpio) -> la data
+	// ya se purgo en el guardado -> a partir del proximo arranque las neveras cargan normal.
+	static void MarkDone()
 	{
+		if (DoneGen() >= GEN)
+			return;
 		if (!FileExist(ExorStorageConstants.CONFIG_DIR))
 			MakeDirectory(ExorStorageConstants.CONFIG_DIR);
 		FileHandle fh = OpenFile(PathFor(), FileMode.WRITE);
 		if (fh == 0)
 			return;
-		FPrintln(fh, n.ToString());
+		FPrintln(fh, GEN.ToString());
 		CloseFile(fh);
+		Print(string.Format("%1 WIPE de neveras COMPLETADO (gen %2) -> de ahora en adelante cargan normal", ExorStorageConstants.LOG, GEN));
 	}
 
-	static void Clear()
+	// true = hay que ELIMINAR las neveras (wipe unico pendiente, o el flag manual activo)
+	static bool ShouldWipe()
 	{
-		string path = PathFor();
-		if (FileExist(path))
-			DeleteFile(path);
+		if (GetExorConfig() && GetExorConfig().storage.saltear_carga_neveras)
+			return true;
+		return DoneGen() < GEN;
 	}
 }

@@ -38,15 +38,9 @@ class ExorVO_Manager
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().Tick, ExorStorageConstants.TICK_MS, true);
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().BarrelTick, ExorStorageConstants.BARREL_TICK_MS, true);
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().WakeTick, ExorStorageConstants.WAKE_TICK_MS, true);
-		// CANARY de neveras: si llegamos a arrancar, la carga de la persistencia TERMINO OK
-		// (ninguna nevera crasheo) -> borrar el canary (si no, la ultima nevera cargada quedaria
-		// marcada y se descartaria de gusto el proximo arranque). Diferido 60s: para cuando el
-		// CE storage ya termino de restaurar los dynamic (la carga real ocurre tras el OnInit).
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorFridgeCanary.Clear, 60000, false);
-
-		// SELF-HEAL de muebles despawneados/descartados: 1 pasada DIFERIDA 90s tras arrancar.
-		// Recrea (vacios) los muebles del registro que no estan vivos -> incluye la nevera que el
-		// canary descarto por corrupta. Ver ExorMuebleRegistry. NO causaba el OOM (era la nevera).
+		// SELF-HEAL de muebles despawneados: 1 pasada DIFERIDA 90s tras arrancar. Recrea (vacios) los
+		// muebles del registro que no estan vivos. Durante el wipe unico de neveras, HealScan NO
+		// recrea neveras y borra su registro (ver ExorMuebleRegistry). Ver ExorFridgeWipe.
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().HealTick, 90000, false);
 		Print(string.Format("%1 Manager iniciado (tick %2 ms, barrel-tick %3 ms, wake-tick %4 ms)", ExorStorageConstants.LOG, ExorStorageConstants.TICK_MS, ExorStorageConstants.BARREL_TICK_MS, ExorStorageConstants.WAKE_TICK_MS));
 	}
