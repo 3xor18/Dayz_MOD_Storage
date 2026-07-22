@@ -143,6 +143,7 @@ Columna **Valores** = qué puede tomar cada campo. `bool` = `true`/`false`. `int
 | `blacklist` | `[]` | [string] classnames | Classnames que NO se pueden guardar en el barril. |
 | `cooldown_abrir_segundos` | `3` | int seg (`0`=sin cooldown) | Anti-dupe: espera mínima para reabrir el mismo barril. |
 | `nevera_bateria_dias` | `3.0` | float días (`0`=no se descarga) | Días que dura una **batería de auto** llena en el refrigerador conservando la comida. La de **camión dura el doble**. |
+| `saltear_carga_neveras` | `false` | bool | **Válvula de emergencia** (normalmente `false`). Si `true`, **elimina TODAS las neveras en cada arranque** (solo neveras, ningún otro mueble). Úsalo solo si el server no arranca por una nevera corrupta. Ver [Solución de problemas](#solución-de-problemas--el-server-no-arranca). |
 | `setear_muebles_solo_cerca_mastil` | `false` | bool | Si `true`, los **muebles solo se colocan dentro del radio del mástil de tu grupo** (fuera de tu territorio, bloqueado con aviso rojo). |
 | `cantidad_maxima_muebles_por_base` | `10` | int (`0`=sin límite) | Máximo de muebles por base. Al llegar al tope, no deja colocar más; tampoco deja **fundar/reubicar** un mástil donde ya hay más muebles que el máximo. |
 | `solo_miembros_lotean_muebles` | `false` | bool | Si `true`, **solo los miembros del territorio** pueden abrir/lotear los muebles (salvo horario libre o SteamID de staff). |
@@ -481,6 +482,7 @@ Por defecto solo evalúa a los SteamIDs de `watchlist` (`solo_watchlist=true`); 
 - `ServerAuditLog/audit_AAAA-MM-DD.txt` — logs forenses anti-raid + anti-cheat (auto-purga)
 - `stats.json` — ranking (kills/deaths/suicidios)
 - `vip_state.json` — usos de equipamiento por VIP
+- `fridges_wiped.txt` — marca que el wipe único de neveras ya se hizo (ver [Solución de problemas](#solución-de-problemas--el-server-no-arranca)). Borrarlo fuerza otro wipe.
 
 ---
 
@@ -592,3 +594,38 @@ Requisitos: Windows, Python 3 con Pillow, [DayZ Tools](https://store.steampowere
 ## Firma
 
 El PBO se firma en el build con `keys/3xorVO.biprivatekey` (privada, **no** está en el repo). La `.bikey` pública viaja con el mod en `keys/`.
+
+## Solución de problemas — el server NO arranca
+
+### Síntoma: crash al cargar la persistencia + `Scripted variables corrupted upon "Exor_Fridge"` o `!!! Corrupted inventory "Exor_Fridge:<id>"`
+
+En el RPT/crash log aparece una de estas líneas justo antes de que el server muera (a veces el panel del host reporta **"Out of memory"** de forma **engañosa** — la RAM real usada puede ser baja; es una nevera con inventario corrupto que hace explotar la carga):
+
+```
+[EntityAI::OnStoreLoad] :: [WARNING] :: Scripted variables corrupted upon "Exor_Fridge".
+!!! Corrupted inventory "Exor_Fridge:12769"
+```
+
+**Causa:** una nevera (`Exor_Fridge`) quedó con persistencia/inventario **corrupto** (típicamente por haber metido un **contenedor anidado** —una olla/`Pot`, bidón, etc.— dentro; ya no se permite). El motor crashea al deserializar su cargo.
+
+**Solución (automática, desde v2.10.7):** el mod hace un **WIPE ÚNICO de neveras**. La primera vez que arranca con esta versión, **elimina TODAS las neveras** (solo neveras — barriles, lockers, loot, autos y todo lo demás quedan intactos), purgando la data corrupta. Al primer **apagado limpio** se marca hecho (`fridges_wiped.txt`) y **de ahí en adelante las neveras vuelven a funcionar normal** (se colocan nuevas y guardan comida sin perder loot). La corrupción no vuelve porque la nevera ya **no acepta contenedores anidados**.
+
+Confirmá en el RPT:
+```
+[3xorVO] nevera ELIMINADA (wipe unico de data corrupta)     <- durante el 1er arranque
+[3xorVO] WIPE de neveras COMPLETADO (gen 1)                 <- al apagar limpio; ya no wipea mas
+```
+
+> Si entre el 1er arranque y el primer apagado limpio hay un reinicio **brusco** (crash/kill), vuelve a wipear (inofensivo). Con reinicios normales se hace **una sola vez**.
+
+### Si aun así no arranca (último recurso, sin build nuevo)
+
+En `<profile>/3xorVanillaOptimization/storage.json` poné:
+```json
+"saltear_carga_neveras": 1
+```
+Eso **elimina todas las neveras en cada arranque** hasta que lo vuelvas a `0`. Sirve para levantar el server sí o sí; después volvés a `0` para que las neveras funcionen.
+
+### Forzar otro wipe en el futuro
+
+Borrá `<profile>/3xorVanillaOptimization/fridges_wiped.txt` (o subí `GEN` en `ExorFridgeWipe` si es un cambio de código). El próximo arranque vuelve a hacer el wipe único.
