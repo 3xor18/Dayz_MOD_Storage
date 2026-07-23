@@ -106,7 +106,44 @@ class ExorMuebleRegistry
 		f.health = e.GetHealth01("", "");
 		EnsureDir();
 		JsonFileLoader<ExorMuebleRegFile>.JsonSaveFile(PathFor(id), f);
-		InvalidarCache();
+		// El cache se ACTUALIZA, no se tira. Tirarlo aca lo volvia inutil justo cuando hace
+		// falta: en el arranque, CADA mueble llama a Register, asi que el proximo mueble sin id
+		// tendria que releer los ~700 archivos del registro otra vez (con 9 neveras salteadas
+		// eran ~6.300 lecturas de JSON = segundos de arranque de mas, y un arranque lento es
+		// justo lo que no queremos).
+		ActualizarCache(f);
+	}
+
+	// mete o pisa la entrada del cache (sin releer el directorio)
+	static void ActualizarCache(ExorMuebleRegFile f)
+	{
+		if (!s_Cache || !f)
+			return;
+		int i;
+		for (i = 0; i < s_Cache.Count(); i++)
+		{
+			ExorMuebleRegFile c = s_Cache.Get(i);
+			if (c && c.id == f.id)
+			{
+				s_Cache.Set(i, f);
+				return;
+			}
+		}
+		s_Cache.Insert(f);
+	}
+
+	// saca la entrada del cache (sin releer el directorio)
+	static void QuitarDelCache(string id)
+	{
+		if (!s_Cache || id == "")
+			return;
+		int i;
+		for (i = s_Cache.Count() - 1; i >= 0; i--)
+		{
+			ExorMuebleRegFile c = s_Cache.Get(i);
+			if (c && c.id == id)
+				s_Cache.Remove(i);
+		}
 	}
 
 	// El id tiene contenido virtualizado guardado en disco? Es LA pregunta antes de dar de baja
@@ -229,7 +266,7 @@ class ExorMuebleRegistry
 		string path = PathFor(id);
 		if (FileExist(path))
 			DeleteFile(path);
-		InvalidarCache();
+		QuitarDelCache(id);
 	}
 
 	// SELF-HEAL: recorre el registro; recrea los muebles que no estan vivos. Devuelve cuantos
@@ -558,14 +595,14 @@ class ExorMuebleRegistry
 				return false;
 			Unregister(idVivo);			// el registro del id nuevo (vacio) ya no sirve
 			RegisterEntity(f.id, vivo);	// el registro huerfano pasa a ser el del mueble vivo
-			InvalidarCache();
+			// (Unregister y RegisterEntity ya mantienen el cache al dia; tirarlo aca obligaria a
+			// releer los ~700 archivos por CADA duplicado resuelto -21 en el test local-.)
 			Print(string.Format("%1 SELF-HEAL: registro duplicado RESUELTO en %2 -> el %3 vivo adopta '%4' y recupera su contenido (se dio de baja el id vacio '%5')", ExorStorageConstants.LOG, Vector(f.x, f.y, f.z).ToString(), f.type, f.id, idVivo));
 			return true;
 		}
 
 		// caso b) el huerfano no tiene nada detras -> se puede dar de baja sin riesgo
 		Unregister(f.id);
-		InvalidarCache();
 		Print(string.Format("%1 SELF-HEAL: registro duplicado '%2' dado de baja en %3 (sin contenido detras; el %4 vivo es '%5')", ExorStorageConstants.LOG, f.id, Vector(f.x, f.y, f.z).ToString(), f.type, idVivo));
 		return true;
 	}

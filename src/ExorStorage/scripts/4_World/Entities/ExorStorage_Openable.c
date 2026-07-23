@@ -290,11 +290,11 @@ class Exor_OpenableStorage : Container_Base
 		string key;
 		if (ctx.Read(key))
 		{
-			if (!ExorStreamPlausible(key, 32))
-			{
-				Print(string.Format("%1 GUARD: clave ilegible en el mueble '%2' -> se carga SIN clave (el resto del mueble queda intacto)", ExorStorageConstants.LOG, m_ExorID));
-				return true;	// el mueble en si esta bien; solo se descarta el bloque de clave
-			}
+			// OJO: la clave NO se valida por charset ni por largo. La escribe el JUGADOR en el
+			// modal, asi que puede tener espacios, tildes o simbolos y ser tan larga como quiera:
+			// rechazarla le sacaria el candado a un locker legitimo en el proximo reinicio.
+			// El freno contra el stream corrido es el del 'id' de arriba (formato conocido,
+			// int_int_int) y el tope del contador de abajo, que es lo que protege la RAM.
 			m_ExorLockKey = key;
 			string setter;
 			if (ctx.Read(setter))
