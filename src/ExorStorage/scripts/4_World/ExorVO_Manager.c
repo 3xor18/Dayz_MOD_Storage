@@ -383,7 +383,10 @@ class ExorVO_Manager
 		}
 		int tFurniture = GetGame().GetTime() - tStart - tBarrels;
 
-		// --- Bolsas de cadaver: TTL + virtualizar/restaurar por distancia (reusa 'players') ---
+		// --- Bolsas de cadaver: TTL (todas) + proximidad (con cupo y cursor) ---
+		// PASE 1 - TTL: barato (resta de enteros) y no se puede diferir sin que las tumbas
+		// duren de mas, asi que corre para TODAS las bolsas en TODOS los ticks. De paso limpia
+		// los huecos nulos del array.
 		for (i = m_BodyBags.Count() - 1; i >= 0; i--)
 		{
 			Exor_BodyBag bag = m_BodyBags.Get(i);
@@ -392,7 +395,37 @@ class ExorVO_Manager
 				m_BodyBags.Remove(i);
 				continue;
 			}
-			bag.ExorBagTick(now, players);
+			bag.ExorBagTTLTick();	// puede borrar la bolsa (expirada)
+		}
+
+		// PASE 2 - PROXIMIDAD (lo caro): mismo trato que barriles y muebles, cupo + cursor
+		// rotativo. Antes esto recorria las 250 bolsas por tick escaneando a los 50 players
+		// cada una = 656ms de pico. Ver MAX_BAGS_PER_TICK.
+		// Las posiciones de los players VIVOS se calculan UNA vez por tick y se pasan ya
+		// resueltas: antes cada bolsa hacia su propio PlayerBase.Cast + IsAlive por cada player.
+		array<vector> alivePos = new array<vector>;
+		for (i = 0; i < players.Count(); i++)
+		{
+			PlayerBase pb = PlayerBase.Cast(players.Get(i));
+			if (pb && pb.IsAlive())
+				alivePos.Insert(pb.GetPosition());
+		}
+
+		int bagCount = m_BodyBags.Count();
+		if (bagCount > 0)
+		{
+			int bagBudget = ScaleBudget(ExorStorageConstants.MAX_BAGS_PER_TICK);
+			int bagStart = m_BagCursor % bagCount;
+			int done = 0;
+			for (int bi = 0; bi < bagCount && done < bagBudget; bi++)
+			{
+				Exor_BodyBag bag2 = m_BodyBags.Get((bagStart + bi) % bagCount);
+				if (!bag2)
+					continue;	// el pase 1 ya limpia los nulos; aca solo se saltea
+				bag2.ExorBagProximityTick(now, alivePos);
+				done++;
+			}
+			m_BagCursor = (bagStart + done) % bagCount;
 		}
 
 		// --- Cerrar sesiones de saqueo inactivas (escribe la linea agrupada al audit) ---
@@ -460,6 +493,7 @@ class ExorVO_Manager
 		return true;
 	}
 	int m_FurCursor = 0;	// cursor rotativo de muebles (anti-starvation sin cupo dedicado)
+	int m_BagCursor = 0;	// cursor rotativo de bolsas de cadaver (el pase caro va con cupo)
 
 	void AdaptBudgetFactor()
 	{

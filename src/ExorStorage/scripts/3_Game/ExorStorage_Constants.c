@@ -4,12 +4,12 @@
 class ExorStorageConstants
 {
 	static const string MOD_NAME = "3xor_Vanilla_Optimization";
-	static const string MOD_VERSION = "2.10.8";
+	static const string MOD_VERSION = "2.10.9";
 	// Sello de build: SUBIRLO EN CADA EMPAQUE, aunque no cambie MOD_VERSION. Sirve para
 	// saber desde el RPT que PBO esta corriendo el server (el de version sola no alcanza:
 	// se desplego 2.9.1 con MOD_VERSION todavia en "2.8.0" y los logs pre/post deploy
 	// salieron identicos -> imposible confirmar si el deploy habia entrado).
-	static const string MOD_BUILD = "2026-07-22n";
+	static const string MOD_BUILD = "2026-07-23a";
 	static const string LOG = "[3xorVO]";
 	// DEBUG temporal del ciclo de vida del barril (setear/levantar/abrir/cerrar/item
 	// in-out/virtualizar/restaurar/load/save/shutdown). Poner en false (o borrar las
@@ -142,6 +142,20 @@ class ExorStorageConstants
 	// proximo, el cursor rotativo garantiza que a todos les toca). NO se aplica al reconcile
 	// (cupo chico y critico para el loot post-crash). Ajustar si los slow ticks persisten.
 	static const int MUEBLE_BUDGET_WEIGHT = 4;
+
+	// Maximo de BOLSAS DE CADAVER que hacen el chequeo CARO (proximidad -> virtualizar/
+	// restaurar) por tick. Medido en produccion 22-jul (test con admin spawneando sets: 564
+	// muertes en 5h, 252 tumbas vivas a la vez): el bloque de bolsas se comio 9.2 de los 10.5
+	// segundos de ticks lentos, con un pico de 656ms en UN tick (barriles: 1ms de esos 656).
+	// Causa: el loop recorria TODAS las bolsas en TODOS los ticks y cada una escaneaba a los
+	// ~50 players con Cast+Distance -> 250x50 = 12.500 casts por tick. El FPS caia de 610
+	// (0-49 bolsas) a 112 (250+) con la MISMA cantidad de players.
+	// Con cursor rotativo + este cupo, 250 bolsas se recorren enteras en ~7 ticks (35s), que
+	// es de sobra para un camino que ya es el BACKUP: el restore de verdad es sincrono al
+	// abrir la tumba (Open()), que no pasa por aca. El TTL sigue corriendo para TODAS las
+	// bolsas en TODOS los ticks (es aritmetica de enteros, no cuesta nada) -> ninguna tumba
+	// se queda de mas por este reparto.
+	static const int MAX_BAGS_PER_TICK = 40;
 
 	// Debounce del guardado EN VIVO mientras el contenedor esta ABIERTO. Cada snapshot
 	// reserializa el contenedor ENTERO y reescribe su archivo (los JSON de produccion van

@@ -15,6 +15,7 @@ class Exor_BodyBag extends Container_Base
 	protected int m_ExorSpawnMin;       // minuto-numero (reloj host) de cuando aparecio -> TTL
 	protected int m_ExorLastNearMs;     // uptime ms de la ultima vez que hubo un player vivo cerca
 	protected bool m_ExorVirtualizedSync;
+	protected bool m_ExorExpirada;      // TTL cumplido: ObjectDelete ya pedido (borrado diferido)
 
 	void Exor_BodyBag()
 	{
@@ -188,31 +189,49 @@ class Exor_BodyBag extends Container_Base
 	// metros (backup del restore-on-open, que es lo confiable). El fix del bug historico
 	// (0 restauraciones -> tumbas vacias) es el DOBLE trigger: proximidad (aca) + Open()
 	// SINCRONO al abrir. acercar < alejar = histeresis para no thrashear.
-	void ExorBagTick(int nowMs, array<Man> players)
+	// ---- PASE 1 (todas las bolsas, todos los ticks): TTL ----
+	// Es una resta de enteros: no vale la pena repartirlo y diferirlo haria que las tumbas
+	// duren de mas. Devuelve true si la bolsa se borro (ya no existe).
+	bool ExorBagTTLTick()
 	{
 		ExorCfgBodyCadaver cfg = GetExorConfig().bodycadaver;
+		if (m_ExorSpawnMin <= 0 || cfg.duracion_minutos <= 0)
+			return false;
 
-		// TTL: borrar la bolsa pasados duracion_minutos (sobrevive reinicio)
-		if (m_ExorSpawnMin > 0 && cfg.duracion_minutos > 0)
-		{
-			int age = ExorTimeUtil.NowMinutes() - m_ExorSpawnMin;
-			if (age >= cfg.duracion_minutos)
-			{
-				// Borrar el JSON SIEMPRE, no solo si estaba virtualizada. Si la bolsa expiraba
-				// con items reales (habia alguien cerca, asi que nunca virtualizo) su archivo
-				// quedaba huerfano para siempre: se encontraron 273 JSON acumulados desde
-				// hacia 4 dias, con tumbas que duran 30 minutos.
-				DeleteFile(ExorGetStoragePath());
-				Print(string.Format("%1 BodyBag %2 expirada (%3 min) -> borrada", ExorStorageConstants.LOG, ExorGetID(), age));
-				GetGame().ObjectDelete(this);
-				return;
-			}
-		}
+		int age = ExorTimeUtil.NowMinutes() - m_ExorSpawnMin;
+		if (age < cfg.duracion_minutos)
+			return false;
+
+		// Borrar el JSON SIEMPRE, no solo si estaba virtualizada. Si la bolsa expiraba
+		// con items reales (habia alguien cerca, asi que nunca virtualizo) su archivo
+		// quedaba huerfano para siempre: se encontraron 273 JSON acumulados desde
+		// hacia 4 dias, con tumbas que duran 30 minutos.
+		DeleteFile(ExorGetStoragePath());
+		Print(string.Format("%1 BodyBag %2 expirada (%3 min) -> borrada", ExorStorageConstants.LOG, ExorGetID(), age));
+		// ObjectDelete es DIFERIDO (el puntero sigue vivo en el array hasta fin de frame), asi
+		// que se marca: el pase 2 de este mismo tick tiene que saltearla en vez de ponerse a
+		// virtualizar (escribir un JSON) una bolsa que ya esta condenada.
+		m_ExorExpirada = true;
+		GetGame().ObjectDelete(this);
+		return true;
+	}
+
+	// ---- PASE 2 (con cupo y cursor): virtualizar/restaurar por distancia ----
+	// 'alivePos' viene YA resuelto por el manager (posiciones de los players vivos, calculadas
+	// una sola vez por tick). Antes cada bolsa hacia su propio Cast+IsAlive+Distance por cada
+	// player: con 250 tumbas y 50 players eran 12.500 casts por tick (pico medido: 656ms).
+	// Diferir esto es seguro: el restore CONFIABLE es sincrono al abrir la tumba (Open()), esto
+	// es solo el backup por proximidad.
+	void ExorBagProximityTick(int nowMs, array<vector> alivePos)
+	{
+		if (m_ExorExpirada)
+			return;		// ya la borro el pase de TTL en este mismo tick
+		ExorCfgBodyCadaver cfg = GetExorConfig().bodycadaver;
 
 		// YA virtualizada: restaurar si un player vivo se acerca (backup del restore-on-open).
 		if (ExorIsVirtualized())
 		{
-			if (ExorPlayerNear(players, cfg.acercar_metros))
+			if (ExorPlayerNear(alivePos, cfg.acercar_metros))
 				ExorRestore();
 			return;
 		}
@@ -221,7 +240,7 @@ class Exor_BodyBag extends Container_Base
 		// nadie vivo a <alejar_metros. Solo si tiene loot real (si no, no hay nada que sacar).
 		if (cfg.virtualizar_minutos > 0)
 		{
-			bool near = ExorPlayerNear(players, cfg.alejar_metros);
+			bool near = ExorPlayerNear(alivePos, cfg.alejar_metros);
 			if (near)
 				m_ExorLastNearMs = nowMs;
 			else if (nowMs - m_ExorLastNearMs >= cfg.virtualizar_minutos * 60000 && ExorContentCount() > 0)
@@ -230,16 +249,18 @@ class Exor_BodyBag extends Container_Base
 	}
 
 	// hay algun player VIVO dentro de 'radius' de la tumba?
-	bool ExorPlayerNear(array<Man> players, float radius)
+	// Compara distancias al CUADRADO: evita una raiz cuadrada por player y por bolsa, que en
+	// el peor tick medido se ejecutaba miles de veces.
+	bool ExorPlayerNear(array<vector> alivePos, float radius)
 	{
-		if (!players)
+		if (!alivePos)
 			return false;
 		vector p = GetPosition();
+		float r2 = radius * radius;
 		int i;
-		for (i = 0; i < players.Count(); i++)
+		for (i = 0; i < alivePos.Count(); i++)
 		{
-			PlayerBase pb = PlayerBase.Cast(players.Get(i));
-			if (pb && pb.IsAlive() && vector.Distance(pb.GetPosition(), p) <= radius)
+			if (vector.DistanceSq(alivePos.Get(i), p) <= r2)
 				return true;
 		}
 		return false;

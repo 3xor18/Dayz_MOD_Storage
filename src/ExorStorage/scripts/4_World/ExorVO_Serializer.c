@@ -340,6 +340,21 @@ class ExorVO_Serializer
 				}
 				if (wpn && emag)
 				{
+					// GUARD 2 (VME x3 el 22-jul, en UMP45, SCARH_Black y M4A1 al restaurar
+					// tumbas): el cargador CALZA, pero el arma YA TIENE UNO PUESTO. Varias armas
+					// -sobre todo de mods- nacen con su cargador por defecto al crearlas, asi que
+					// al llegar el nuestro, CreateAttachment no tiene slot libre y devuelve null;
+					// vanilla loguea "Failed to create and attach null" y el arma queda a medio
+					// armar (que es justo lo que despues rompe la persistencia).
+					// No se descarta el cargador guardado: se saca el de fabrica y se pone el
+					// nuestro, para no perderle al player la municion que tenia.
+					Magazine yaPuesto = wpn.GetMagazine(0);
+					if (yaPuesto)
+					{
+						Print(string.Format("%1 GUARD: '%2' ya venia con cargador de fabrica -> se reemplaza por el guardado ('%3')", ExorStorageConstants.LOG, wpn.GetType(), data.type));
+						GetGame().ObjectDelete(yaPuesto);
+					}
+
 					Magazine nm = wpn.SpawnAttachedMagazine(data.type);
 					if (nm)
 					{
@@ -348,6 +363,12 @@ class ExorVO_Serializer
 							nm.ServerSetAmmoCount(data.ammoCount);
 						GetGame().ObjectDelete(e);
 						moved = true;
+					}
+					else
+					{
+						// Si igual fallo, que quede DICHO en el log: antes esto caia en silencio
+						// al camino de attachment normal y el cargador terminaba suelto.
+						Print(string.Format("%1 GUARD: SpawnAttachedMagazine('%2') fallo en '%3' -> el cargador va como attachment normal", ExorStorageConstants.LOG, data.type, wpn.GetType()));
 					}
 				}
 

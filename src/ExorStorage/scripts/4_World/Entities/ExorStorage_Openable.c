@@ -227,6 +227,34 @@ class Exor_OpenableStorage : Container_Base
 			ctx.Write(m_ExorUnlockedBy.Get(u));
 	}
 
+	// TOPE DURO de la lista de "abierto por" que se lee del stream. NO es un limite de diseño
+	// (un clan nunca tiene 64 miembros con la clave): es un cortafuegos contra un contador
+	// LEIDO PODRIDO. Ver el comentario de OnStoreLoad.
+	static const int EXOR_MAX_UNLOCKED = 64;
+
+	// Un string leido del stream tiene pinta de dato nuestro y no de basura?
+	// Con el stream desalineado, ctx.Read() no falla: devuelve true con bytes cualquiera.
+	// Validar lo que YA leimos es gratis y es la unica forma de frenar antes de la lectura
+	// siguiente, que es la que revienta el motor.
+	// alfabeto permitido. Se compara por IndexOf y no por rangos ("a" <= ch) a proposito:
+	// la comparacion de strings por orden en EnforceScript no esta pensada para esto.
+	static const string EXOR_CHARSET_OK = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
+
+	static bool ExorStreamPlausible(string s, int maxLen)
+	{
+		if (s.Length() > maxLen)
+			return false;
+		int i;
+		for (i = 0; i < s.Length(); i++)
+		{
+			// nuestros ids/claves/steamids son alfanumericos + '_' ; cualquier otra cosa
+			// (control chars, binario) significa que estamos leyendo bytes de otro lado
+			if (EXOR_CHARSET_OK.IndexOf(s.Substring(i, 1)) < 0)
+				return false;
+		}
+		return true;
+	}
+
 	override bool OnStoreLoad(ParamsReadContext ctx, int version)
 	{
 		if (!super.OnStoreLoad(ctx, version))
@@ -234,11 +262,39 @@ class Exor_OpenableStorage : Container_Base
 		string id;
 		if (!ctx.Read(id))
 			return false;
+
+		// ---------------------------------------------------------------------------
+		// CORTAFUEGOS DE STREAM DESALINEADO (produccion 22 y 23-jul)
+		// ---------------------------------------------------------------------------
+		// Sintoma: "!!! String CORRUPTED - FIX OnStoreLoad()" en la linea del ctx.Read(key)
+		// de abajo, y detras "Corrupted stream after Exor_Fridge" -> se cae la carga de TODO
+		// lo que venia despues en ese dynamic_*.bin. Ademas ese arranque se fue a 21 GB de RAM
+		// (lo normal son 4) y lo mato el hosting a los 9 minutos.
+		// El 21 GB sale del bloque de abajo: si el contador 'uc' se lee de un stream corrido,
+		// no vale 0-3 sino un entero cualquiera (cientos de millones) y el for se pone a leer
+		// e insertar strings hasta comerse la RAM del host.
+		// Dos frenos, en orden:
+		//   1) el id ya leido tiene que TENER PINTA de id nuestro (NNN_NNN_NNN). Si no, el
+		//      stream ya venia corrido -> se corta ACA, antes del Read que revienta el motor.
+		//   2) el contador se acota a EXOR_MAX_UNLOCKED pase lo que pase.
+		// Cortar devuelve false: el motor descarta ESTE mueble (no el archivo entero) y el
+		// self-heal lo recrea con su contenido, que vive en el JSON y no en este stream.
+		if (!ExorStreamPlausible(id, 40))
+		{
+			Print(string.Format("%1 GUARD: stream de mueble DESALINEADO (id ilegible) -> mueble descartado, se recrea del registro (no se toca el archivo de persistencia)", ExorStorageConstants.LOG));
+			return false;
+		}
 		m_ExorID = id;
+
 		// campos de clave (formato v2.10.0). La data del server ya los tiene -> se leen SIEMPRE.
 		string key;
 		if (ctx.Read(key))
 		{
+			if (!ExorStreamPlausible(key, 32))
+			{
+				Print(string.Format("%1 GUARD: clave ilegible en el mueble '%2' -> se carga SIN clave (el resto del mueble queda intacto)", ExorStorageConstants.LOG, m_ExorID));
+				return true;	// el mueble en si esta bien; solo se descarta el bloque de clave
+			}
 			m_ExorLockKey = key;
 			string setter;
 			if (ctx.Read(setter))
@@ -246,6 +302,11 @@ class Exor_OpenableStorage : Container_Base
 			int uc;
 			if (ctx.Read(uc))
 			{
+				if (uc < 0 || uc > EXOR_MAX_UNLOCKED)
+				{
+					Print(string.Format("%1 GUARD: contador de 'abierto por' absurdo (%2) en el mueble '%3' -> ignorado (esto es lo que se comia la RAM del server)", ExorStorageConstants.LOG, uc, m_ExorID));
+					return true;
+				}
 				int u;
 				for (u = 0; u < uc; u++)
 				{
@@ -268,6 +329,28 @@ class Exor_OpenableStorage : Container_Base
 			if (GetInventory())
 				GetInventory().LockInventory(HIDE_INV_FROM_SCRIPT);
 			ExorLockAttachments(true);	// las armas cargadas de persistencia arrancan bloqueadas
+
+			// ADOPCION DE HUERFANO. Si este mueble llego SIN id, es porque su OnStoreLoad no
+			// pudo leerlo: nevera salteada por BootRepair, stream corrupto, cualquier cosa que
+			// devuelva false. Sin esto, ExorGetID() le inventa un id NUEVO y pasan dos cosas:
+			//   1) queda un registro huerfano con el id viejo -> el self-heal intenta recrearlo
+			//      cada 30 min, choca con este mueble vivo y loguea "NO se recrea: ya hay otro
+			//      encima" para siempre (12 lineas por pase en el server del amigo);
+			//   2) PEOR: el JSON del contenido virtualizado esta guardado con el id VIEJO, asi
+			//      que con un id nuevo el mueble ya no lo encuentra -> el contenido queda
+			//      inalcanzable aunque el archivo siga en disco.
+			// Recuperar el id viejo del registro arregla las dos: no se duplica el registro y el
+			// reconcile vuelve a encontrar su contenido.
+			if (m_ExorID == "")
+			{
+				string adoptado = ExorMuebleRegistry.BuscarHuerfanoEnPos(GetType(), GetPosition());
+				if (adoptado != "")
+				{
+					m_ExorID = adoptado;
+					Print(string.Format("%1 ADOPCION: mueble sin id en %2 recupero su registro '%3' (y con el, su contenido guardado)", ExorStorageConstants.LOG, GetPosition().ToString(), adoptado));
+				}
+			}
+
 			m_ExorVirtualizedSync = ExorHasContent();
 			ExorMuebleRegistry.Register(this);	// registro del self-heal (id/pos actuales)
 			SetSynchDirty();
