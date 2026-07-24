@@ -124,6 +124,12 @@ modded class MissionServer
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorResyncRoster, 3000, false, player);
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorResyncRoster, 8000, false, player);
 
+		// RE-SYNC candados de auto (s_Member/s_Access del cliente arrancan vacios cada sesion): a los 6s
+		// y 10s (idempotente) para que tras reinicio/reconexion el dueño vea sus autos con candado como
+		// propios (subir + baul) sin re-ingresar la clave. El del parking lo cubre ExorCarScheduleMemberNotify.
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorResyncCarLocks, 6000, false, player);
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorResyncCarLocks, 10000, false, player);
+
 		// #4b: si reaparece dentro de territorio ajeno, sacarlo al borde (diferido).
 		ExorAntiRaid.KickFromEnemyBaseIfNeeded(player);
 
@@ -150,6 +156,38 @@ modded class MissionServer
 			player.RPCSingleParam(ExorRPC.VIP_STATUS, new Param1<bool>(isVip), true, identity);
 			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorResendVip, 3000, false, player, isVip);
 			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorResendVip, 8000, false, player, isVip);
+
+			// CANDADO DE AUTOS: devolverle el acceso a los autos donde YA ingreso la clave
+			// (persistido en el JSON) -> NO se la re-pide tras reconectar/reiniciar. Diferido
+			// (como el VIP) para que el cache del cliente ya este listo. El grant lleva el
+			// network-id del auto; funciona aunque el auto este lejos (el id calza al acercarse).
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorResendCarAccess, 4000, false, player);
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorResendCarAccess, 9000, false, player);
+		}
+	}
+
+	// re-otorga el acceso al baul/manejo de todos los autos con candado donde el player ya
+	// habia metido la clave (o es admin). Corre server-side.
+	void ExorResendCarAccess(PlayerBase player)
+	{
+		if (!player || !player.GetIdentity())
+			return;
+		string sid = ExorGroupManager.SteamId(player);
+		ExorVO_Manager m = ExorVO_Manager.Get();
+		if (!m || !m.m_Vehicles)
+			return;
+		int i;
+		for (i = 0; i < m.m_Vehicles.Count(); i++)
+		{
+			CarScript car = m.m_Vehicles.Get(i);
+			if (!car || !car.ExorCarHasLock())
+				continue;
+			// acceso (ya metio la clave o admin) -> baul + manejar + "Cambiar clave"
+			if (car.ExorCarIsUnlockedBy(sid) || car.ExorCarIsAdmin(sid))
+				player.ExorSendCarAccessGrant(car);
+			// miembro del clan dueño -> ve "Ingresar clave" (el ajeno NO, solo raidea)
+			if (car.ExorCarIsMemberOfLockGroup(sid))
+				player.ExorSendCarMember(car);
 		}
 	}
 
@@ -214,6 +252,14 @@ modded class MissionServer
 	// llegado/revivido UNA sola vez (el envio 0s de OnPlayerConnected/SyncGroup) y si ese
 	// paquete se perdia en lag, "no veia al que entro/revivio" hasta el proximo evento.
 	// Ahora cada connect/respawn le da a TODOS los miembros online 3 envios (0s + 3s + 8s).
+	// re-sync de los candados de auto del jugador al conectar (ver ExorAfterClientSpawned)
+	void ExorResyncCarLocks(PlayerBase player)
+	{
+		if (!player || !player.GetIdentity())
+			return;
+		ExorVO_Manager.ExorSyncCarLocksForPlayer(player);
+	}
+
 	void ExorResyncRoster(PlayerBase player)
 	{
 		if (!player || !player.GetIdentity())

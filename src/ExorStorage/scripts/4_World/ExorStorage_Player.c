@@ -262,6 +262,10 @@ modded class PlayerBase
 		// La accion misma solo se muestra a los SteamID de staff. Ver ExorActionAdminRemove.
 		AddAction(ExorActionAdminRemove, InputActionMap);
 		AddAction(ExorActionFlipVehicle, InputActionMap);
+		// candado de autos: continuas (mantener F), targetean el auto -> mismo patron que Voltear
+		AddAction(ExorActionSetCarKey, InputActionMap);
+		AddAction(ExorActionEnterCarKey, InputActionMap);
+		AddAction(ExorActionRaidCarLock, InputActionMap);
 		AddAction(ExorActionOpenInvite, InputActionMap);
 		AddAction(ExorActionJoinGroup, InputActionMap);
 		AddAction(ExorActionCancelInvite, InputActionMap);
@@ -903,6 +907,12 @@ modded class PlayerBase
 			case ExorRPC.LOCK_MODAL_OPEN:
 				ExorOnLockModalOpen(ctx);
 				break;
+			case ExorRPC.CAR_ACCESS_GRANT:
+				ExorOnCarAccessGrant(ctx);
+				break;
+			case ExorRPC.CAR_MEMBER:
+				ExorOnCarMember(ctx);
+				break;
 			case ExorRPC.CONFIG_SYNC:
 				ExorOnConfigSync(ctx);
 				break;
@@ -1201,6 +1211,7 @@ modded class PlayerBase
 		if (full == "")
 			return;	// aun faltan trozos
 		ExorConfig.ApplyClientJson(full);
+		ExorCarAccessClient.RefreshAdmin();	// ya llego la lista de admins -> saber si soy admin del baul
 	}
 
 	// Cliente: recibe la lista y abre la pantalla de seleccion de spawn.
@@ -1365,6 +1376,7 @@ modded class PlayerBase
 	// SERVER: locker sobre el que este jugador esta poniendo/metiendo clave (guardado entre
 	// que abre el modal y confirma). Es estatico/indestructible -> ref seguro con null-check.
 	protected Exor_OpenableStorage m_ExorKeyTarget;
+	protected CarScript m_ExorCarKeyTarget;	// candado de AUTOS: reusa el mismo modal, target aparte
 
 	// SERVER: abre el modal de clave en el cliente (mode 0=meter, 1=setear). Guarda el locker.
 	void ExorOpenLockKeyModal(Exor_OpenableStorage fur, int mode)
@@ -1372,7 +1384,57 @@ modded class PlayerBase
 		if (!GetGame().IsServer() || !fur)
 			return;
 		m_ExorKeyTarget = fur;
+		m_ExorCarKeyTarget = null;	// es locker, no auto
 		RPCSingleParam(ExorRPC.LOCK_MODAL_OPEN, new Param1<int>(mode), true, GetIdentity());
+	}
+
+	// SERVER: abre el mismo modal pero apuntando a un AUTO.
+	void ExorOpenCarKeyModal(CarScript car, int mode)
+	{
+		if (!GetGame().IsServer() || !car)
+			return;
+		m_ExorCarKeyTarget = car;
+		m_ExorKeyTarget = null;	// es auto, no locker
+		RPCSingleParam(ExorRPC.LOCK_MODAL_OPEN, new Param1<int>(mode), true, GetIdentity());
+	}
+
+	// SERVER: le da a ESTE cliente acceso al baul de 'car' (metio la clave OK / es dueño).
+	// Manda el network-id del auto; el cliente lo guarda en su set -> CanDisplayCargo lo deja ver.
+	void ExorSendCarAccessGrant(CarScript car)
+	{
+		if (!GetGame().IsServer() || !car)
+			return;
+		int low, high;
+		car.GetNetworkID(low, high);
+		RPCSingleParam(ExorRPC.CAR_ACCESS_GRANT, new Param2<int, int>(low, high), true, GetIdentity());
+	}
+
+	// CLIENTE: llega un grant de acceso a un baul -> guardarlo en el set (O(1)).
+	void ExorOnCarAccessGrant(ParamsReadContext ctx)
+	{
+		Param2<int, int> p = new Param2<int, int>(0, 0);
+		if (!ctx.Read(p))
+			return;
+		ExorCarAccessClient.Grant(string.Format("%1_%2", p.param1, p.param2));
+	}
+
+	// SERVER: le avisa a ESTE cliente que es MIEMBRO del clan dueño de 'car'.
+	void ExorSendCarMember(CarScript car)
+	{
+		if (!GetGame().IsServer() || !car)
+			return;
+		int low, high;
+		car.GetNetworkID(low, high);
+		RPCSingleParam(ExorRPC.CAR_MEMBER, new Param2<int, int>(low, high), true, GetIdentity());
+	}
+
+	// CLIENTE: soy miembro del clan dueño de este auto -> guardarlo (para "Ingresar clave").
+	void ExorOnCarMember(ParamsReadContext ctx)
+	{
+		Param2<int, int> p = new Param2<int, int>(0, 0);
+		if (!ctx.Read(p))
+			return;
+		ExorCarAccessClient.MarkMember(string.Format("%1_%2", p.param1, p.param2));
 	}
 
 	// SERVER: el jugador confirmo el modal.
@@ -1380,6 +1442,12 @@ modded class PlayerBase
 	{
 		if (!GetGame().IsServer())
 			return;
+		// candado de AUTO tiene prioridad si fue lo ultimo que se abrio
+		if (m_ExorCarKeyTarget)
+		{
+			ExorDoCarKeySubmit(mode, key);
+			return;
+		}
 		Exor_OpenableStorage fur = m_ExorKeyTarget;
 		if (!fur)
 			return;
@@ -1420,6 +1488,91 @@ modded class PlayerBase
 			}
 		}
 		m_ExorKeyTarget = null;
+	}
+
+	// SERVER: confirmacion del modal cuando el target es un AUTO.
+	void ExorDoCarKeySubmit(int mode, string key)
+	{
+		CarScript car = m_ExorCarKeyTarget;
+		m_ExorCarKeyTarget = null;
+		if (!car)
+			return;
+		string sid = ExorGroupManager.SteamId(this);
+		ExorCfgCarLock cfg = GetExorConfig().carlock;
+
+		if (mode == ExorLockKeyClient.MODE_SET)
+		{
+			bool admin = cfg.ExorEsAdmin(sid);
+			// validar largo + alfanumerico
+			if (!ExorCarKeyValida(key))
+			{
+				ExorMuebleRules.SendRed(this, string.Format("La clave debe tener %1-%2 caracteres, solo letras y números.", cfg.clave_min_largo, cfg.clave_max_largo));
+				return;
+			}
+			if (car.ExorCarHasLock())
+			{
+				// CAMBIAR: miembro ACTUAL del clan con la clave (o admin). El clan dueño NO cambia.
+				if (!(car.ExorCarIsMemberOfLockGroup(sid) && car.ExorCarIsUnlockedBy(sid)) && !admin)
+				{
+					ExorMuebleRules.SendRed(this, "Necesitás ingresar la clave actual antes de cambiarla.");
+					return;
+				}
+					car.ExorCarSetKey(key, sid, car.ExorCarGetLockGroup());	// preservar el clan dueño
+			}
+			else
+			{
+				// COLOCAR: si estas en un clan, el candado es del clan (sus miembros meten la clave);
+				// si no, queda a tu nombre (candado personal, solo vos lo abris). Anda con o sin party.
+				ExorGroup g = ExorGroupManager.Get().FindByPlayer(sid);
+				string grp = "";
+				if (g)
+					grp = g.id;
+				car.ExorCarSetKey(key, sid, grp);
+				// CONSUMIR el keypad: recien AHORA (candado ya escrito con exito). Si el jugador
+				// hubiera cancelado el modal, este codigo no corre -> no se pierde el item.
+				ItemBase kp = GetItemInHands();
+				if (kp && kp.IsInherited(Exor_CarCodeLock))
+					GetGame().ObjectDelete(kp);
+			}
+			car.ExorCarMarkUnlocked(sid);	// el que la pone queda desbloqueado (puede arrancar ya)
+			ExorSendCarAccessGrant(car);	// + acceso al baul en su cliente
+			if (car.ExorCarIsMemberOfLockGroup(sid))
+				ExorSendCarMember(car);		// + el cliente sabe que es miembro (para "Ingresar clave")
+			ExorMuebleRules.SendChat(this, "Candado del auto guardado.");
+		}
+		else	// MODE_ENTER: meter la clave para desbloquear el auto
+		{
+			if (car.ExorCarKeyMatches(key))
+			{
+				car.ExorCarMarkUnlocked(sid);
+				ExorSendCarAccessGrant(car);	// + acceso al baul en su cliente
+				if (car.ExorCarIsMemberOfLockGroup(sid))
+					ExorSendCarMember(car);		// + el cliente sabe que es miembro (para "Ingresar clave")
+				ExorMuebleRules.SendChat(this, "Clave correcta. Ya podés usar el auto.");
+			}
+			else
+			{
+				ExorMuebleRules.SendRed(this, "Clave incorrecta.");
+			}
+		}
+	}
+
+	// clave valida: largo entre min/max del config y solo letras+numeros (sin espacios/simbolos).
+	// Charset por IndexOf (la comparacion de strings por orden en EnforceScript no es confiable).
+	bool ExorCarKeyValida(string key)
+	{
+		ExorCfgCarLock cfg = GetExorConfig().carlock;
+		int n = key.Length();
+		if (n < cfg.clave_min_largo || n > cfg.clave_max_largo)
+			return false;
+		string ok = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+		int i;
+		for (i = 0; i < n; i++)
+		{
+			if (ok.IndexOf(key.Substring(i, 1)) < 0)
+				return false;
+		}
+		return true;
 	}
 
 	// CLIENTE: pide confirmar el modal (lo llama el menu).

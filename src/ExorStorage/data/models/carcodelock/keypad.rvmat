@@ -1,0 +1,25 @@
+// Material UNICO del keypad (candado de auto) - shader Super.
+// Un solo material para TODAS las caras (frente=textura horneada UV planar, paredes=atlas).
+// Stage1 = NORMAL PLANO (neutro) a proposito: (a) no raya el frente planar, (b) evita el bug de
+// transparencia por mix de 2 materiales. El detalle del keypad ya esta en el _co horneado.
+ambient[] = {1.0, 1.0, 1.0, 1.0};
+diffuse[] = {1.0, 1.0, 1.0, 1.0};
+forcedDiffuse[] = {0.0, 0.0, 0.0, 0.0};
+emmisive[] = {0.0, 0.0, 0.0, 1.0};
+specular[] = {0.05, 0.05, 0.05, 1.0};
+specularPower = 20;
+PixelShaderID = "Super";
+VertexShaderID = "Super";
+
+class Stage1
+{
+	texture = "ExorStorage\data\models\carcodelock\keypad_nohq.paa";
+	uvSource = "tex";
+	class uvTransform
+	{
+		aside[] = {1.0, 0.0, 0.0};
+		up[]    = {0.0, 1.0, 0.0};
+		dir[]   = {0.0, 0.0, 0.0};
+		pos[]   = {0.0, 0.0, 0.0};
+	};
+};

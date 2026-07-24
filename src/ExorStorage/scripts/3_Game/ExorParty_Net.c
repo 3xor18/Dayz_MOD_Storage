@@ -43,6 +43,8 @@ class ExorRPC
 	static const int PARKING_SPAWN  = 49244;	// C -> S: desvirtualizar (sacar) el auto almacenado seleccionado (Param1 id)
 	static const int LOCK_MODAL_OPEN   = 49245;	// S -> C: abrir el modal de clave del locker (Param1 int mode: 0=meter clave, 1=setear/cambiar)
 	static const int LOCK_MODAL_SUBMIT = 49246;	// C -> S: el jugador confirmo el modal (Param2 int mode, string clave)
+	static const int CAR_ACCESS_GRANT  = 49247;	// S -> C: te doy acceso al baul de un auto (Param2 int netId low/high)
+	static const int CAR_MEMBER        = 49248;	// S -> C: sos miembro del clan dueño de este auto (Param2 netId low/high)
 
 	// Rango reservado del mod. Se usa para decidir si un RPC es NUESTRO y por lo tanto NO
 	// hay que pasarlo a super.OnRPC() (la cadena de los otros mods). Al agregar un RPC

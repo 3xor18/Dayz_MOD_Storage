@@ -28,5 +28,9 @@ modded class ActionConstructor
 		actions.Insert(ExorActionPackParking);
 		actions.Insert(ExorActionSetLockerKey);
 		actions.Insert(ExorActionAdminRemove);	// borrar barril/mueble sin que el self-heal lo recree (solo staff)
+		// candado de autos
+		actions.Insert(ExorActionSetCarKey);
+		actions.Insert(ExorActionEnterCarKey);
+		actions.Insert(ExorActionRaidCarLock);
 	}
 }

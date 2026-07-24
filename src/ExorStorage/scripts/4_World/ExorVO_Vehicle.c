@@ -38,6 +38,14 @@ class ExorVO_VehicleFile
 	float oil = 0;
 	float brake = 0;
 	float coolant = 0;
+	// CANDADO de autos: se preserva al virtualizar/desvirtualizar (era el bug de Murano, que
+	// perdia el codigo al pasar por el parking). El id se conserva para que el JSON aparte del
+	// candado (CarLocks/<id>.json) siga ligado tras recrear el auto.
+	string lock_id;
+	string lock_key;
+	string lock_setter;
+	string lock_group;
+	ref TStringArray lock_unlocked;	// sids que ya desbloquearon (para que el dueño no re-ingrese tras parking)
 	// piezas (ruedas, bateria, bujia, radiador, puertas, faros, barril-en-slot) y cargo (baul/cabina)
 	ref array<ref ExorVO_ItemData> att;
 	ref array<ref ExorVO_ItemData> cargo;
@@ -78,6 +86,21 @@ class ExorVO_Vehicle
 		f.oil     = car.GetFluidFraction(CarFluid.OIL);
 		f.brake   = car.GetFluidFraction(CarFluid.BRAKE);
 		f.coolant = car.GetFluidFraction(CarFluid.COOLANT);
+
+		// candado: preservar el id + estado para que sobreviva la virtualizacion
+		f.lock_id     = car.ExorCarGetLockId();
+		f.lock_key    = car.ExorCarGetLockKey();
+		f.lock_setter = car.ExorCarGetSetter();
+		f.lock_group  = car.ExorCarGetLockGroup();
+		// copiar la lista de desbloqueados (no la referencia) para que sobreviva la serializacion
+		f.lock_unlocked = new TStringArray;
+		TStringArray _ul = car.ExorCarGetUnlockedBy();
+		if (_ul)
+		{
+			int _u;
+			for (_u = 0; _u < _ul.Count(); _u++)
+				f.lock_unlocked.Insert(_ul.Get(_u));
+		}
 
 		// piezas + cargo recursivos (mismo serializer que barriles/tumbas). Captura ruedas,
 		// motor, puertas, el baul, y el barril-del-slot CON su contenido real.
@@ -167,6 +190,23 @@ class ExorVO_Vehicle
 		RestoreFluid(car, CarFluid.COOLANT, f.coolant);
 
 		car.SetHealth01("", "", f.health);
+
+		// CANDADO: re-ligar el auto recreado a su candado. Se restaura el id (para que su JSON
+		// aparte siga ligado) y, si tenia clave, se re-aplica el estado en RAM sin reescribir el
+		// JSON (ya existe con ese id). Asi el codigo NO se pierde al pasar por el parking, que
+		// era el bug de Murano. Si no tenia candado, lock_id viene "" y no hace nada.
+		if (f.lock_id != "")
+		{
+			car.ExorCarSetLockId(f.lock_id);
+			if (f.lock_key != "")
+			{
+				car.ExorCarApplyLockState(f.lock_key, f.lock_setter, f.lock_group, f.lock_unlocked);
+				// re-avisar a los miembros online del clan: son miembros de ESTE auto (netid NUEVO) y,
+				// si ya estaban desbloqueados, re-darles acceso al baul. El auto se auto-agenda el
+				// aviso con delay (para que ya este replicado en red). Sin esto el dueño ve "no es tuyo".
+				car.ExorCarScheduleMemberNotify();
+			}
+		}
 		return car;
 	}
 

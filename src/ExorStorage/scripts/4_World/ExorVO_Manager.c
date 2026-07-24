@@ -116,6 +116,35 @@ class ExorVO_Manager
 		}
 	}
 
+	// RE-SYNC del candado al CONECTAR (o tras reinicio): los sets del cliente (s_Member/s_Access)
+	// arrancan vacios cada sesion. Recorremos los autos con candado y a cada uno del que el jugador
+	// es MIEMBRO le avisamos (CAR_MEMBER) + si ya estaba desbloqueado le devolvemos el acceso al baul.
+	// Sin esto, tras reiniciar el server el dueño ve su auto "como si no fuese suyo".
+	static void ExorSyncCarLocksForPlayer(PlayerBase player)
+	{
+		if (!GetGame().IsServer() || !player)
+			return;
+		ExorVO_Manager m = Get();
+		if (!m || !m.m_Vehicles)
+			return;
+		string sid = ExorGroupManager.SteamId(player);
+		if (sid == "")
+			return;
+		int i;
+		for (i = 0; i < m.m_Vehicles.Count(); i++)
+		{
+			CarScript car = m.m_Vehicles.Get(i);
+			if (!car || !car.ExorCarHasLock())
+				continue;
+			if (car.ExorCarIsMemberOfLockGroup(sid))
+			{
+				player.ExorSendCarMember(car);
+				if (car.ExorCarIsUnlockedBy(sid))
+					player.ExorSendCarAccessGrant(car);
+			}
+		}
+	}
+
 	static void RegisterBodyBag(Exor_BodyBag bag)
 	{
 		if (Get().m_BodyBags.Find(bag) == -1)
@@ -774,6 +803,30 @@ class ExorVO_Manager
 		}
 		if (n > 0)
 			Print(string.Format("%1 clave limpiada de %2 locker(s) al expulsar a %3", ExorStorageConstants.LOG, n, sid));
+	}
+
+	// Igual que los lockers pero para AUTOS: al expulsar al que puso el candado, se lo saca
+	// para que el clan no quede afuera de su propio auto.
+	static void ClearCarLocksBySetter(string sid)
+	{
+		if (sid == "")
+			return;
+		ExorVO_Manager m = Get();
+		if (!m || !m.m_Vehicles)
+			return;
+		int i;
+		int n = 0;
+		for (i = 0; i < m.m_Vehicles.Count(); i++)
+		{
+			CarScript car = m.m_Vehicles.Get(i);
+			if (car && car.ExorCarHasLock() && car.ExorCarGetSetter() == sid)
+			{
+				car.ExorCarClearLock();
+				n++;
+			}
+		}
+		if (n > 0)
+			Print(string.Format("%1 candado limpiado de %2 auto(s) al expulsar a %3", ExorStorageConstants.LOG, n, sid));
 	}
 
 	// Como IsPlayerNear pero solo cuenta players VIVOS (un cadaver tambien es un Man).

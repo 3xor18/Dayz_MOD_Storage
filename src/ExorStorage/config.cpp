@@ -192,6 +192,21 @@ class CfgVehicles
 		hiddenSelections[] = {};
 	};
 
+	// CANDADO DE AUTOS (keypad): item de inventario. Se lo lleva en la mano y se "Coloca
+	// candado" mirando un auto del clan. Modelo propio (keypad de seguridad).
+	class Exor_CarCodeLock: Inventory_Base
+	{
+		scope = 2;
+		displayName = "Candado de Auto";
+		descriptionShort = "Keypad para ponerle clave a un auto de tu clan. Tenelo en la mano y mirá el auto para colocarlo.";
+		model = "\ExorStorage\data\models\carcodelock\keypad.p3d";
+		rotationFlags = 17;
+		itemSize[] = {2, 2};
+		weight = 400;
+		itemBehaviour = 0;
+		hiddenSelections[] = {};
+	};
+
 	// HOLOGRAMA del preview (se ve el parking al apuntar donde colocarlo).
 	// scope=1: usable como proyeccion por codigo pero NO aparece en el spawn de admin
 	// (evita el "tercer item fantasma" en la lista).

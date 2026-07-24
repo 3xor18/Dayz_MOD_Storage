@@ -77,6 +77,15 @@ Mide geometría y resultados con los eventos del motor para dar **indicios** (NU
 - **Voltear vehículo** (acción con hold, anti-abuso).
 - **Inventario ampliado**: el baúl de **todos los autos vanilla** (Olga 24/OffroadHatchback, Sedan/CivilianSedan, Gunter 2/Hatchback_02, Sedan_02, ADA 4x4/Offroad_02, M3S/Truck_01_Covered) pasa a **600 slots**, y permite guardar **ropa/contenedores con items adentro** (como los barriles). El tamaño de cargo es de build (no se togglea por JSON); lo anidado sí (`inv_items_anidados`).
 
+### Candado de auto (code-lock propio)
+Sistema de candado por **clave** para autos, nativo del mod (se integra con la virtualización del parking: el código **sobrevive** guardar/sacar el auto y el reinicio del server).
+- **Item `Exor_CarCodeLock`** (un **keypad** de inventario, modelo 3D propio): con el keypad en la mano y mirando un auto → **"Poner clave"** (clave **4-8 alfanumérica**). Si estás en un clan, el candado es **del clan** (sus miembros meten la clave una vez); si no, queda **a tu nombre** (candado personal). El keypad se consume al colocar.
+- **Miembros del clan**: **"Ingresar clave"** (una vez y no se pide más). **Cambiar clave**: miembro con la clave, o admin.
+- Con candado activo, un ajeno **no puede subir/arrancar** ni **ver el baúl** (se le oculta) hasta **raidear**.
+- **Raid**: quien no es dueño, con **herramienta habilitada** en la mano, puede **"Quitar Codelock"** (barra de progreso; % de acierto y duración según la herramienta). Suena **alarma** del auto al intentarlo. Herramientas y tiempos configurables por classname en `autos.json`.
+- **Admins** (lista en `autos.json`): bypass total (entran sin clave y sin raidear).
+- Al **expulsar** a un miembro deja de tener acceso al instante (pasa a ajeno → solo raid).
+
 ### Storage (barriles 3xor)
 - `Exor_Barrel_500` (500 slots) + su versión **empaquetable** (caja transportable).
 - **Virtualización** del contenido a disco (menos entidades), **auto-cierre**, **anti-dupe**, comida que dura más, mochilas/ropa con items adentro.
@@ -165,6 +174,17 @@ Columna **Valores** = qué puede tomar cada campo. `bool` = `true`/`false`. `int
 | `camara.pasajeros_1ra_persona` | `true` | bool | Los no-conductores van forzados a 1ª persona. |
 | `inventario.ver_ambos_dentro` | `true` | bool | Ver tu inventario + el del auto a la vez. |
 | `dano.quitar_dano_vehiculos` | `false` | bool | `true` = los autos no reciben daño. |
+
+### `autos.json` — candado de auto (code-lock)
+| Parámetro | Default | Valores | Descripción |
+|---|---|---|---|
+| `carlock_activado` | `true` | bool | Activa todo el sistema de candado de autos. |
+| `carlock_admins` | `[...]` | [string] SteamID64 | Admins con bypass total (entran sin clave ni raid). |
+| `clave_min_largo` / `clave_max_largo` | `4` / `8` | int | Largo permitido de la clave (alfanumérica). |
+| `alarma_soundset` | `CivilianSedan_Horn_Short_SoundSet` | string | Soundset que suena en loop mientras raidean el auto. |
+| `herramientas` | ver abajo | [obj] | Herramientas que pueden **raidear** el candado. Cada una: `classname` (item en mano), `acierto_porcentaje` (0..100, prob por intento), `segundos_raid` (duración de la barra). |
+
+Herramientas por defecto: **Lockpick** 60% / 60s · **Screwdriver** 45% / 120s · **CombatKnife** 35% / 180s. El **cuchillo de piedra** no está en la lista (no puede raidear). El keypad para poner el candado es el item **`Exor_CarCodeLock`**.
 
 ### `municion.json` — stacks y cantidad al spawnear
 | Parámetro | Default | Valores | Descripción |
@@ -474,11 +494,12 @@ Por defecto solo evalúa a los SteamIDs de `watchlist` (`solo_watchlist=true`); 
 
 ## Archivos que crea el mod (en `<profile>/3xorVanillaOptimization/`)
 
-**Config (editables):** `storage.json` · `vehiculos.json` · `municion.json` · `party.json` · `spawns.json` · `mapa.json` · `items.json` · `vip.json` · `killfeed.json` · `serverinfo.json` · `chat.json` · `reparacion.json` · `bodycadaver.json` · `nobuild.json` · `autorun.json` · `anticheat.json` · `koth.json` · `cofre.json`
+**Config (editables):** `storage.json` · `vehiculos.json` · `autos.json` · `municion.json` · `party.json` · `spawns.json` · `mapa.json` · `items.json` · `vip.json` · `killfeed.json` · `serverinfo.json` · `chat.json` · `reparacion.json` · `bodycadaver.json` · `nobuild.json` · `autorun.json` · `anticheat.json` · `koth.json` · `cofre.json`
 
 **Datos (los maneja el server, no editar a mano salvo que sepas):**
 - `groups/<id>.json` — grupos/party persistidos
 - `storage/<id>.json` — contenido virtualizado de barriles
+- `CarLocks/<tipo_x_z>.json` — candados de auto por posición (clave/dueño/desbloqueados)
 - `ServerAuditLog/audit_AAAA-MM-DD.txt` — logs forenses anti-raid + anti-cheat (auto-purga)
 - `stats.json` — ranking (kills/deaths/suicidios)
 - `vip_state.json` — usos de equipamiento por VIP

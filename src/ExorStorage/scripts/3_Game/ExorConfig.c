@@ -880,6 +880,10 @@ class ExorClientCfgDTO
 	ref ExorCfgReparacion reparacion;	// reparar-a-pristine + lista de kits combinables (el cliente la usa para ofrecer la accion)
 	ref ExorCfgAutorun autorun;	// auto-run (correr-solo): el cliente lo aplica al jugador local
 	bool permitir_construir_cerca;	// toggle de anti-construccion (el cliente lo usa en CanPlaceClient/holograma)
+	// candado de autos: el cliente necesita activado (para el gate del baul) + la lista de admins
+	// (para saber si el player local es admin y ver los baules lockeados). Es liviano (1 bool + pocos ids).
+	bool carlock_activado;
+	ref TStringArray carlock_admins;
 
 	void ExorClientCfgDTO()
 	{
@@ -890,6 +894,7 @@ class ExorClientCfgDTO
 		veh_inventario = new ExorCfgVehInventario;
 		reparacion = new ExorCfgReparacion;
 		autorun = new ExorCfgAutorun;
+		carlock_admins = new TStringArray;
 	}
 }
 
@@ -1680,6 +1685,122 @@ class ExorCfgCofre
 	}
 }
 
+// ============================================================================
+// autos.json - CANDADO DE AUTOS (code-lock propio, reemplaza MuranoCarLock)
+// ----------------------------------------------------------------------------
+// Una herramienta que puede INTENTAR sacar el candado (raid). classname del item
+// que hay que tener EN LA MANO, probabilidad de exito por intento, y cuanto tarda.
+class ExorCfgCarLockTool
+{
+	string	classname;			// item en la mano (ej "Lockpick", "Screwdriver", "CombatKnife")
+	float	acierto_porcentaje;	// 0..100 = prob de sacar el candado en UN intento
+	int		segundos_raid;		// cuanto dura el intento (barra de progreso)
+}
+
+class ExorCfgCarLock
+{
+	int		activado;			// 1 = candado de autos activo
+	int		clave_min_largo;	// 4
+	int		clave_max_largo;	// 8
+	// sonido tipo alarma de auto que suena al INTENTAR raidear (soundset del juego).
+	// Configurable; si queda vacio no suena (no rompe nada).
+	string	alarma_sonido;
+	// herramientas que pueden intentar sacar el candado (raid). El cuchillo de PIEDRA
+	// NO esta en la lista a proposito -> con el no se puede. Cualquier item que no este
+	// aca tampoco sirve.
+	ref array<ref ExorCfgCarLockTool> herramientas;
+	// classnames de auto que PUEDEN llevar candado. Vacio = TODOS los autos (vanilla,
+	// Raptor, etc.). Si tiene entradas, solo esos.
+	ref TStringArray autos_permitidos;
+	// SteamID64 de ADMINS: abren/cierran/arrancan CUALQUIER auto con candado SIN la clave y
+	// SIN tener que raidear. Bypass total. Editar en autos.json.
+	ref TStringArray admin_steamids;
+
+	void ExorCfgCarLock()
+	{
+		herramientas = new array<ref ExorCfgCarLockTool>;
+		autos_permitidos = new TStringArray;
+		admin_steamids = new TStringArray;
+	}
+
+	// este steamid es admin del candado de autos? (bypass total)
+	bool ExorEsAdmin(string sid)
+	{
+		return admin_steamids && sid != "" && admin_steamids.Find(sid) >= 0;
+	}
+
+	void SetDefaults()
+	{
+		activado = 1;
+		clave_min_largo = 4;
+		clave_max_largo = 8;
+		// bocina corta vanilla, se REPITE cada 1s durante el raid = "TU TU TU" de alarma de auto.
+		// Se manda dentro del RPC al cliente (el cliente no tiene la config del candado sincronizada).
+		// Vacio = sin sonido. Se puede cambiar por cualquier soundset de efecto.
+		alarma_sonido = "CivilianSedan_Horn_Short_SoundSet";
+		herramientas.Clear();
+
+		ExorCfgCarLockTool t1 = new ExorCfgCarLockTool();
+		t1.classname = "Lockpick";
+		t1.acierto_porcentaje = 60.0;
+		t1.segundos_raid = 60;
+		herramientas.Insert(t1);
+
+		ExorCfgCarLockTool t2 = new ExorCfgCarLockTool();
+		t2.classname = "Screwdriver";
+		t2.acierto_porcentaje = 45.0;
+		t2.segundos_raid = 120;
+		herramientas.Insert(t2);
+
+		// cuchillos: combate + los comunes. El de PIEDRA (StoneKnife) NO esta -> no sirve.
+		ExorCfgCarLockTool t3 = new ExorCfgCarLockTool();
+		t3.classname = "CombatKnife";
+		t3.acierto_porcentaje = 35.0;
+		t3.segundos_raid = 180;
+		herramientas.Insert(t3);
+
+		ExorCfgCarLockTool t4 = new ExorCfgCarLockTool();
+		t4.classname = "KitchenKnife";
+		t4.acierto_porcentaje = 35.0;
+		t4.segundos_raid = 180;
+		herramientas.Insert(t4);
+
+		ExorCfgCarLockTool t5 = new ExorCfgCarLockTool();
+		t5.classname = "HuntingKnife";
+		t5.acierto_porcentaje = 35.0;
+		t5.segundos_raid = 180;
+		herramientas.Insert(t5);
+
+		autos_permitidos.Clear();	// vacio = todos los autos
+
+		admin_steamids.Clear();
+		admin_steamids.Insert("76561198038793661");	// "SOY DEM" (admin, mismo que reportes)
+	}
+
+	// devuelve la config de la herramienta si el classname esta habilitado, o null.
+	ExorCfgCarLockTool ExorToolFor(string cls)
+	{
+		if (!herramientas)
+			return null;
+		int i;
+		for (i = 0; i < herramientas.Count(); i++)
+		{
+			ExorCfgCarLockTool t = herramientas.Get(i);
+			if (t && t.classname == cls)
+				return t;
+		}
+		return null;
+	}
+
+	// este classname de auto puede llevar candado?
+	bool ExorAutoPermitido(string cls)
+	{
+		if (!autos_permitidos || autos_permitidos.Count() == 0)
+			return true;	// vacio = todos
+		return autos_permitidos.Find(cls) >= 0;
+	}
+}
+
 class ExorConfig
 {
 	ref ExorCfgStorage storage;
@@ -1700,6 +1821,7 @@ class ExorConfig
 	ref ExorCfgKoth koth;
 	ref ExorCfgNoBuild nobuild;
 	ref ExorCfgCofre cofre;
+	ref ExorCfgCarLock carlock;	// candado de autos (autos.json)
 	bool m_Synced;	// cliente: true cuando ya recibio la config del server
 
 	void ExorConfig()
@@ -1722,6 +1844,7 @@ class ExorConfig
 		koth = new ExorCfgKoth;
 		nobuild = new ExorCfgNoBuild;
 		cofre = new ExorCfgCofre;
+		carlock = new ExorCfgCarLock;
 	}
 
 	// SERVER: serializa la config relevante al cliente a JSON
@@ -1736,6 +1859,8 @@ class ExorConfig
 		d.reparacion = reparacion;
 		d.autorun = autorun;
 		d.permitir_construir_cerca = party.territorio.permitir_construir_cerca;
+		d.carlock_activado = carlock.activado != 0;
+		d.carlock_admins = carlock.admin_steamids;
 		JsonSerializer js = new JsonSerializer();
 		string data;
 		js.WriteToString(d, false, data);
@@ -1766,6 +1891,14 @@ class ExorConfig
 		if (d.autorun)
 			c.autorun = d.autorun;
 		c.party.territorio.permitir_construir_cerca = d.permitir_construir_cerca;
+		if (d.carlock_activado)
+			c.carlock.activado = 1;
+		else
+			c.carlock.activado = 0;
+		if (d.carlock_admins)
+			c.carlock.admin_steamids = d.carlock_admins;
+		// NOTA: el cache de admin del cliente (ExorCarAccessClient.RefreshAdmin) se refresca desde
+		// 4_World (ExorOnConfigSync), no aca: 3_Game no puede referenciar clases de 4_World.
 		c.m_Synced = true;
 	}
 
@@ -1819,6 +1952,7 @@ class ExorConfig
 		c.LoadKoth();
 		c.LoadNoBuild();
 		c.LoadCofre();
+		c.LoadCarLock();
 
 		return c;
 	}
@@ -2011,6 +2145,15 @@ class ExorConfig
 			cofre.Validate();
 			JsonFileLoader<ExorCfgCofre>.JsonSaveFile(ExorStorageConstants.CFG_COFRE, cofre);
 		}
+	}
+
+	void LoadCarLock()
+	{
+		if (FileExist(ExorStorageConstants.CFG_AUTOS))
+			JsonFileLoader<ExorCfgCarLock>.JsonLoadFile(ExorStorageConstants.CFG_AUTOS, carlock);
+		else
+			carlock.SetDefaults();
+		JsonFileLoader<ExorCfgCarLock>.JsonSaveFile(ExorStorageConstants.CFG_AUTOS, carlock);
 	}
 
 	// ---- migracion del settings.json monolitico viejo ----

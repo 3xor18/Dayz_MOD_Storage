@@ -775,6 +775,7 @@ class ExorGroupManager
 		// Si el expulsado habia puesto clave en algun locker, LIMPIARLA (para que el resto del
 		// clan no quede afuera si el se dejo de conectar sin compartirla).
 		ExorVO_Manager.ClearLockerKeysBySetter(targetSid);
+		ExorVO_Manager.ClearCarLocksBySetter(targetSid);	// idem para el candado de autos
 		SaveGroup(g);
 		SyncGroup(g);
 
