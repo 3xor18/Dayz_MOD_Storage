@@ -1264,13 +1264,36 @@ modded class PlayerBase
 		ExorSendParkingList();
 	}
 
+	// SERVER: clan DUEÑO del parking que se esta gestionando = el del territorio donde ESTA
+	// la maquina, NO el del jugador que la abre.
+	//
+	// Antes se usaba el grupo del jugador y eso hacia dos cosas mal: abrir el parking de otro
+	// clan mostraba TUS autos (no los de esa base), y peor, en horario de raid te dejaba
+	// SACAR tus propios autos adentro de la base ajena (teletransporte de flota). Con el
+	// grupo del territorio, el parking siempre habla de los autos de ESA base: los miembros
+	// los guardan y los sacan, y un raider en horario libre solo puede sacar los del dueño
+	// (aparecen ahi, hay que robarlos manejando) pero nunca meter los suyos.
+	//
+	// Si el punto no cae en ningun territorio (al dueño se le cayo el mastil), se cae al
+	// grupo del jugador para no dejar al clan sin acceso a sus propios autos guardados.
+	string ExorParkingOwnerGroup()
+	{
+		ExorTerritoryManager tm = ExorTerritoryManager.Get();
+		string owner;
+		if (tm)
+			owner = tm.GroupAtPos(m_ExorParkingPos);
+		if (owner == "")
+			owner = ExorGetGroupId();
+		return owner;
+	}
+
 	// SERVER: arma el JSON (almacenados + reales) y lo manda al cliente (en trozos).
 	// El mismo RPC ABRE el menu (si no estaba) o lo REFRESCA (si ya estaba).
 	void ExorSendParkingList()
 	{
 		if (!GetGame().IsServer() || !m_ExorParkingActive)
 			return;
-		string json = ExorParkingNet.BuildJson(m_ExorParkingPos, ExorGetGroupId());
+		string json = ExorParkingNet.BuildJson(m_ExorParkingPos, ExorParkingOwnerGroup());
 		ExorNetChunk.Send(this, GetIdentity(), ExorRPC.PARKING_OPEN, json);
 	}
 
@@ -1309,7 +1332,10 @@ modded class PlayerBase
 			ExorSendParkingList();	// ya no esta: refrescar y salir
 			return;
 		}
-		string reason = ExorVehicleGarage.Virtualize(target, ExorGetGroupId());
+		// el auto se guarda a nombre del clan DUEÑO de la base, no del que aprieta el boton
+		// (asi un raider no puede quedarse con el auto ajeno metiendolo a su propio garage;
+		// de hecho el guard de "jugadores ajenos cerca" ya le va a rebotar la accion).
+		string reason = ExorVehicleGarage.Virtualize(target, ExorParkingOwnerGroup());
 		if (reason != "")
 			ExorMuebleRules.SendRed(this, "No se pudo guardar el auto: " + reason);
 		else
@@ -1328,7 +1354,10 @@ modded class PlayerBase
 			ExorMuebleRules.SendRed(this, deny);
 			return;
 		}
-		string reason = ExorVehicleGarage.Spawn(id, ExorGetGroupId());
+		// se saca contra el clan DUEÑO del parking: un miembro saca los suyos, y un raider en
+		// horario libre puede sacar los de la base que esta raideando (aparecen ahi, hay que
+		// llevarselos manejando), pero NUNCA los de su propio clan en una base ajena.
+		string reason = ExorVehicleGarage.Spawn(id, ExorParkingOwnerGroup());
 		if (reason != "")
 			ExorMuebleRules.SendRed(this, "No se pudo sacar el auto: " + reason);
 		else

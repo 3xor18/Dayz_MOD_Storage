@@ -54,7 +54,15 @@ class ExorActionPackParking : ActionContinuousBase
 
 		// GUARD "sin autos dentro": si el clan tiene autos VIRTUALIZADOS, no dejar empaquetar
 		// (se quedarian sin donde recuperarse). Hay que sacarlos todos primero.
-		string groupId = player.ExorGetGroupId();
+		// el grupo a chequear es el DUEÑO del territorio donde esta el parking, no el del que
+		// empaqueta (un staff con bypass tiene otro grupo -o ninguno- y el chequeo miraba la
+		// lista equivocada). Sin territorio, se cae al grupo del jugador.
+		string groupId;
+		ExorTerritoryManager tmPack = ExorTerritoryManager.Get();
+		if (tmPack)
+			groupId = tmPack.GroupAtPos(parking.GetPosition());
+		if (groupId == "")
+			groupId = player.ExorGetGroupId();
 		array<string> virtIds, virtNames;
 		ExorVehicleGarage.ListForGroup(groupId, virtIds, virtNames);
 		if (virtIds.Count() > 0)

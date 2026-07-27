@@ -33,6 +33,9 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	protected bool m_ExorRegPosInit;
 	protected bool m_ExorVirt;        // los items reales estan SACADOS del mundo (estan en el JSON)
 	protected bool m_ExorSnapDirty;   // hubo cambios de cargo sin volcar todavia al JSON
+	protected int  m_ExorDirtySinceMs;// uptime ms del PRIMER cambio sucio sin volcar (debounce)
+	// el ultimo restore dejo items afuera -> re-capturar achicaria el JSON (ver ExorVirtualize)
+	protected bool m_ExorRestoreParcial;
 	protected bool m_ExorLoadDone;    // ya se reconcilio JSON vs persistencia tras cargar
 	protected bool m_ExorRestoring;   // estamos recreando items DESDE el JSON (no marcar dirty)
 	protected bool m_ExorFloorCleaned;// ya se limpio el piso (drops de DayZ) tras este arranque
@@ -40,6 +43,16 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	void Exor_Barrel_Base()
 	{
 		RegisterNetSyncVariableBool("m_ExorVirtualizedSync");
+	}
+
+	// Marca que hay contenido sin volcar al JSON. Arranca el reloj del debounce solo en el
+	// PRIMER cambio de la tanda (si no, un jugador acomodando el barril reiniciaria el reloj
+	// con cada item y no se guardaria nunca mientras siga tocando).
+	void ExorMarkSnapDirty()
+	{
+		if (!m_ExorSnapDirty)
+			m_ExorDirtySinceMs = GetGame().GetTime();
+		m_ExorSnapDirty = true;
 	}
 
 	// ------------------------- DEBUG temporal (sacar al terminar) -------------------------
@@ -317,6 +330,12 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		{
 			ExorRestoreIfNeeded();
 			m_ExorLastInteractMs = GetGame().GetTime();
+			// ABRIR = "puede haber cambiado algo que los hooks NO ven". EECargoIn/EECargoOut
+			// solo se disparan por lo que entra o sale del BARRIL EN SI; lo que el jugador
+			// mete o saca DENTRO de una mochila que ya estaba en el barril no dispara nada.
+			// Sin esto el JSON se quedaba con la foto vieja y al virtualizar se borraban del
+			// mundo items que el archivo no tenia = municion perdida (lo que reportan).
+			ExorMarkSnapDirty();
 			if (ExorStorageConstants.DEBUG_BARRELS)
 			{
 				int totalCargo;
@@ -334,6 +353,11 @@ class Exor_Barrel_Base : Barrel_ColorBase
 			int now = GetGame().GetTime();
 			m_ExorLastInteractMs = now;
 			m_ExorLastCloseMs = now;
+			// CERRAR = ultima oportunidad de leer el contenido REAL: con la tapa cerrada ya
+			// no se puede tocar nada hasta la proxima apertura. Marcarlo sucio garantiza el
+			// volcado final aunque el ultimo cambio haya sido DENTRO de una mochila (eso no
+			// dispara ningun hook del barril).
+			ExorMarkSnapDirty();
 			ExorDbg("Close (tapa cerrada; auto-cierre o manual)");
 		}
 	}
@@ -409,10 +433,20 @@ class Exor_Barrel_Base : Barrel_ColorBase
 			// GUARDADO EN VIVO (con cupo del manager): si hubo cambios de cargo, volcar el
 			// contenido al JSON. SOLO si NO esta virtualizado (un virtualizado tiene cargo
 			// vacio a proposito y su JSON es la verdad -> jamas pisarlo con un vacio).
-			if (m_ExorSnapDirty && !m_ExorVirt && allowSnapshot)
+			// DEBOUNCE (igual que los muebles): mientras el barril esta ABIERTO el jugador
+			// sigue acomodando y cada snapshot reserializa el barril ENTERO y reescribe el
+			// archivo completo. Se espera SNAP_DEBOUNCE_MS desde el primer cambio en vez de
+			// escribir en cada tick de 5 s.
+			if (m_ExorSnapDirty && !m_ExorVirt && allowSnapshot && now - m_ExorDirtySinceMs >= ExorStorageConstants.SNAP_DEBOUNCE_MS)
 			{
 				ExorWriteSnapshot();
 				didSnapshot = true;
+				// SIGUE ABIERTO -> volver a marcarlo sucio: lo que el jugador mueva DENTRO de
+				// una mochila del barril despues de este guardado no dispara ningun hook, y
+				// si quedara limpio ese cambio no llegaria nunca al JSON (se revertia al
+				// virtualizar). Asi el guardado sigue corriendo cada SNAP_DEBOUNCE_MS y el
+				// volcado del cierre lee siempre el contenido REAL.
+				ExorMarkSnapDirty();
 			}
 			if (cerrarMs > 0 && now - m_ExorLastInteractMs > cerrarMs)
 			{
@@ -466,7 +500,7 @@ class Exor_Barrel_Base : Barrel_ColorBase
 			else
 			{
 				m_ExorLastInteractMs = GetGame().GetTime();
-				m_ExorSnapDirty = true;	// cambio REAL del player -> volcar al JSON (throttle en el tick)
+				ExorMarkSnapDirty();	// cambio REAL del player -> volcar al JSON (throttle en el tick)
 				ExorDbg("EECargoIn (player METIO item) item=" + it);
 			}
 		}
@@ -485,7 +519,7 @@ class Exor_Barrel_Base : Barrel_ColorBase
 			else
 			{
 				m_ExorLastInteractMs = GetGame().GetTime();
-				m_ExorSnapDirty = true;
+				ExorMarkSnapDirty();
 				ExorDbg("EECargoOut (player SACO item) item=" + it);
 			}
 		}
@@ -523,10 +557,13 @@ class Exor_Barrel_Base : Barrel_ColorBase
 				toDelete.Insert(it);
 		}
 
-		// SOLO reescribir el JSON si el PLAYER cambio algo (dirty). Si no cambio nada (recien
-		// restaurado), el JSON YA es la verdad -> NO reescribir. ASI un restore donde un item
-		// no entro (cayo afuera) NUNCA achica el JSON -> el loot nunca se pierde, se reintenta.
-		if (m_ExorSnapDirty)
+		// Volcar el contenido REAL al JSON antes de sacarlo del mundo. Abrir el barril ya lo
+		// marca sucio (ver Open()), asi que los cambios que los hooks no ven -balas metidas
+		// dentro de una mochila que ya estaba en el barril- igual quedan guardados.
+		// EXCEPCION: si el ultimo restore quedo INCOMPLETO (un item no entro y quedo afuera),
+		// re-capturar achicaria el JSON y ESO si perderia loot -> se conserva el archivo
+		// entero y se reintenta la proxima vez.
+		if (m_ExorSnapDirty && !m_ExorRestoreParcial)
 			ExorWriteSnapshot();
 
 		if (toDelete.Count() == 0)
@@ -662,8 +699,14 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		if (podados > 0)
 			Print(string.Format("%1 GUARD: barril %2 -> %3 item(s) corruptos descartados antes de restaurar", ExorStorageConstants.LOG, ExorGetID(), podados));
 		m_ExorRestoring = true;
+		ExorVO_Serializer.ResetFallosUbicacion();
 		ExorVO_Serializer.RestoreItemsBigFirst(f.items, this, hidden);
 		m_ExorRestoring = false;
+		// Si algo no entro (quedo suelto en el piso), este barril NO puede re-capturar su
+		// contenido al virtualizar: lo achicaria y ese item se perderia. Ver ExorVirtualize.
+		m_ExorRestoreParcial = ExorVO_Serializer.FallosUbicacion() > 0;
+		if (m_ExorRestoreParcial)
+			Print(string.Format("%1 AVISO: el barril %2 restauro INCOMPLETO -> no se re-captura el contenido (se conserva el JSON entero)", ExorStorageConstants.LOG, ExorGetID()));
 
 		// el JSON NO se borra (es la verdad permanente). m_ExorVirt=false evita re-restaurar.
 		m_ExorVirt = false;

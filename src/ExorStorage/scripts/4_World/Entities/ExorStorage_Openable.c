@@ -34,6 +34,8 @@ class Exor_OpenableStorage : Container_Base
 	protected bool m_ExorLoadDone;		// ya se reconcilio JSON vs persistencia tras cargar
 	protected bool m_ExorRestoring;		// recreando items DESDE el JSON (no marcar dirty)
 	protected bool m_ExorFloorCleaned;	// ya se limpio el piso (drops de DayZ) tras el arranque
+	// el ultimo restore dejo items afuera -> re-capturar achicaria el JSON (ver ExorVirtualize)
+	protected bool m_ExorRestoreParcial;
 
 	// ---- CLAVE (code-lock, solo lockers) ----
 	protected string m_ExorLockKey;			// "" = sin clave. Persistido. SOLO server la conoce.
@@ -370,6 +372,15 @@ class Exor_OpenableStorage : Container_Base
 		{
 			ExorRestoreIfNeeded();		// recrear items del JSON si estaba virtualizado
 			m_ExorLastInteractMs = GetGame().GetTime();
+			// ABRIR = "puede haber cambiado algo que los hooks NO ven". EECargoIn/EECargoOut y
+			// EEItemAttached/Detached solo se disparan por lo que entra o sale del MUEBLE EN SI;
+			// lo que el jugador mete o saca DENTRO de una mochila (o una prenda) que ya estaba
+			// adentro no dispara NADA. Con el mueble marcado limpio, el JSON se quedaba con la
+			// foto vieja y al virtualizar se borraban del mundo items que el archivo no tenia:
+			// esas son las balas que los jugadores guardan y no vuelven a aparecer. Marcarlo
+			// sucio al abrir hace que los tres caminos de guardado (debounce con el mueble
+			// abierto, cierre y virtualizado) vuelvan a leer el contenido REAL.
+			ExorMarkSnapDirty();
 		}
 		ExorUpdateDoorAnim();
 	}
@@ -386,6 +397,11 @@ class Exor_OpenableStorage : Container_Base
 			int now = GetGame().GetTime();
 			m_ExorLastInteractMs = now;
 			m_ExorLastCloseMs = now;
+			// CERRAR = ultima oportunidad de leer el contenido REAL. Con el mueble cerrado su
+			// inventario (y el de sus attachments) queda bloqueado, asi que lo que se guarde
+			// aca ya no puede cambiar hasta la proxima apertura. Marcarlo sucio garantiza ese
+			// volcado final aunque el ultimo cambio haya sido dentro de una mochila.
+			ExorMarkSnapDirty();
 		}
 		ExorUpdateDoorAnim();
 	}
@@ -485,22 +501,54 @@ class Exor_OpenableStorage : Container_Base
 	// ECE_PLACE_ON_SURFACE = entidad real). Sin esto queda una "caja acostada" huerfana pickeable
 	// al lado (nuestro OnPlacementComplete borra el packed y el hologram no limpia su proyeccion).
 	// Se usa tanto al deployar OK como al BLOQUEAR (limite de muebles). 'keep' = el mueble deployado.
+	// Ese objeto es la proyeccion VIVA del holograma de algun jugador que esta colocando?
+	// Se consulta antes de borrar un _Ghost: ver la nota de ExorSweepGhosts.
+	static bool ExorEsProyeccionViva(Object o)
+	{
+		if (!o)
+			return false;
+		array<Man> players = new array<Man>;
+		GetGame().GetPlayers(players);
+		int i;
+		for (i = 0; i < players.Count(); i++)
+		{
+			PlayerBase p = PlayerBase.Cast(players.Get(i));
+			if (!p)
+				continue;
+			Hologram h = p.GetHologramServer();
+			if (h && h.GetProjectionEntity() == o)
+				return true;
+		}
+		return false;
+	}
+
 	static void ExorSweepGhosts(PlayerBase pb, vector pos, EntityAI keep)
 	{
-		if (pb)
-		{
-			Hologram holo = pb.GetHologramServer();
-			if (holo && holo.GetProjectionEntity())
-				GetGame().ObjectDelete(holo.GetProjectionEntity());
-		}
-		// la ref del hologram suele venir ya nula -> barrer por POSICION cualquier _Ghost cercano
+		// NUNCA borrar un _Ghost que todavia es la proyeccion de un holograma VIVO.
+		// Vanilla (actiondeployobject.c:67) hace, en CADA frame mientras dura la accion de
+		// colocar, GetHologramServer().GetProjectionEntity().GetPosition(): si le sacamos la
+		// proyeccion por abajo, el jugador sigue "placing" (m_HologramServer != null) pero
+		// GetProjectionEntity() ya es null -> Virtual Machine Exception por frame hasta que
+		// termina la accion. Eso son las rafagas de excepciones que aparecen en el RPT del
+		// server justo despues de cada "mueble seteado" (167 en 3 dias, una de 152 seguidas):
+		// cada excepcion escribe stack trace a disco = hitch de frame.
+		// La proyeccion del que ACABA de colocar la borra vanilla una linea despues de
+		// nuestro OnPlacementComplete (PlacingCompleteServer), asi que no hay que tocarla.
+		// Lo que si hay que barrer son las proyecciones HUERFANAS (hologramas que ya murieron
+		// pero dejaron su _Ghost pickeable al lado del mueble): esas no pertenecen a ningun
+		// jugador colocando, asi que pasan el filtro y se borran igual que antes.
 		array<Object> objs = new array<Object>;
 		array<CargoBase> prx = new array<CargoBase>;
 		GetGame().GetObjectsAtPosition3D(pos, 4.0, objs, prx);
 		foreach (Object o : objs)
 		{
-			if (o && o != keep && o.GetType().Contains("_Ghost"))
-				GetGame().ObjectDelete(o);
+			if (!o || o == keep)
+				continue;
+			if (!o.GetType().Contains("_Ghost"))
+				continue;
+			if (ExorEsProyeccionViva(o))
+				continue;	// holograma vivo (el que coloca, o un companero colocando al lado)
+			GetGame().ObjectDelete(o);
 		}
 	}
 
@@ -776,8 +824,13 @@ class Exor_OpenableStorage : Container_Base
 			}
 		}
 
-		// solo reescribir si el player cambio algo (dirty); si no, el JSON ya es la verdad.
-		if (m_ExorSnapDirty)
+		// Volcar el contenido REAL al JSON antes de sacarlo del mundo. Abrir el mueble ya lo
+		// marca sucio (ver Open()), asi que cualquier cambio que los hooks no vean -balas
+		// metidas en la mochila de un slot- igual queda guardado antes de borrar los items.
+		// EXCEPCION: si el ultimo restore quedo INCOMPLETO (algo no entro y quedo en el
+		// piso), re-capturar achicaria el JSON y ESO si perderia loot -> se conserva el
+		// archivo entero y se reintenta la proxima vez.
+		if (m_ExorSnapDirty && !m_ExorRestoreParcial)
 			ExorWriteSnapshot();
 
 		if (toDelete.Count() == 0)
@@ -869,6 +922,7 @@ class Exor_OpenableStorage : Container_Base
 		if (podados > 0)
 			Print(string.Format("%1 GUARD: mueble %2 -> %3 item(s) corruptos descartados antes de restaurar", ExorStorageConstants.LOG, ExorGetID(), podados));
 		m_ExorRestoring = true;
+		ExorVO_Serializer.ResetFallosUbicacion();
 		// attachments PRIMERO (armas/ropa a sus slots), luego el cargo
 		if (f.att)
 		{
@@ -877,6 +931,11 @@ class Exor_OpenableStorage : Container_Base
 		}
 		ExorVO_Serializer.RestoreItemsBigFirst(f.items, this, hidden);
 		m_ExorRestoring = false;
+		// Si algo no entro (quedo suelto en el piso), este mueble NO puede re-capturar su
+		// contenido al virtualizar: lo achicaria y ese item se perderia. Ver ExorVirtualize.
+		m_ExorRestoreParcial = ExorVO_Serializer.FallosUbicacion() > 0;
+		if (m_ExorRestoreParcial)
+			Print(string.Format("%1 AVISO: el mueble %2 restauro INCOMPLETO -> no se re-captura el contenido (se conserva el JSON entero)", ExorStorageConstants.LOG, ExorGetID()));
 
 		m_ExorVirt = false;
 		m_ExorVirtualizedSync = false;
@@ -1076,6 +1135,14 @@ class Exor_OpenableStorage : Container_Base
 			{
 				ExorWriteSnapshot();
 				didSnapshot = true;
+				// SIGUE ABIERTO -> se vuelve a marcar sucio. Mientras el mueble esta abierto
+				// el jugador puede seguir moviendo cosas DENTRO de una mochila o una prenda
+				// que ya estaba adentro, y eso no dispara NINGUN hook del mueble. Si lo
+				// dejaramos limpio, ese cambio posterior al guardado quedaba fuera del JSON y
+				// al virtualizar se revertia (probado in-game: sacar una pila de la mochila
+				// despues del guardado periodico y volver a encontrarla). Re-marcarlo deja el
+				// guardado corriendo cada SNAP_DEBOUNCE_MS y garantiza el volcado del cierre.
+				ExorMarkSnapDirty();
 			}
 			if (cerrarMs > 0 && now - m_ExorLastInteractMs > cerrarMs)
 				Close();

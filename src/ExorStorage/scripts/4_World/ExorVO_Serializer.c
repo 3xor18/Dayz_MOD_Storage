@@ -45,6 +45,17 @@ class ExorVO_ContainerFile
 
 class ExorVO_Serializer
 {
+	// ------------------------- RESTORE INCOMPLETO -------------------------
+	// Contador de items que NO se pudieron meter en el contenedor al restaurar (ni en su
+	// parent anidado ni en la raiz: quedaron sueltos en el piso). Lo usa el contenedor para
+	// decidir si puede re-capturar su contenido al virtualizar: si el ultimo restore quedo
+	// incompleto, RE-capturar achicaria el JSON y ese loot se perderia de verdad -> en ese
+	// caso se conserva el JSON viejo (que sigue teniendo todo) y se reintenta la proxima vez.
+	static int s_FallosUbicacion;
+
+	static void ResetFallosUbicacion() { s_FallosUbicacion = 0; }
+	static int  FallosUbicacion()      { return s_FallosUbicacion; }
+
 	// ------------------------- CAPTURA -------------------------
 	static ExorVO_ItemData CaptureItem(EntityAI e)
 	{
@@ -413,6 +424,9 @@ class ExorVO_Serializer
 				// raiz para que sea visible/recuperable (no perderlo bajo tierra).
 				if (root)
 					e.SetPosition(root.GetPosition());
+				// marcar el restore como INCOMPLETO: este item existe en el mundo pero NO
+				// esta adentro del contenedor -> re-capturar ahora lo borraria del JSON.
+				s_FallosUbicacion++;
 				Print(string.Format("%1 AVISO: '%2' no entro en '%3' ni en la raiz (lleno) -> queda en el piso", ExorStorageConstants.LOG, data.type, parent.GetType()));
 			}
 		}

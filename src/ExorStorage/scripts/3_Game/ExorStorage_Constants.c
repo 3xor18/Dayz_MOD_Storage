@@ -4,12 +4,12 @@
 class ExorStorageConstants
 {
 	static const string MOD_NAME = "3xor_Vanilla_Optimization";
-	static const string MOD_VERSION = "2.11.0";
+	static const string MOD_VERSION = "2.11.1";
 	// Sello de build: SUBIRLO EN CADA EMPAQUE, aunque no cambie MOD_VERSION. Sirve para
 	// saber desde el RPT que PBO esta corriendo el server (el de version sola no alcanza:
 	// se desplego 2.9.1 con MOD_VERSION todavia en "2.8.0" y los logs pre/post deploy
 	// salieron identicos -> imposible confirmar si el deploy habia entrado).
-	static const string MOD_BUILD = "2026-07-24";
+	static const string MOD_BUILD = "2026-07-27";
 	static const string LOG = "[3xorVO]";
 	// DEBUG temporal del ciclo de vida del barril (setear/levantar/abrir/cerrar/item
 	// in-out/virtualizar/restaurar/load/save/shutdown). Poner en false (o borrar las
@@ -145,7 +145,14 @@ class ExorStorageConstants
 	// consume WEIGHT del cupo -> un tick nunca apila varios muebles caros (el resto espera al
 	// proximo, el cursor rotativo garantiza que a todos les toca). NO se aplica al reconcile
 	// (cupo chico y critico para el loot post-crash). Ajustar si los slow ticks persisten.
-	static const int MUEBLE_BUDGET_WEIGHT = 4;
+	// 4 -> 6 (27-jul): con peso 4 un tick podia apilar 3 snapshots + 3 virtualizados de
+	// mueble; los TICK-LENTO del server real muestran justo eso (202 ms en un tick con 3 ops
+	// de mueble, o sea ~67 ms por op). Ademas ahora se guarda mas seguido -abrir el mueble
+	// marca sucio, que es lo que arregla la perdida de municion en contenedores anidados- asi
+	// que conviene repartir esas escrituras en mas ticks en vez de apilarlas. Con peso 6 el
+	// tope por tick baja a 2 snapshots + 2 virtualizados. No se pierde trabajo: el cursor
+	// rotativo garantiza que al que no le toco este tick le toca en el siguiente (5 s).
+	static const int MUEBLE_BUDGET_WEIGHT = 6;
 
 	// Maximo de BOLSAS DE CADAVER que hacen el chequeo CARO (proximidad -> virtualizar/
 	// restaurar) por tick. Medido en produccion 22-jul (test con admin spawneando sets: 564
