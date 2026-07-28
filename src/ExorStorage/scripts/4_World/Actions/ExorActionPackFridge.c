@@ -102,8 +102,10 @@ class ExorActionPackFridge : ActionContinuousBase
 		packed.SetOrientation(ori);
 		packed.SetHealth01("", "", health);
 
-		// baja del registro del self-heal: el player lo saca a proposito -> NO recrearlo.
-		ExorMuebleRegistry.Unregister(fur.ExorGetID());
+		// El player lo saca a proposito -> el self-heal NO lo recrea. Pero el registro NO se
+		// borra: queda marcado como empaquetado (quien/cuando/donde), que es lo unico con lo
+		// que se puede devolver el mueble si la persistencia despues pierde el item.
+		ExorMuebleRegistry.RegisterPacked(fur.ExorGetID(), packedType, pos, packer);
 
 		GetGame().ObjectDelete(fur);
 		Print("[3xorStorage] Mueble empaquetado -> " + packedType + " en " + pos.ToString());

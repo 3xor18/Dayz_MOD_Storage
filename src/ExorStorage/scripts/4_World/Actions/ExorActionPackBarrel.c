@@ -71,10 +71,12 @@ class ExorActionPackBarrel : ActionContinuousBase
 		packed.SetOrientation(ori);
 		packed.SetHealth01("", "", health);
 
-		// BAJA DEL REGISTRO del self-heal: el player lo saco A PROPOSITO. Sin esto el barril
-		// volveria a aparecer solo. Cualquier OTRA desaparicion (despawn del motor, cuarentena
+		// El player lo saco A PROPOSITO -> el self-heal NO lo recrea (sin esto el barril
+		// volveria a aparecer solo). Cualquier OTRA desaparicion (despawn del motor, cuarentena
 		// de persistencia) deja el registro -> se recrea con su contenido. Ver ExorMuebleRegistry.
-		ExorMuebleRegistry.Unregister(barrel.ExorGetID());
+		// El registro NO se borra: se marca como empaquetado, asi queda comprobante de quien se
+		// lo llevo por si la persistencia despues pierde el item empaquetado.
+		ExorMuebleRegistry.RegisterPacked(barrel.ExorGetID(), packedType, pos, action_data.m_Player);
 
 		GetGame().ObjectDelete(barrel);
 		Print("[3xorStorage] Barril empaquetado -> " + packedType + " en " + pos.ToString());

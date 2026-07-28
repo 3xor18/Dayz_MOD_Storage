@@ -29,6 +29,12 @@ class ExorMuebleRegFile
 	// seguir borrando: hay que avisarle al player que lo corra de lugar. Los registros viejos
 	// no traen el campo y se leen como 0 -> compatible con lo que ya esta en disco.
 	int		heals;
+	// EMPAQUETADO. 1 = el player lo empaqueto y se lo llevo; el registro NO se borra, queda
+	// como comprobante. Ver RegisterPacked. El self-heal SALTEA estos (recrear un mueble que
+	// alguien tiene en la mochila seria duplicarlo).
+	int		packed;
+	string	owner;		// steamID de quien lo empaqueto (para poder devolverselo)
+	string	packed_at;	// fecha/hora del empaque, en hora del server
 }
 
 class ExorMuebleRegistry
@@ -219,6 +225,8 @@ class ExorMuebleRegistry
 			ExorMuebleRegFile f = regs.Get(i);
 			if (!f || f.type != tipo)
 				continue;
+			if (f.packed == 1)
+				continue;	// comprobante de empaque: no es un huerfano, no se adopta
 			if (vector.Distance(Vector(f.x, f.y, f.z), pos) > EXOR_DUPE_M)
 				continue;
 			// tiene que estar HUERFANO: si hay un mueble vivo con ese id, el registro es de otro
@@ -258,7 +266,52 @@ class ExorMuebleRegistry
 		return false;
 	}
 
-	// baja del registro: SOLO la llama la accion de empaque (player saca el mueble a proposito).
+	// ----------------------------------------------------------------------------
+	// EMPAQUE: el registro NO se borra, se marca.
+	//
+	// El unico estado en el que un mueble no tenia NINGUNA red era el empaquetado. Puesto,
+	// si el motor lo despawnea el self-heal lo devuelve (el registro sigue en disco). Pero al
+	// empaquetarlo se borraba el registro y pasaba a ser un item comun en el inventario de
+	// alguien: si la persistencia lo perdia -el clasico "CEStorageElement::Save ... parent
+	// problem, hierParent:0" que el motor escupe en cada ciclo de guardado- desaparecia sin
+	// dejar rastro y no habia con que devolverselo al jugador.
+	//
+	// Ahora queda un comprobante: tipo, quien lo empaqueto, cuando y donde. NO se recrea solo
+	// (el jugador lo puede tener guardado en una mochila; recrearlo seria duplicarlo), pero
+	// cuando alguien reporta "se me desaparecio el locker" el registro esta ahi para
+	// verificarlo y devolverlo, en vez de ser su palabra contra la nada.
+	//
+	// Empaquetar EXIGE el mueble vacio (ExorCanBePacked), asi que aca nunca hay loot en juego:
+	// lo unico que se puede perder es el mueble.
+	// ----------------------------------------------------------------------------
+	static void RegisterPacked(string id, string packedType, vector pos, PlayerBase quien)
+	{
+		if (!GetGame().IsServer() || id == "")
+			return;
+
+		ExorMuebleRegFile f = new ExorMuebleRegFile();
+		string path = PathFor(id);
+		if (FileExist(path))
+			JsonFileLoader<ExorMuebleRegFile>.JsonLoadFile(path, f);
+
+		f.id = id;
+		if (packedType != "")
+			f.type = packedType;
+		f.x = pos[0];  f.y = pos[1];  f.z = pos[2];
+		f.packed = 1;
+		f.packed_at = ExorRaidLog.TimeStamp();
+		f.owner = "";
+		if (quien && quien.GetIdentity())
+			f.owner = quien.GetIdentity().GetPlainId();
+
+		EnsureDir();
+		JsonFileLoader<ExorMuebleRegFile>.JsonSaveFile(path, f);
+		QuitarDelCache(id);
+		Print(string.Format("%1 EMPAQUE: '%2' (%3) empaquetado por %4 en %5 -> el registro queda como comprobante (no se recrea)", ExorStorageConstants.LOG, id, f.type, f.owner, pos.ToString()));
+	}
+
+	// baja del registro. Ya NO la llama el empaque (ver RegisterPacked); queda para el
+	// remove de admin y para la resolucion de duplicados.
 	static void Unregister(string id)
 	{
 		if (id == "")
@@ -345,6 +398,13 @@ class ExorMuebleRegistry
 
 				ExorMuebleRegFile f = new ExorMuebleRegFile();
 				JsonFileLoader<ExorMuebleRegFile>.JsonLoadFile(string.Format("%1\\%2", ExorStorageConstants.MUEBLES_REG_DIR, fileName), f);
+				// EMPAQUETADO: es un comprobante, no un mueble que falte. Recrearlo seria
+				// duplicarselo al que lo tiene en la mochila.
+				if (f.packed == 1)
+				{
+					more = FindNextFile(h, fileName, attr);
+					continue;
+				}
 				if (f.id != "" && f.type != "" && !alive.Get(f.id))
 				{
 					vector pos = Vector(f.x, f.y, f.z);
@@ -577,11 +637,36 @@ class ExorMuebleRegistry
 		bool huerfanoConLoot = TieneContenido(f.id);
 		bool vivoConLoot = TieneContenido(idVivo);
 
-		// caso c) los dos con contenido -> decision humana
+		// caso c) los DOS con contenido -> se queda el VIVO y el huerfano se archiva.
+		//
+		// Antes esto se dejaba sin resolver esperando decision humana, y el resultado fue que
+		// la misma linea se repitio en CADA arranque durante dias sin que nadie decidiera nada
+		// (una nevera en el server del amigo desde el 26-jul). Regla acordada: sobrevive el
+		// registro del mueble VIVO -es el que el jugador esta usando ahora mismo; el huerfano
+		// es el resto de un OnStoreLoad que fallo- y el otro se saca del medio.
+		//
+		// "Sacar del medio" NO es borrar a lo bruto: el JSON del huerfano se COPIA primero a
+		// storage\descartados\ y recien ahi se da de baja. Si la copia falla no se toca nada y
+		// se vuelve al aviso de antes: preferimos repetir una linea de log a evaporar loot.
 		if (huerfanoConLoot && vivoConLoot)
 		{
-			Print(string.Format("%1 SELF-HEAL: OJO -> DOS registros con contenido en %2 ('%3' huerfano y '%4' vivo, %5). NO se toca ninguno: hay que decidir a mano cual conservar.", ExorStorageConstants.LOG, Vector(f.x, f.y, f.z).ToString(), f.id, idVivo, f.type));
-			return false;
+			string jsonHuerfano = string.Format("%1\\%2.json", ExorStorageConstants.STORAGE_DIR, f.id);
+			string dirDescartes = string.Format("%1\\descartados", ExorStorageConstants.STORAGE_DIR);
+			string jsonRespaldo = string.Format("%1\\%2.json", dirDescartes, f.id);
+
+			if (!FileExist(dirDescartes))
+				MakeDirectory(dirDescartes);
+
+			if (!CopyFile(jsonHuerfano, jsonRespaldo))
+			{
+				Print(string.Format("%1 SELF-HEAL: OJO -> DOS registros con contenido en %2 ('%3' huerfano y '%4' vivo, %5) y NO se pudo respaldar '%3' en %6. No se toca nada.", ExorStorageConstants.LOG, Vector(f.x, f.y, f.z).ToString(), f.id, idVivo, f.type, dirDescartes));
+				return false;
+			}
+
+			DeleteFile(jsonHuerfano);
+			Unregister(f.id);
+			Print(string.Format("%1 SELF-HEAL: duplicado con contenido en %2 (%3) RESUELTO -> se conserva el vivo '%4'; el huerfano '%5' quedo archivado en %6 (si alguien reclama ese loot, esta ahi).", ExorStorageConstants.LOG, Vector(f.x, f.y, f.z).ToString(), f.type, idVivo, f.id, dirDescartes));
+			return true;
 		}
 
 		// caso a) el contenido esta del lado del huerfano -> el mueble vivo adopta ese id

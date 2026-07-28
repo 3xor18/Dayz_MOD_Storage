@@ -315,7 +315,23 @@ class ExorVO_Serializer
 			return null;
 		}
 
-		ApplyScalars(e, data);
+		// CAUSA RAIZ del loot que llegaba DESARMADO a la tumba (235 casos en 3 dias en el
+		// server real: 'M4_MPHndgrd_Black' no entro en 'M4A1', 'PlateCarrierPouches' no entro
+		// en 'PlateCarrierVest', 'Battery9V' no entro en 'Headtorch_Grey'...). Vanilla, en
+		// ItemBase:
+		//     CanPutInCargo(parent)      -> false si parent.IsRuined()
+		//     CanPutAsAttachment(parent) -> false si IsRuined() || parent.IsRuined()
+		// o sea que un contenedor/arma DESTRUIDO rechaza TODO lo que le quieras meter, y un
+		// item destruido no se ata a ningun lado. Como la vida se aplicaba ACA -antes de
+		// colgarle los attachments y el cargo-, el item quedaba ruined en el instante mismo
+		// del armado y despues rebotaba a la raiz todo lo suyo. Por eso fallaban los CINCO
+		// hijos del mismo chaleco: no era capacidad ni slots, era el padre ya destruido.
+		// Tambien es el origen de la VME "[X::SpawnAttachedMagazine] Failed to create and
+		// attach null": el arma ruined no aceptaba el cargador.
+		// ARREGLO: se arma TODO a vida llena y la vida va al FINAL (ver el cierre de esta
+		// funcion). El resto de escalares (cantidad, balas, etapa de comida) no bloquean nada,
+		// asi que se aplican ya.
+		ApplyScalarsSinVida(e, data);
 
 		// 1) ATTACHMENTS mientras 'e' esta SUELTO (cargador/mira/ropa solo enganchan suelto).
 		int i;
@@ -372,8 +388,12 @@ class ExorVO_Serializer
 						nm.SetHealth01("", "", data.health);
 						if (data.ammoCount >= 0)
 							nm.ServerSetAmmoCount(data.ammoCount);
+						// 'e' (el cargador suelto que se habia armado en el piso) se descarta: el
+						// bueno es 'nm', ya adentro del arma. Se RETORNA aca: seguir de largo
+						// dejaria tocando una entidad borrada (SetHealth01 al final de la funcion)
+						// y un cargador no tiene cargo que restaurar.
 						GetGame().ObjectDelete(e);
-						moved = true;
+						return nm;
 					}
 					else
 					{
@@ -422,8 +442,15 @@ class ExorVO_Serializer
 			{
 				// muy raro: ni en el parent ni en la raiz. Subirlo a la SUPERFICIE de la
 				// raiz para que sea visible/recuperable (no perderlo bajo tierra).
+				// PlaceOnSurface ademas lo deja como un objeto de MUNDO en regla. Un item que
+				// quedo a mitad de camino de un movimiento de inventario es justo el que el
+				// motor despues reporta como "CEStorageElement::Save X parent problem,
+				// hierParent:0" en cada ciclo de guardado, y esos no persisten bien.
 				if (root)
+				{
 					e.SetPosition(root.GetPosition());
+					e.PlaceOnSurface();
+				}
 				// marcar el restore como INCOMPLETO: este item existe en el mundo pero NO
 				// esta adentro del contenedor -> re-capturar ahora lo borraria del JSON.
 				s_FallosUbicacion++;
@@ -436,6 +463,13 @@ class ExorVO_Serializer
 		// si. Recursivo: un bolso-en-bolso tambien se mueve VACIO y se llena en su lugar.
 		for (i = 0; i < data.cargo.Count(); i++)
 			RestoreItem(data.cargo.Get(i), e, groundPos, root, false);
+
+		// 4) VIDA AL FINAL. Ahora 'e' ya esta en su lugar y ya tiene adentro todo lo suyo, asi
+		// que recien aca se le pone el daño guardado. Al reves -como estaba- un item ruined
+		// rechaza attachments y cargo (ItemBase.CanPutInCargo / CanPutAsAttachment) y su
+		// contenido terminaba tirado en la raiz de la tumba. Ruinar DESPUES no expulsa nada:
+		// vanilla convive con prendas/armas destruidas llenas todo el tiempo.
+		e.SetHealth01("", "", data.health);
 
 		return e;
 	}
@@ -501,10 +535,20 @@ class ExorVO_Serializer
 		}
 	}
 
-	// aplica los datos escalares (vida, cantidad, balas, etapa de comida) a un item ya creado
+	// aplica los datos escalares (vida, cantidad, balas, etapa de comida) a un item ya creado.
+	// Usarlo SOLO con items HOJA (sin attachments ni cargo que restaurar): si el item todavia
+	// tiene que recibir cosas adentro, va ApplyScalarsSinVida + la vida al final, porque un
+	// item ruined rechaza todo lo que se le quiera meter. Ver el comentario en RestoreItem.
 	static void ApplyScalars(EntityAI e, ExorVO_ItemData d)
 	{
 		e.SetHealth01("", "", d.health);
+		ApplyScalarsSinVida(e, d);
+	}
+
+	// idem pero SIN tocar la vida (queda a full hasta que el item este armado y ubicado).
+	// Nada de esto bloquea el inventario: cantidad, balas y etapa de comida son inocuas.
+	static void ApplyScalarsSinVida(EntityAI e, ExorVO_ItemData d)
+	{
 		ItemBase ib = ItemBase.Cast(e);
 		if (ib && d.quantity >= 0)
 			ib.SetQuantity(d.quantity);
@@ -573,10 +617,13 @@ class ExorVO_Serializer
 			for (j = 0; j < d.cargo.Count(); j++)
 				DrainRuinedTree(d.cargo.Get(j), top);
 
-		// si 'd' esta ruined y tiene cargo -> sacarlo al nivel superior
-		if (IsRuined(d) && d.cargo && d.cargo.Count() > 0)
+		bool ruinado = IsRuined(d);
+		int k;
+
+		// CARGO de un contenedor ruined -> al cargo de la tumba. Nadie puede abrir una prenda
+		// rota anidada, asi que adentro el loot queda atrapado.
+		if (ruinado && d.cargo && d.cargo.Count() > 0)
 		{
-			int k;
 			for (k = 0; k < d.cargo.Count(); k++)
 			{
 				ExorVO_ItemData c = d.cargo.Get(k);
@@ -589,6 +636,38 @@ class ExorVO_Serializer
 				top.Insert(c);
 			}
 			d.cargo.Clear();
+		}
+
+		// ATTACHMENTS: sale SOLO el que esta destruido, mire como mire el padre.
+		//
+		// Un M4A1 destruido con el handguard y la culata sanos llega a la tumba CON el handguard
+		// y la culata puestos; solo la mira y el cargador rotos caen sueltos. Es lo que manda
+		// vanilla igual: ItemBase.CanPutAsAttachment devuelve false si el propio item esta
+		// ruined, asi que atar uno roto no era una opcion.
+		//
+		// OJO, error que estuvo aca: tambien se sacaban los attachments SANOS cuando el padre
+		// estaba roto, por miedo a que quedaran inalcanzables. Falso. EntityAI.AreChildrenAccessible
+		// corta por CARGO, no por vida: a un arma metida en un contenedor no le podes sacar la
+		// mira este rota o sana -sacas el arma del contenedor y ahi la desarmas-. Es DayZ normal
+		// y pasa con cualquier arma en cualquier barril. El resultado del miedo era peor: un
+		// handguard al 100% tirado suelto en la tumba en vez de puesto en su arma.
+		//
+		// Se recorre al reves y se saca uno por uno porque casi siempre es un caso MIXTO (unos
+		// attachments rotos y otros sanos): no se puede vaciar la lista entera.
+		if (d.attachments && d.attachments.Count() > 0)
+		{
+			for (k = d.attachments.Count() - 1; k >= 0; k--)
+			{
+				ExorVO_ItemData a = d.attachments.Get(k);
+				if (!a)
+					continue;
+				if (!IsRuined(a))
+					continue;	// sano -> se queda en su slot
+				a.cargo_row = -1;
+				a.cargo_col = -1;
+				top.Insert(a);
+				d.attachments.Remove(k);
+			}
 		}
 	}
 
