@@ -243,6 +243,35 @@ class ExorVO_Manager
 		// igual; nada desaparece. Se calcula 1 vez por tick, no por barril.
 		bool pauseVirt = cfg.storage.pausar_virt_en_raid && ExorMuebleRules.IsLootFreeNow();
 
+		// ANTI-DUPE: faltando pocos minutos para un reinicio PROGRAMADO, cerrar y virtualizar
+		// todo a la fuerza. Asi el server se apaga con los cargos vacios y al cargar no se
+		// cumple "justReconciled && ExorCargoCount() > 0" -> la ruta del restore duplicado
+		// no se puede disparar. No cubre las caidas del host (no avisan); para eso esta el
+		// GUARD de ExorDoRestore, que es el que cierra el agujero al 100%.
+		// Costo real: casi todo ya esta virtualizado (se auto-virtualiza a los pocos segundos
+		// de cerrarse), asi que este pase solo toca el punado que alguien esta usando.
+		// Ignora pauseVirt a proposito: si el reinicio cae en horario de raid, igual hay que
+		// dejar todo virtualizado.
+		if (ExorStorageBootLock.CercaDeReinicio(cfg.storage))
+		{
+			int forzados = 0;
+			int fb;
+			for (fb = m_Barrels.Count() - 1; fb >= 0; fb--)
+			{
+				Exor_Barrel_Base bPre = m_Barrels.Get(fb);
+				if (bPre && bPre.ExorForzarVirtualizar())
+					forzados++;
+			}
+			for (fb = m_Openables.Count() - 1; fb >= 0; fb--)
+			{
+				Exor_OpenableStorage oPre = m_Openables.Get(fb);
+				if (oPre && oPre.ExorForzarVirtualizar())
+					forzados++;
+			}
+			if (forzados > 0)
+				Print(string.Format("%1 PRE-REINICIO: %2 contenedor(es) cerrados y virtualizados a la fuerza (anti-dupe)", ExorStorageConstants.LOG, forzados));
+		}
+
 		// RESERVA PARA MUEBLES: el bloque de barriles corre primero y, si se comiera todo el
 		// cupo, los muebles no reconciliarian hasta que terminaran los ~657 barriles (y hasta
 		// entonces NO auto-cierran ni virtualizan). Se le guarda la mitad del cupo de

@@ -67,9 +67,18 @@ modded class PlayerBase
 	// flag spawns.equipar_npc_test esta on (SOLO local), lo equipamos con ropa+mochila+armas
 	// para poder matarlo y probar la bolsa de cadaver con loot real. Un jugador REAL tiene
 	// identidad a los pocos segundos -> el chequeo diferido (4s) lo descarta y nunca lo toca.
+	// --- Anti-dupe: momento en que este jugador entro (uptime ms del server) ---
+	// El bloqueo de apertura se mide POR JUGADOR, no desde el arranque de la mision: el que
+	// rushea el barril despues de un reinicio es el que acaba de conectarse, y medirlo desde
+	// la mision no lo agarra (cuando el 1er player entra ya pasaron los segundos).
+	protected int m_ExorConnectMs;
+	int ExorConnectMs() { return m_ExorConnectMs; }
+
 	override void EEInit()
 	{
 		super.EEInit();
+		if (GetGame().IsServer())
+			m_ExorConnectMs = GetGame().GetTime();
 		if (GetGame().IsServer() && GetExorConfig().spawns.equipar_npc_test)
 			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorEquipDummyIfNpc, 4000, false);
 	}

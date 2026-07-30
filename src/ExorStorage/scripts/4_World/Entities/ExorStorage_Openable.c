@@ -363,6 +363,23 @@ class Exor_OpenableStorage : Container_Base
 	// ======================= ABRIR / CERRAR =======================
 	override void Open()
 	{
+		// BLOQUEO DE ARRANQUE + COOLDOWN DE REAPERTURA. Va ANTES de tocar m_IsOpened para no
+		// desincronizar al cliente (mismo patron que el barril). Ojo: hasta ahora este Open()
+		// no tenia NINGUN cooldown -- m_ExorLastCloseMs se escribia en Close() pero no se leia
+		// nunca -> los muebles estaban mas expuestos que el barril.
+		if (GetGame().IsServer())
+		{
+			ExorCfgStorage cfgOpen = GetExorConfig().storage;
+			int nowOpen = GetGame().GetTime();
+			// (la ventana de gracia por jugador se chequea en la accion, que si tiene el player)
+			int cdOpenMs = cfgOpen.cooldown_abrir_segundos * 1000;
+			if (cdOpenMs > 0 && m_ExorLastCloseMs > 0 && nowOpen - m_ExorLastCloseMs < cdOpenMs)
+			{
+				ExorDbg("Open BLOQUEADO (cooldown de reapertura anti-dupe)");
+				return;
+			}
+		}
+
 		m_IsOpened = true;
 		SetSynchDirty();
 		if (GetInventory())
@@ -785,6 +802,16 @@ class Exor_OpenableStorage : Container_Base
 		}
 		if (f.items.Count() == 0 && f.att.Count() == 0)
 		{
+			// BLINDAJE: este DeleteFile es el UNICO punto del mod que destruye loot de forma
+			// irreversible. Un mueble VIRTUALIZADO tiene el cargo vacio A PROPOSITO y su JSON
+			// es la unica copia del contenido -> jamas borrarlo desde aca. Mismo caso mientras
+			// se esta restaurando (el cargo todavia no se lleno).
+			if (m_ExorVirt || m_ExorRestoring)
+			{
+				Print(string.Format("%1 GUARD: mueble %2 -> se EVITO borrar el JSON con un cargo vacio (virt=%3 restaurando=%4)", ExorStorageConstants.LOG, ExorGetID(), m_ExorVirt, m_ExorRestoring));
+				m_ExorSnapDirty = false;	// no reintentar cada tick: no hay nada real que volcar
+				return;
+			}
 			if (FileExist(ExorGetStoragePath()))
 				DeleteFile(ExorGetStoragePath());
 		}
@@ -793,6 +820,21 @@ class Exor_OpenableStorage : Container_Base
 			JsonFileLoader<ExorVO_ContainerFile>.JsonSaveFile(ExorGetStoragePath(), f);
 		}
 		m_ExorSnapDirty = false;
+	}
+
+	// ANTI-DUPE: cierre + virtualizacion FORZADA antes de un reinicio programado
+	// (ver ExorStorageBootLock.CercaDeReinicio). Mismo criterio que el barril: se ignora la
+	// cercania del jugador y, si alguien esta arrastrando un item justo ahi, se prefiere
+	// perder ESE item antes que dejar el mueble explotable. Devuelve true si hizo trabajo.
+	bool ExorForzarVirtualizar()
+	{
+		if (m_ExorVirt || ExorCargoCount() == 0)
+			return false;
+		if (IsOpen())
+			Close();
+		ExorMarkSnapDirty();	// que ExorVirtualize vuelque el contenido REAL al JSON
+		ExorVirtualize();
+		return true;
 	}
 
 	// Saca los items reales del mundo (quedan en el JSON, la verdad permanente).
@@ -894,6 +936,20 @@ class Exor_OpenableStorage : Container_Base
 
 	void ExorDoRestore()
 	{
+		// GUARD ANTI-DUPE (obligatorio). Mismo agujero que el barril, ver ExorStorage_Barrels.c:
+		// ExorRestoreIfNeeded programa un CallLater(ExorDoRestore, 300) y vuelve SIN tocar
+		// m_ExorVirt -> dos aperturas dentro de esa ventana recreaban el JSON dos veces en el
+		// mismo mueble = contenido duplicado. Aca es PEOR que en el barril porque Open() no
+		// tiene cooldown de reapertura (m_ExorLastCloseMs se escribe pero nunca se lee).
+		// Afecta a Exor_Locker, Exor_LockerRojo, Exor_Fridge y Exor_MuebleArmas.
+		// No perder loot: esto solo puede SALTEAR un restore redundante; nunca escribe ni
+		// borra el JSON, y m_ExorVirt queda como estaba (el contenido sigue en disco).
+		if (!m_ExorVirt || m_ExorRestoring)
+		{
+			Print(string.Format("%1 GUARD: mueble %2 -> restore duplicado BLOQUEADO (virt=%3 restaurando=%4)", ExorStorageConstants.LOG, ExorGetID(), m_ExorVirt, m_ExorRestoring));
+			return;
+		}
+
 		string path = ExorGetStoragePath();
 		if (!FileExist(path))
 		{

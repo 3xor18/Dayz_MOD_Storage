@@ -7,9 +7,16 @@
 // ============================================================================
 modded class ActionOpenBarrel
 {
+	// ANTI-DUPE: ventana de gracia al entrar. El que rushea el barril justo despues de un
+	// reinicio es el que acaba de conectarse. El chequeo real vive en Exor_Barrel_Base.Open(),
+	// que es server-side; aca solo le decimos QUIEN esta abriendo (la accion es la unica que
+	// tiene el player). Se hace asi y no en ActionCondition porque esa corre en el CLIENTE.
 	override void OnExecuteServer(ActionData action_data)
 	{
+		if (action_data)
+			ExorStorageBootLock.s_Abriendo = PlayerBase.Cast(action_data.m_Player);
 		super.OnExecuteServer(action_data);
+		ExorStorageBootLock.s_Abriendo = null;
 
 		if (!action_data || !action_data.m_Target)
 			return;

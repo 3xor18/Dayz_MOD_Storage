@@ -51,9 +51,14 @@ class ExorActionOpenCloseFridge : ActionInteractBase
 
 		if (fur.IsOpen())
 		{
-			fur.Close();
+			fur.Close();	// CERRAR siempre se permite: nunca dejar un mueble trabado abierto
 			return;
 		}
+
+		// ANTI-DUPE: ventana de gracia al entrar (ver ExorStorageBootLock). Solo frena ABRIR,
+		// y se chequea aca (server) y no en ActionCondition, que corre en el cliente.
+		if (ExorStorageBootLock.BloqueadoConAviso(action_data.m_Player))
+			return;
 
 		// ABRIR = LOTEAR: si "solo miembros lotean" esta activo y NO es horario libre (raid),
 		// solo los miembros del territorio pueden abrirlo. Si no, aviso rojo y no abre.

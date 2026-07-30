@@ -293,6 +293,16 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		// si quedo vacio, borrar el JSON (barril sin contenido = no hay nada que guardar)
 		if (f.items.Count() == 0)
 		{
+			// BLINDAJE: este DeleteFile es el UNICO punto del mod que destruye loot de forma
+			// irreversible. Un barril VIRTUALIZADO tiene el cargo vacio A PROPOSITO y su JSON
+			// es la unica copia del contenido -> jamas borrarlo desde aca. Mismo caso mientras
+			// se esta restaurando (el cargo todavia no se lleno).
+			if (m_ExorVirt || m_ExorRestoring)
+			{
+				Print(string.Format("%1 GUARD: barril %2 -> se EVITO borrar el JSON con un cargo vacio (virt=%3 restaurando=%4)", ExorStorageConstants.LOG, ExorGetID(), m_ExorVirt, m_ExorRestoring));
+				m_ExorSnapDirty = false;	// no reintentar cada tick: no hay nada real que volcar
+				return;
+			}
 			if (FileExist(ExorGetStoragePath()))
 				DeleteFile(ExorGetStoragePath());
 			ExorDbg("ExorWriteSnapshot: cargo VACIO -> JSON borrado");
@@ -312,6 +322,10 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		{
 			ExorCfgStorage settings = GetExorConfig().storage;
 			int now = GetGame().GetTime();
+			// VENTANA DE GRACIA AL ENTRAR (anti-dupe): el player lo pone la accion en
+			// s_Abriendo (ver ExorActionOpenBarrelLog.c); si es null no bloquea nada.
+			if (ExorStorageBootLock.BloqueadoConAviso(ExorStorageBootLock.s_Abriendo))
+				return;
 			int cdMs = settings.cooldown_abrir_segundos * 1000;
 			if (cdMs > 0 && m_ExorLastCloseMs > 0 && now - m_ExorLastCloseMs < cdMs)
 			{
@@ -539,6 +553,24 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	// Saca los items reales del mundo. El JSON ya esta al dia (guardado en vivo), pero
 	// lo reescribimos por las dudas antes de borrar (crash-safe). El JSON NO se borra:
 	// es la verdad permanente del barril hasta que lo levanten.
+	// ANTI-DUPE: cierre + virtualizacion FORZADA antes de un reinicio programado
+	// (ver ExorStorageBootLock.CercaDeReinicio). Objetivo: llegar al apagado con el cargo
+	// VACIO, para que al cargar no se cumpla "justReconciled && ExorCargoCount() > 0" y la
+	// ruta del restore duplicado no se pueda disparar.
+	// Ignora la cercania del jugador a proposito: si alguien esta arrastrando un item justo
+	// en ese instante, se prefiere perder ESE item antes que dejar el barril explotable
+	// (decision del owner del server). Devuelve true si hizo trabajo.
+	bool ExorForzarVirtualizar()
+	{
+		if (m_ExorVirt || ExorCargoCount() == 0)
+			return false;
+		if (IsOpen())
+			Close();
+		ExorMarkSnapDirty();	// que ExorVirtualize vuelque el contenido REAL al JSON
+		ExorVirtualize();
+		return true;
+	}
+
 	void ExorVirtualize()
 	{
 		GameInventory inv = GetInventory();
@@ -647,6 +679,22 @@ class Exor_Barrel_Base : Barrel_ColorBase
 
 	void ExorDoRestore()
 	{
+		// GUARD ANTI-DUPE (obligatorio). ExorRestoreIfNeeded puede programar un
+		// CallLater(ExorDoRestore, 300) y volver SIN tocar m_ExorVirt: durante esos 300 ms el
+		// barril sigue diciendo "estoy virtualizado", asi que una SEGUNDA apertura programaba
+		// un segundo restore y el JSON se recreaba DOS veces en el mismo cargo = duplicado.
+		// Pasaba solo en la 1ra apertura tras el arranque (justReconciled), que ademas es
+		// cuando el cooldown de reapertura no aplica (m_ExorLastCloseMs = 0).
+		// Todos los caminos legitimos entran aca con m_ExorVirt == true y ExorDoRestore es
+		// SINCRONICA -> el primero en correr lo deja en false y el segundo rebota aca.
+		// No perder loot: esto solo puede SALTEAR un restore redundante; nunca escribe ni
+		// borra el JSON, y m_ExorVirt queda como estaba (el contenido sigue en disco).
+		if (!m_ExorVirt || m_ExorRestoring)
+		{
+			Print(string.Format("%1 GUARD: barril %2 -> restore duplicado BLOQUEADO (virt=%3 restaurando=%4)", ExorStorageConstants.LOG, ExorGetID(), m_ExorVirt, m_ExorRestoring));
+			return;
+		}
+
 		string path = ExorGetStoragePath();
 		if (!FileExist(path))
 		{

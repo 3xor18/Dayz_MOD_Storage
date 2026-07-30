@@ -93,11 +93,27 @@ class ExorCfgStorage
 	// solo_miembros_lotean_muebles y el horario (para admins/moderadores).
 	ref TStringArray bypass_lootear_steamids;
 
+	// ---- ANTI-DUPE (ver el GUARD en ExorDoRestore) ----
+	// La ruta de dupeo exige que el contenedor llegue al apagado SIN virtualizar (con items
+	// reales en el cargo del engine). Cerrando y virtualizando todo antes del reinicio, al
+	// cargar el cargo viene vacio y esa ruta no se puede disparar.
+	// El mod NO puede deducir cuando reinicia el host: el panel mata el proceso y DayZ no
+	// avisa a los scripts. Por eso las horas van a mano. Son hora LOCAL (aplica offset_horas).
+	// Para APAGARLO: cerrar_antes_reinicio_minutos = 0 (vaciar el array NO sirve, se re-siembra).
+	// Esto NO cubre las caidas del host (no avisan); para eso esta el guard de ExorDoRestore.
+	ref TIntArray reinicios_horas;
+	int cerrar_antes_reinicio_minutos = 2;   // 0 = off
+	// Segundos tras el arranque en los que no se puede abrir un contenedor. Es por RENDIMIENTO
+	// (el boot es el momento mas cargado: restores + reconcile + carga del mundo). Como
+	// anti-dupe casi no aporta: el pase de reconcile tarda horas en recorrer todo. 0 = off.
+	int bloqueo_abrir_al_entrar_segundos = 60;
+
 	void ExorCfgStorage()
 	{
 		blacklist = new TStringArray;
 		horario_looteo_libre = new array<ref ExorHorarioLibre>;
 		bypass_lootear_steamids = new TStringArray;
+		reinicios_horas = new TIntArray;
 	}
 
 	void SetDefaults()
@@ -126,6 +142,19 @@ class ExorCfgStorage
 		{
 			bypass_lootear_steamids.Clear();
 			bypass_lootear_steamids.Insert("76561198722396813");	// staff/admin por default (siempre puede lotear)
+		}
+		cerrar_antes_reinicio_minutos = 2;
+		bloqueo_abrir_al_entrar_segundos = 60;
+		if (reinicios_horas)
+		{
+			reinicios_horas.Clear();
+			// ciclo actual del host: cada 4 h
+			reinicios_horas.Insert(0);
+			reinicios_horas.Insert(4);
+			reinicios_horas.Insert(8);
+			reinicios_horas.Insert(12);
+			reinicios_horas.Insert(16);
+			reinicios_horas.Insert(20);
 		}
 	}
 }
@@ -1964,6 +1993,21 @@ class ExorConfig
 			JsonFileLoader<ExorCfgStorage>.JsonLoadFile(ExorStorageConstants.CFG_STORAGE, storage);
 		else
 			storage.SetDefaults();
+		// MIGRACION: un storage.json anterior a esta version no trae reinicios_horas y el
+		// loader lo deja vacio -> sembrar el ciclo de 4 h para que la feature quede activa.
+		// Para APAGARLA hay que poner cerrar_antes_reinicio_minutos = 0, NO vaciar el array
+		// (un array vacio no se puede distinguir de una clave ausente).
+		if (!storage.reinicios_horas)
+			storage.reinicios_horas = new TIntArray;
+		if (storage.reinicios_horas.Count() == 0)
+		{
+			storage.reinicios_horas.Insert(0);
+			storage.reinicios_horas.Insert(4);
+			storage.reinicios_horas.Insert(8);
+			storage.reinicios_horas.Insert(12);
+			storage.reinicios_horas.Insert(16);
+			storage.reinicios_horas.Insert(20);
+		}
 		JsonFileLoader<ExorCfgStorage>.JsonSaveFile(ExorStorageConstants.CFG_STORAGE, storage);
 	}
 
