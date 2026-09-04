@@ -42,8 +42,35 @@ modded class TerritoryFlag
 	// bloquea todo el sistema de daño de la entidad. Se llama en cada rama gestionada de EEInit.
 	// NOTA: en este server los raids son por NWD (muros/puerta), el mastil NO es objetivo raideable,
 	// asi que volverlo intocable no cambia el diseño de raideo.
+	// ------------------------------------------------------------------------
+	//  VIDA DEL MASTIL (por que desaparecia a los dias o semanas)
+	// ------------------------------------------------------------------------
+	// El sintoma reportado -"el mastil se fue solo despues de dias/semanas"- es la firma
+	// exacta del CE: el Central Economy borra los objetos cuyo LIFETIME (el del types.xml)
+	// se agota, y lo hace en silencio, sin nadie cerca y sin daño. Por eso los diagnosticos
+	// anteriores nunca encontraban un culpable en el log: no habia ninguno.
+	//
+	// Hasta ahora la unica defensa era el self-heal (detectarlo despues y recrear el mastil),
+	// que llega tarde -el clan pasa un rato sin su mastil- y encima cuesta un pase de disco.
+	// Esto ataca la causa: se le renueva el reloj al objeto. Es lo mismo que hace vanilla
+	// cuando alguien interactua con algo, solo que sin depender de que alguien pase por ahi.
+	//
+	// Se renueva al crearse Y cada 10 minutos desde el mantenimiento (ver
+	// ExorTerritoryManager.RefrescarVidaMastiles): con un lifetime de 45 dias y un refresco
+	// cada 10 minutos, no hay ventana posible en la que el CE lo alcance.
+	static const float EXOR_MAST_VIDA_SEG = 3888000;	// 45 dias
+
+	void ExorRefrescarVida()
+	{
+		if (!GetGame().IsServer())
+			return;
+		SetLifetimeMax(EXOR_MAST_VIDA_SEG);
+		SetLifetime(EXOR_MAST_VIDA_SEG);
+	}
+
 	void ExorMakeMastImmune()
 	{
+		ExorRefrescarVida();	// no solo indestructible: tampoco lo borra el CE por lifetime
 		if (!GetGame().IsServer())
 			return;
 		SetAllowDamage(false);
@@ -74,23 +101,28 @@ modded class TerritoryFlag
 
 	// Re-aplica la animacion de la tela segun el estado izada/bajada persistido.
 	// La usa ExorPostInit tras cargar (con reintentos por si la tela tarda en colgar).
-	void ExorReapplyFlagVisual()
+	// Devuelve TRUE si de verdad pudo aplicar la animacion (o sea: la tela ya estaba
+	// colgada). El llamador usa eso para reintentar SOLO cuando hace falta, en vez de
+	// agendar reintentos fijos por mastil en cada arranque.
+	bool ExorReapplyFlagVisual()
 	{
 		if (!GetGame().IsServer())
-			return;
-		ExorAnimateCloth(m_ExorFlagRaised);
+			return true;
+		return ExorAnimateCloth(m_ExorFlagRaised);
 	}
 
 	// Anima la tela fisica (si hay una colgada) para que coincida con el estado.
 	// phase 0 = arriba (izada), phase 1 = abajo (bajada) [vanilla esta invertido].
-	void ExorAnimateCloth(bool raised)
+	// false = todavia no hay tela colgada, asi que no hubo nada que animar.
+	bool ExorAnimateCloth(bool raised)
 	{
 		if (!FindAttachmentBySlotName("Material_FPole_Flag"))
-			return;
+			return false;
 		float ph = 1;
 		if (raised)
 			ph = 0;
 		AnimateFlagEx(ph);
+		return true;
 	}
 
 	// ------------------------- invitacion abierta (en el mastil) -------------------------
@@ -347,9 +379,12 @@ modded class TerritoryFlag
 			// Re-aplicar la animacion de la tela para que coincida con el estado
 			// IZADA/BAJADA persistido (si no, tras reiniciar se ve siempre abajo).
 			// Reintentos por si la tela todavia no cargo como attachment.
-			ExorReapplyFlagVisual();
-			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorReapplyFlagVisual, 2000, false);
-			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorReapplyFlagVisual, 5000, false);
+			// Un intento ahora y UNO solo diferido, y ese solo si el primero no encontro la
+			// tela todavia. Antes eran dos reintentos fijos POR MASTIL en CADA arranque:
+			// con muchas bases, decenas de callbacks agendados en el momento mas cargado del
+			// server para reaplicar una animacion que casi siempre ya estaba bien.
+			if (!ExorReapplyFlagVisual())
+				GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorReapplyFlagVisual, 3000, false);
 			return;
 		}
 
@@ -361,9 +396,7 @@ modded class TerritoryFlag
 		// El kit a veces cae DESPUES del deploy (no esta al reclamar), asi que
 		// barremos: ahora (manos + piso) y de nuevo a los 2.5 s, 6 s y 10 s.
 		ExorDeleteNearbyKits(placer);
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanupKitGround, 2500, false);
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanupKitGround, 6000, false);
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanupKitGround, 10000, false);
+		ExorScheduleKitSweep();
 
 		string sid = ExorGroupManager.SteamId(placer);
 		ExorGroup existing = ExorGroupManager.Get().FindByPlayer(sid);
@@ -410,6 +443,7 @@ modded class TerritoryFlag
 				m_ExorGroupId = existing.id;
 				vector rpA = GetPosition();
 				existing.mast_x = rpA[0]; existing.mast_y = rpA[1]; existing.mast_z = rpA[2];
+				ExorTerritoryProbe.Bump();	// el territorio se MUDO -> caduca el indice de zonas
 				existing.last_build_min = nowm;
 
 				if (dist <= 100.0)
@@ -453,6 +487,7 @@ modded class TerritoryFlag
 			m_ExorGroupId = existing.id;
 			vector rpB = GetPosition();
 			existing.mast_x = rpB[0]; existing.mast_y = rpB[1]; existing.mast_z = rpB[2];
+			ExorTerritoryProbe.Bump();	// territorio reclamado -> caduca el indice de zonas
 			// NO tocar last_build_min: una REPARACION (el mastil se bugueo/desaparecio) no debe
 			// armar el cooldown de "mover 1 vez por dia". Antes esto lo seteaba a 'nowm' -> el
 			// SIGUIENTE mastil que colocaba el jugador caia en CASO A dentro del cooldown y se
@@ -493,6 +528,7 @@ modded class TerritoryFlag
 		ExorOnClaimed(nowmN);
 		vector p = GetPosition();
 		g.mast_x = p[0]; g.mast_y = p[1]; g.mast_z = p[2];
+		ExorTerritoryProbe.Bump();	// territorio nuevo -> caduca el indice de zonas
 		g.claim_min = nowmN;		// minuto de reclamo (herencia de bandera blanca al reconstruir)
 		g.last_build_min = nowmN;	// arranca el cooldown de reconstruccion
 		ExorGroupManager.Get().SaveGroup(g);
@@ -548,15 +584,39 @@ modded class TerritoryFlag
 		}
 	}
 
-	// Barrido post-deploy (varias veces): borra el kit del piso Y del inventario
-	// del dueno (por si lo levanto antes de que se barriera del piso).
+	// Cuantos reintentos de barrido quedan. El barrido se agenda A SI MISMO y SE CORTA
+	// apenas encuentra el kit (o al agotar los intentos), en vez de dejar tres CallLater
+	// fijos que se ejecutan siempre.
+	protected int m_ExorKitSweepsLeft;
+
+	// Arranca la secuencia de barridos post-deploy. Antes cada colocacion (y cada
+	// self-heal, y cada mastil de KOTH) agendaba TRES ExorCleanupKitGround fijos, y cada
+	// uno hace un GetObjectsAtPosition3D de 15 m -el escaneo espacial es lo mas caro que
+	// se le puede pedir al motor- MAS una enumeracion completa del inventario del dueño.
+	// O sea 3 escaneos garantizados por evento, aunque el primero ya hubiera hecho el
+	// trabajo. Ahora es 1 escaneo en el caso normal y hasta 3 solo si el kit todavia no
+	// aparecio (el motor a veces lo suelta tarde, que es la razon por la que existian los
+	// reintentos).
+	void ExorScheduleKitSweep()
+	{
+		if (!GetGame().IsServer())
+			return;
+		m_ExorKitSweepsLeft = 3;
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanupKitGround, 2500, false);
+	}
+
+	// Barrido post-deploy: borra el kit del piso Y del inventario del dueno (por si lo
+	// levanto antes de que se barriera del piso). Devuelve por m_ExorKitSweepsLeft si hace
+	// falta reintentar.
 	void ExorCleanupKitGround()
 	{
 		if (!GetGame().IsServer())
 			return;
 
+		bool encontrado = false;
+
 		// piso (radio 15m: el kit del mastil queda pegado a la bandera; 25m escaneaba un
-		// volumen grande innecesario en zonas pobladas, y este barrido corre 3x por evento)
+		// volumen grande innecesario en zonas pobladas)
 		array<Object> objects = new array<Object>;
 		array<CargoBase> cargos = new array<CargoBase>;
 		GetGame().GetObjectsAtPosition3D(GetPosition(), 15.0, objects, cargos);
@@ -568,6 +628,7 @@ modded class TerritoryFlag
 			{
 				Print("[3xorVO] barrido: borrando kit del piso " + ib.GetType());
 				GetGame().ObjectDelete(ib);
+				encontrado = true;
 			}
 		}
 
@@ -589,11 +650,19 @@ modded class TerritoryFlag
 						{
 							Print("[3xorVO] barrido: borrando kit del inventario del dueno");
 							inv.Get(k).Delete();
+							encontrado = true;
 						}
 					}
 				}
 			}
 		}
+
+		// Se corta apenas se encontro el kit: ya no hay nada que barrer y repetir el
+		// escaneo espacial seria trabajo puro al pedo.
+		if (m_ExorKitSweepsLeft > 0)
+			m_ExorKitSweepsLeft--;
+		if (!encontrado && m_ExorKitSweepsLeft > 0)
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanupKitGround, 3500, false);
 	}
 
 	PlayerBase ExorNearestPlayer(float radius)
@@ -601,17 +670,20 @@ modded class TerritoryFlag
 		array<Man> players = new array<Man>;
 		GetGame().GetPlayers(players);
 		PlayerBase best;
-		float bestD = radius;
+		// AL CUADRADO: comparar cuadrados ordena igual que comparar distancias, asi que el
+		// "mas cercano" sale el mismo sin una raiz por jugador.
+		float bestD2 = radius * radius;
+		vector aqui = GetPosition();
 		int i;
 		for (i = 0; i < players.Count(); i++)
 		{
 			PlayerBase pb = PlayerBase.Cast(players.Get(i));
 			if (!pb)
 				continue;
-			float d = vector.Distance(pb.GetPosition(), GetPosition());
-			if (d < bestD)
+			float d2 = vector.DistanceSq(pb.GetPosition(), aqui);
+			if (d2 < bestD2)
 			{
-				bestD = d;
+				bestD2 = d2;
 				best = pb;
 			}
 		}
@@ -678,9 +750,7 @@ modded class TerritoryFlag
 		PlayerBase pbBuilder = PlayerBase.Cast(builder);
 		if (pbBuilder)
 			ExorDeleteNearbyKits(pbBuilder);
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanupKitGround, 2500, false);
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanupKitGround, 6000, false);
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanupKitGround, 10000, false);
+		ExorScheduleKitSweep();
 		// colgar la MISMA bandera que tenia (blanca o de color, guardada en el grupo)
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorHangSavedFlag, 1500, false);
 		ExorScheduleWhiteFlagExpiry();
@@ -745,9 +815,7 @@ modded class TerritoryFlag
 
 		// borrar el kit (TerritoryFlagKit/FenceKit) que puede quedar en el piso al
 		// auto-construir el mastil. Varias pasadas por si aparece un tick despues.
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanupKitGround, 1000, false);
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanupKitGround, 4000, false);
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorCleanupKitGround, 9000, false);
+		ExorScheduleKitSweep();
 	}
 
 	// setea el humo (server) y lo sincroniza a los clientes cercanos

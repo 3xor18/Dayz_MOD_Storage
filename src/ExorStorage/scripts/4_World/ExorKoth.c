@@ -378,8 +378,10 @@ class ExorKothRun
 		proxN = 0;
 		nearN = 0;
 		namesInCap = "";
-		array<Man> players = new array<Man>;
-		GetGame().GetPlayers(players);
+		// Lista compartida del latido de 1 Hz. Antes esto pedia la suya POR EVENTO KOTH
+		// ACTIVO y por segundo: con varios eventos a la vez eran varios GetPlayers() y
+		// varios arrays nuevos por segundo para responder exactamente lo mismo.
+		array<Man> players = ExorTick1Hz.Jugadores();
 		// radios al CUADRADO: comparar d2 evita una raiz cuadrada por jugador por segundo
 		float r2cap  = g.metros_cercania_player_para_completar * g.metros_cercania_player_para_completar;
 		float r2prox = g.metros_proximidad_mastil_para_bonus * g.metros_proximidad_mastil_para_bonus;

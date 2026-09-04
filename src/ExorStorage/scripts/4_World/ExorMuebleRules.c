@@ -72,6 +72,9 @@ class ExorMuebleRules
 		ExorVO_Manager vo = ExorVO_Manager.Get();
 		if (!vo || !vo.m_Openables)
 			return 0;
+		// AL CUADRADO como el conteo de barriles de abajo: es un barrido sobre TODOS los
+		// muebles registrados y se dispara al colocar un mueble y al poner/quitar un mastil.
+		float r2 = radius * radius;
 		int n = 0;
 		int i;
 		for (i = 0; i < vo.m_Openables.Count(); i++)
@@ -79,7 +82,7 @@ class ExorMuebleRules
 			Exor_OpenableStorage f = vo.m_Openables.Get(i);
 			if (!f || f == exclude)
 				continue;
-			if (ExorTerritoryRules.Dist2D(center, f.GetPosition()) <= radius)
+			if (ExorMath.Dist2DSq(center, f.GetPosition()) <= r2)
 				n++;
 		}
 		return n;
@@ -430,7 +433,7 @@ class ExorMuebleRules
 		ExorTerritoryManager tm = ExorTerritoryManager.Get();
 		if (tm && tm.IsInOwnGroupTerritory(player, pos))
 			return true;	// miembro de esta base
-		if (tm && tm.FindEnemyTerritoryAt(player, pos))
+		if (tm && tm.FindEnemyTerritoryAt(player, pos) != "")
 		{
 			reason = "Solo los miembros del clan pueden usar el parking.";
 			return false;
@@ -454,7 +457,7 @@ class ExorMuebleRules
 		ExorTerritoryManager tm = ExorTerritoryManager.Get();
 		if (tm && tm.IsInOwnGroupTerritory(player, pos))
 			return true;	// sos miembro de esta base
-		if (tm && tm.FindEnemyTerritoryAt(player, pos))
+		if (tm && tm.FindEnemyTerritoryAt(player, pos) != "")
 		{
 			reason = "Solo los miembros del territorio pueden lotear estos muebles.";
 			return false;	// base ajena y no sos miembro

@@ -90,7 +90,7 @@ modded class PlayerBase
 	protected vector        m_ExorTerrPos;
 	protected int           m_ExorTerrMs;
 	protected int           m_ExorTerrVer;
-	protected TerritoryFlag m_ExorTerrFlag;
+	protected string m_ExorTerrGid;
 
 	// El cache sirve? Tres condiciones, todas baratas: misma version, dentro del TTL y
 	// sin haberse movido mas de la tolerancia (comparada AL CUADRADO).
@@ -105,14 +105,16 @@ modded class PlayerBase
 		return ExorMath.Dist2DSq(pos, m_ExorTerrPos) <= moveTolSq;
 	}
 
-	TerritoryFlag ExorTerrCacheFlag() { return m_ExorTerrFlag; }
+	// Se guarda el ID DEL CLAN y no la entidad mastil: un puntero a una entidad que el
+	// motor puede borrar en cualquier momento no tiene por que vivir en un cache.
+	string ExorTerrCacheGid() { return m_ExorTerrGid; }
 
-	void ExorTerrCacheSet(int now, vector pos, int ver, TerritoryFlag m)
+	void ExorTerrCacheSet(int now, vector pos, int ver, string gid)
 	{
 		m_ExorTerrMs = now;
 		m_ExorTerrPos = pos;
 		m_ExorTerrVer = ver;
-		m_ExorTerrFlag = m;
+		m_ExorTerrGid = gid;
 	}
 
 	override void EEInit()
@@ -186,7 +188,12 @@ modded class PlayerBase
 		// que aplicar ni que soltar, asi que no vale la pena ni pedir el input controller ni
 		// evaluar canRun (5 llamadas virtuales). El cliente sigue entrando siempre porque es
 		// el que lee la tecla; el server solo simula cuando hay estado real.
-		if (GetGame().IsServer() && GetGame().GetPlayer() != this && !m_ExorAutoRun && !m_ExorArApplied)
+		// ORDEN DE LOS CHEQUEOS: los dos bools van PRIMERO. Son lecturas de memoria del
+		// propio objeto; IsServer() y GetPlayer() son llamadas al motor. En el caso comun
+		// -el auto-run apagado, que es casi todo el mundo casi todo el tiempo- ahora se sale
+		// con dos lecturas y ninguna llamada, en vez de dos llamadas y dos lecturas, por
+		// jugador y por frame.
+		if (!m_ExorAutoRun && !m_ExorArApplied && GetGame().IsServer() && GetGame().GetPlayer() != this)
 			return;
 
 		HumanInputController hic = GetInputController();

@@ -61,6 +61,156 @@ class ExorTerritoryRules
 		float dz = a[2] - b[2];
 		return Math.Sqrt(dx * dx + dz * dz);
 	}
+
+	// Igual pero AL CUADRADO. Para "esta dentro del radio?" da exactamente el mismo
+	// resultado (a^2 <= r^2 equivale a a <= r con valores no negativos) y ahorra una raiz
+	// cuadrada por mastil y por llamada. Se usa en los barridos, que es donde se nota.
+	static float Dist2DSq(vector a, vector b)
+	{
+		float dx = a[0] - b[0];
+		float dz = a[2] - b[2];
+		return (dx * dx) + (dz * dz);
+	}
+}
+
+
+// ===========================================================================
+//  INDICE DE TERRITORIO: la protección NO depende de que la bandera exista
+// ===========================================================================
+// EL PROBLEMA QUE RESUELVE
+// ---------------------------------------------------------------------------
+// Hasta ahora, "esta posicion es territorio de alguien?" se contestaba recorriendo
+// las ENTIDADES bandera vivas. Eso ata la proteccion de una base a la entidad mas
+// fragil del mod: el TerritoryFlag es lo que el motor despawnea (limpieza del CE por
+// lifetime, ruina, persistencia corrupta). Historial real: banderas que desaparecian
+// solas y clanes que, mientras tanto, quedaban SIN territorio -o sea sin proteccion
+// de looteo ni de construccion- hasta que el self-heal las recreaba.
+//
+// Y ademas era caro: cada consulta llamaba GetPosition(), ExorGetGroupId() e
+// ExorIsBuilt() -tres llamadas al motor- POR BANDERA, y esas consultas corren en
+// caminos calientes (colocar, abrir un contenedor, levantar un item).
+//
+// LA IDEA
+// ---------------------------------------------------------------------------
+// El dato que define un territorio no es la entidad: es la POSICION DEL MASTIL, y esa
+// ya vive en el JSON de cada grupo (mast_x/mast_z). Asi que el indice se arma desde
+// los GRUPOS, no desde el mundo:
+//   - la base sigue protegida aunque el motor se lleve la bandera puesta;
+//   - la consulta es un barrido sobre floats en memoria, sin una sola llamada al motor;
+//   - se rearma solo cuando cambia algo (mismo sello de version que ya usaba el cache
+//     de "en que territorio estoy"), no en cada consulta.
+//
+// La entidad bandera sigue existiendo, claro: es lo que se ve, lo que se iza y donde
+// se interactua. Simplemente deja de ser la fuente de la verdad.
+class ExorZonaTerr
+{
+	float x;
+	float z;
+	string gid;
+}
+
+class ExorTerritoryIndex
+{
+	static ref array<ref ExorZonaTerr> s_Zonas;
+	static int s_Ver = -1;
+
+	// Rearma el indice si cambio algo (mastil puesto/sacado, roster, claim). Barato:
+	// una comparacion de enteros en el caso normal.
+	static void Asegurar()
+	{
+		int ver = ExorTerritoryProbe.Version();
+		if (s_Zonas && s_Ver == ver)
+			return;
+		s_Ver = ver;
+		s_Zonas = new array<ref ExorZonaTerr>;
+		array<ref ExorGroup> gs = ExorGroupManager.Get().m_Groups;
+		if (!gs)
+			return;
+		int i;
+		for (i = 0; i < gs.Count(); i++)
+		{
+			ExorGroup g = gs.Get(i);
+			if (!g)
+				continue;
+			if (g.mast_x == 0 && g.mast_z == 0)
+				continue;	// grupo sin territorio reclamado
+			ExorZonaTerr z = new ExorZonaTerr();
+			z.x = g.mast_x;
+			z.z = g.mast_z;
+			z.gid = g.id;
+			s_Zonas.Insert(z);
+		}
+	}
+
+	static array<ref ExorZonaTerr> Zonas()
+	{
+		Asegurar();
+		return s_Zonas;
+	}
+
+	// Id del grupo dueño del territorio en 'pos' ("" si no hay ninguno).
+	static string GrupoEn(vector pos)
+	{
+		if (!ExorHotFlags.TerritorioOn())
+			return "";
+		Asegurar();
+		float r = ExorTerritoryRules.Radius();
+		float r2 = r * r;
+		float px = pos[0];
+		float pz = pos[2];
+		int i;
+		for (i = 0; i < s_Zonas.Count(); i++)
+		{
+			ExorZonaTerr z = s_Zonas.Get(i);
+			float dx = px - z.x;
+			float dz = pz - z.z;
+			if ((dx * dx) + (dz * dz) <= r2)
+				return z.gid;
+		}
+		return "";
+	}
+
+	// Posicion (horizontal) del mastil de un grupo. "0 0 0" si el grupo no tiene territorio.
+	// Sale del dato GUARDADO, asi que responde igual con el mastil despawneado.
+	static vector PosDe(string gid)
+	{
+		if (gid == "")
+			return "0 0 0";
+		Asegurar();
+		int i;
+		for (i = 0; i < s_Zonas.Count(); i++)
+		{
+			ExorZonaTerr z = s_Zonas.Get(i);
+			if (z.gid == gid)
+				return Vector(z.x, 0, z.z);
+		}
+		return "0 0 0";
+	}
+
+	// Id del grupo AJENO cuyo territorio cubre 'pos' ("" = ninguno, o es el propio).
+	// 'miGid' vacio = el jugador no tiene clan -> cualquier territorio le es ajeno.
+	static string GrupoAjenoEn(string miGid, vector pos)
+	{
+		if (!ExorHotFlags.TerritorioOn())
+			return "";
+		Asegurar();
+		float r = ExorTerritoryRules.Radius();
+		float r2 = r * r;
+		float px = pos[0];
+		float pz = pos[2];
+		int i;
+		for (i = 0; i < s_Zonas.Count(); i++)
+		{
+			ExorZonaTerr z = s_Zonas.Get(i);
+			if (miGid != "" && z.gid == miGid)
+				continue;	// mi propio territorio
+			float dx = px - z.x;
+			float dz = pz - z.z;
+			if ((dx * dx) + (dz * dz) <= r2)
+				return z.gid;
+		}
+		return "";
+	}
 }
 
 // ===========================================================================
@@ -125,10 +275,22 @@ class ExorTerritoryManager
 		RequestSyncToAll();
 	}
 
-	// NOTA: la "inmortalidad" del mastil (que no lo borre el CE por lifetime) se maneja en el
-	// types.xml del server subiendo el <lifetime> del TerritoryFlag. La API de script para refrescar
-	// el lifetime en vivo (CEApi.SetItemLifetime) NO existe en esta version de DayZ. Igual, si por
-	// cualquier causa el objeto-bandera se pierde, el self-heal recrea el mastil (party se conserva).
+	// Le renueva el reloj del CE a TODOS los mastiles vivos. Lo llama el mantenimiento cada
+	// 10 minutos. Es un barrido sobre un array chico (un mastil por clan) y dos llamadas por
+	// mastil, o sea nada; a cambio, el CE deja de poder borrarlos por lifetime, que es la
+	// causa de que "el mastil se fuera solo a los dias o semanas".
+	// Sigue existiendo el self-heal como red: si igual se pierde uno (crash, otro mod), se
+	// recrea. Pero ahora es la excepcion y no el mecanismo principal.
+	void RefrescarVidaMastiles()
+	{
+		int i;
+		for (i = 0; i < m_Masts.Count(); i++)
+		{
+			TerritoryFlag m = m_Masts.Get(i);
+			if (m)
+				m.ExorRefrescarVida();
+		}
+	}
 
 	TerritoryFlag FindMastByGroup(string groupId)
 	{
@@ -144,19 +306,11 @@ class ExorTerritoryManager
 	// GRUPO dueño del territorio que contiene 'pos' (mastil construido a <=Radius). "" si el
 	// punto no esta en ningun territorio. Lo usa el auto-virtualizado para taggear el auto con
 	// el clan de la base donde esta el parking (sin persistir el grupo en el parking).
+	// Del INDICE, no de las entidades: asi el parking de una base sigue sabiendo de que
+	// clan es aunque la bandera este momentaneamente despawneada. Ver ExorTerritoryIndex.
 	string GroupAtPos(vector pos)
 	{
-		float radius = ExorTerritoryRules.Radius();
-		int i;
-		for (i = 0; i < m_Masts.Count(); i++)
-		{
-			TerritoryFlag m = m_Masts.Get(i);
-			if (!m || !m.ExorIsBuilt())
-				continue;
-			if (ExorTerritoryRules.Dist2D(pos, m.GetPosition()) <= radius)
-				return m.ExorGetGroupId();
-		}
-		return "";
+		return ExorTerritoryIndex.GrupoEn(pos);
 	}
 
 	// como FindMastByGroup pero SOLO devuelve un mastil REAL (con el poste construido);
@@ -265,13 +419,13 @@ class ExorTerritoryManager
 		}
 	}
 
-	// Devuelve el mastil AJENO en cuyo radio cae 'pos' (o null si no hay ninguno o
+	// Devuelve el ID DEL GRUPO ajeno cuyo territorio cubre 'pos' ("" si no hay ninguno o
 	// si 'pos' cae solo en territorio propio). 'player' puede ser null (= todo ajeno).
 	// Base reutilizable para: anti-construccion, anti-desmantelar y logs anti-raid.
-	TerritoryFlag FindEnemyTerritoryAt(PlayerBase player, vector pos)
+	string FindEnemyTerritoryAt(PlayerBase player, vector pos)
 	{
 		if (!ExorHotFlags.TerritorioOn())
-			return null;
+			return "";
 
 		string myGroupId = "";
 		if (player)
@@ -285,27 +439,15 @@ class ExorTerritoryManager
 
 	// Igual que FindEnemyTerritoryAt pero recibiendo el id de grupo YA resuelto. Existe
 	// para los caminos calientes (ver ExorTerritoryProbe): resolver el grupo del jugador y
-	// barrer los mastiles son dos costos distintos y el primero se puede cachear aparte.
-	// Distancias AL CUADRADO: comparar a^2 <= r^2 da el mismo resultado que a <= r y ahorra
-	// una raiz cuadrada por mastil por llamada.
-	TerritoryFlag FindEnemyTerritoryAtEx(string myGroupId, vector pos)
+	// barrer los territorios son dos costos distintos y el primero se puede cachear aparte.
+	//
+	// Devuelve el ID DEL GRUPO ajeno ("" = ninguno). Antes devolvia la ENTIDAD mastil, pero
+	// ningun llamador la usaba: todos preguntaban "es territorio ajeno?" y "de que clan?".
+	// Con el id, la proteccion deja de depender de que la entidad exista -que es justo la
+	// que el motor despawnea-. Ver ExorTerritoryIndex.
+	string FindEnemyTerritoryAtEx(string myGroupId, vector pos)
 	{
-		if (!ExorHotFlags.TerritorioOn())
-			return null;
-		float radius = ExorTerritoryRules.Radius();
-		float r2 = radius * radius;
-		int i;
-		for (i = 0; i < m_Masts.Count(); i++)
-		{
-			TerritoryFlag m = m_Masts.Get(i);
-			if (!m)
-				continue;
-			if (m.ExorGetGroupId() == myGroupId && myGroupId != "")
-				continue;	// mi propio territorio
-			if (ExorMath.Dist2DSq(pos, m.GetPosition()) <= r2)
-				return m;	// territorio ajeno
-		}
-		return null;
+		return ExorTerritoryIndex.GrupoAjenoEn(myGroupId, pos);
 	}
 
 	// ROBUSTEZ (fix "no deja construir en base propia"): true si 'pos' cae dentro del
@@ -341,7 +483,7 @@ class ExorTerritoryManager
 		if (IsInOwnGroupTerritory(player, pos))
 			return true;	// tu propia base (por mastil guardado del grupo) -> siempre permitido
 
-		if (FindEnemyTerritoryAt(player, pos))
+		if (FindEnemyTerritoryAt(player, pos) != "")
 			return false;	// cae en territorio ajeno
 		return true;
 	}
@@ -381,20 +523,24 @@ class ExorTerritoryManager
 		float maxD2 = SYNC_RANGE * SYNC_RANGE;
 		int MAX_ZONES = 40;	// tope de zonas a sincronizar (mas que suficiente para el preview cercano)
 
-		// candidatos en rango con su distancia^2 (sin sqrt en el loop)
-		array<TerritoryFlag> near = new array<TerritoryFlag>;
+		// Candidatos en rango con su distancia^2 (sin sqrt en el loop).
+		// Salen del INDICE y no de las entidades vivas: el preview de construccion del
+		// cliente tiene que respetar el territorio de un clan aunque su mastil este
+		// despawneado en ese momento (si no, el jugador ve "se puede construir" justo donde
+		// el server le va a decir que no). Ver ExorTerritoryIndex.
+		array<ref ExorZonaTerr> zonas = ExorTerritoryIndex.Zonas();
+		array<ref ExorZonaTerr> near = new array<ref ExorZonaTerr>;
 		array<float> nearD = new array<float>;
 		int i;
-		for (i = 0; i < m_Masts.Count(); i++)
+		for (i = 0; i < zonas.Count(); i++)
 		{
-			TerritoryFlag m = m_Masts.Get(i);
-			if (!m)
-				continue;
-			vector dd = m.GetPosition() - ppos;
-			float d2 = dd[0] * dd[0] + dd[2] * dd[2];	// horizontal (ignora altura)
+			ExorZonaTerr zt = zonas.Get(i);
+			float ddx = zt.x - ppos[0];
+			float ddz = zt.z - ppos[2];
+			float d2 = ddx * ddx + ddz * ddz;	// horizontal (ignora altura)
 			if (d2 > maxD2)
 				continue;
-			near.Insert(m);
+			near.Insert(zt);
 			nearD.Insert(d2);
 		}
 
@@ -417,7 +563,7 @@ class ExorTerritoryManager
 			}
 			if (best != k)
 			{
-				TerritoryFlag tf = near.Get(k); near.Set(k, near.Get(best)); near.Set(best, tf);
+				ExorZonaTerr tf = near.Get(k); near.Set(k, near.Get(best)); near.Set(best, tf);
 				float df = nearD.Get(k); nearD.Set(k, nearD.Get(best)); nearD.Set(best, df);
 			}
 		}
@@ -428,22 +574,15 @@ class ExorTerritoryManager
 		string data = "";
 		for (i = 0; i < lim; i++)
 		{
-			TerritoryFlag m2 = near.Get(i);
+			ExorZonaTerr z2 = near.Get(i);
 			ExorTerritoryZone z = new ExorTerritoryZone();
-			vector mp = m2.GetPosition();
-			z.x = mp[0];
-			z.z = mp[2];
+			z.x = z2.x;
+			z.z = z2.z;
 			z.radius = radius;
-			// "mine" por binding del mastil vivo O por el mastil GUARDADO de mi grupo
-			// (robusto: si el binding del mastil vivo quedo inconsistente por un
-			// self-heal/persistencia, igual reconozco mi propia base por su posicion).
-			z.mine = (myGroupId != "" && m2.ExorGetGroupId() == myGroupId);
-			if (!z.mine && g && (g.mast_x != 0 || g.mast_z != 0))
-			{
-				vector myMastPos = Vector(g.mast_x, 0, g.mast_z);
-				if (ExorTerritoryRules.Dist2D(mp, myMastPos) <= 5.0)
-					z.mine = true;	// esta zona es el mastil guardado de mi grupo
-			}
+			// "mine" sale directo del id del grupo dueño de la zona: el indice se arma desde
+			// el mastil GUARDADO de cada grupo, asi que ya no hace falta el desempate por
+			// posicion que cubria los bindings inconsistentes del mastil vivo.
+			z.mine = (myGroupId != "" && z2.gid == myGroupId);
 			dto.zones.Insert(z);
 		}
 		js.WriteToString(dto, false, data);
@@ -471,6 +610,8 @@ class ExorTerritoryClient
 	{
 		if (!s_Cache)
 			return false;
+		// AL CUADRADO: esto corre por FRAME en el cliente mientras el jugador tiene un
+		// holograma en la mano (ItemBase.CanBePlaced), una vez por territorio conocido.
 		int i;
 		for (i = 0; i < s_Cache.zones.Count(); i++)
 		{
@@ -479,7 +620,7 @@ class ExorTerritoryClient
 				continue;
 			float dx = pos[0] - z.x;
 			float dz = pos[2] - z.z;
-			if (Math.Sqrt(dx * dx + dz * dz) <= z.radius)
+			if ((dx * dx) + (dz * dz) <= z.radius * z.radius)
 				return true;
 		}
 		return false;
@@ -499,6 +640,7 @@ class ExorTerritoryClient
 		if (!s_Cache)
 			return true;
 
+		// AL CUADRADO, por lo mismo que arriba: por frame mientras se coloca algo.
 		int i;
 		for (i = 0; i < s_Cache.zones.Count(); i++)
 		{
@@ -507,7 +649,7 @@ class ExorTerritoryClient
 				continue;
 			float dx = pos[0] - z.x;
 			float dz = pos[2] - z.z;
-			if (Math.Sqrt(dx * dx + dz * dz) <= z.radius)
+			if ((dx * dx) + (dz * dz) <= z.radius * z.radius)
 				return false;
 		}
 		return true;

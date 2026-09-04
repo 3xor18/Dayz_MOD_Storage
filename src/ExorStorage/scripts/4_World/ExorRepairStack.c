@@ -10,7 +10,34 @@
 // ============================================================================
 class ExorRepairStack
 {
+	// "ESTE classname es un kit combinable?" MEMOIZADO.
+	// El motor llama CanBeCombined por cada candidato mientras el jugador arrastra algo en
+	// el inventario -o sea decenas de veces por segundo, y para items que casi nunca son
+	// kits-. Antes cada llamada recorria la lista de la config comparando strings. El
+	// classname de un item no cambia nunca, asi que la respuesta se calcula una vez por tipo
+	// en toda la vida del proceso y despues es un lookup de hash.
+	static ref map<string, bool> s_EsKit;
+
+	static bool EsKitCombinable(string type)
+	{
+		if (!s_EsKit)
+			s_EsKit = new map<string, bool>;
+		bool r;
+		if (s_EsKit.Find(type, r))
+			return r;
+		ExorCfgReparacion cfg = GetExorConfig().reparacion;
+		r = false;
+		if (cfg)
+			r = cfg.EsStackeable(type);
+		s_EsKit.Set(type, r);
+		return r;
+	}
+
 	// true si 'a' puede recibir a 'other' como union de dos kits gastados iguales.
+	// ORDEN DE LOS CHEQUEOS: primero lo que descarta al 99,9% de los items (es un kit?) y
+	// recien despues el resto. GetType() devuelve un string NUEVO en cada llamada, asi que
+	// pedirlo dos veces en el caso comun -que es "no, no es un kit"- era allocar de gusto en
+	// pleno arrastre de inventario.
 	static bool CanStack(ItemBase a, EntityAI other)
 	{
 		if (!a || !other)
@@ -18,10 +45,10 @@ class ExorRepairStack
 		ItemBase b = ItemBase.Cast(other);
 		if (!b || b == a)
 			return false;
-		if (a.GetType() != b.GetType())
+		string ta = a.GetType();
+		if (!EsKitCombinable(ta))
 			return false;
-		ExorCfgReparacion cfg = GetExorConfig().reparacion;
-		if (!cfg || !cfg.EsStackeable(a.GetType()))
+		if (ta != b.GetType())
 			return false;
 		// 'a' tiene que tener lugar para recibir mas uso (si esta lleno, no combinar)
 		if (a.GetQuantity() >= a.GetQuantityMax())

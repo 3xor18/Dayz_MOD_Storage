@@ -259,28 +259,31 @@ class ExorTerritoryProbe
 	static void Bump() { s_Version = s_Version + 1; }
 	static int Version() { return s_Version + ExorRosterVersion.Get(); }
 
-	// Mastil AJENO en cuyo radio esta parado el jugador (null si ninguno).
-	static TerritoryFlag EnemyMastOf(PlayerBase p)
+	// Id del clan AJENO en cuyo territorio esta parado el jugador ("" si ninguno).
+	// Antes devolvia la ENTIDAD mastil y la cacheaba en el PlayerBase; guardar un puntero a
+	// una entidad que el motor puede borrar en cualquier momento era una fuente de punteros
+	// colgados, y ademas ningun consumidor necesitaba la entidad. Ahora es un string.
+	static string GrupoAjenoDe(PlayerBase p)
 	{
 		if (!p || !ExorHotFlags.TerritorioOn())
-			return null;
+			return "";
 
 		int now = GetGame().GetTime();
 		vector pos = p.GetPosition();
 		int ver = Version();
 
 		if (p.ExorTerrCacheValido(now, pos, ver, EXOR_TERR_TTL_MS, EXOR_TERR_MOVE_M * EXOR_TERR_MOVE_M))
-			return p.ExorTerrCacheFlag();
+			return p.ExorTerrCacheGid();
 
-		// MISS: resolver de verdad. El id de grupo se resuelve una vez y se pasa ya
-		// hecho al barrido de mastiles (ver FindEnemyTerritoryAtEx).
+		// MISS: resolver de verdad. El id del grupo del jugador se resuelve una vez y se
+		// pasa ya hecho al indice de territorios (ver ExorTerritoryIndex).
 		string gid = "";
 		ExorGroup g = ExorGroupManager.Get().FindByPlayer(ExorGroupManager.SteamId(p));
 		if (g)
 			gid = g.id;
-		TerritoryFlag m = ExorTerritoryManager.Get().FindEnemyTerritoryAtEx(gid, pos);
-		p.ExorTerrCacheSet(now, pos, ver, m);
-		return m;
+		string ajeno = ExorTerritoryManager.Get().FindEnemyTerritoryAtEx(gid, pos);
+		p.ExorTerrCacheSet(now, pos, ver, ajeno);
+		return ajeno;
 	}
 }
 
@@ -316,6 +319,33 @@ class ExorTick1Hz
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorTick1Hz.Latido, 1000, true);
 	}
 
+	// Lista de jugadores del latido, pedida UNA vez por segundo y compartida.
+	// Antes cada suscriptor que necesitaba jugadores hacia su propio GetPlayers() con su
+	// propio array nuevo -y el KOTH lo hacia una vez POR EVENTO ACTIVO, no una por tick-.
+	// Es el mismo patron que ya usa el tick de contenedores.
+	static ref array<Man> s_Players;
+	static int s_PlayersMs;
+
+	// Devuelve la lista del latido. Si alguien la pide fuera del latido (o antes del
+	// primero), se rearma sola: nadie trabaja con datos viejos y nadie recalcula al pedo.
+	static array<Man> Jugadores()
+	{
+		if (!s_Players)
+			s_Players = new array<Man>;
+		if (s_PlayersMs == 0 || GetGame().GetTime() - s_PlayersMs > 1000)
+			Refrescar();
+		return s_Players;
+	}
+
+	static void Refrescar()
+	{
+		if (!s_Players)
+			s_Players = new array<Man>;
+		s_Players.Clear();
+		GetGame().GetPlayers(s_Players);
+		s_PlayersMs = GetGame().GetTime();
+	}
+
 	static void Latido()
 	{
 		if (!GetGame().IsServer())
@@ -328,6 +358,7 @@ class ExorTick1Hz
 		if (st)
 			offset = st.offset_horas;
 		ExorCofre.NowLocal(offset, s_MinOfDay, s_Weekday, s_DayKey);
+		Refrescar();	// una sola lista de jugadores para los tres suscriptores
 
 		ExorPartyLive.Get().TickTimed();
 		ExorKoth.Get().TickTimed();
@@ -541,5 +572,8 @@ class ExorHousekeeping
 		ExorSpawn.PurgarViejos(now, EXOR_TTL_MS);
 		ExorKillFarm.PurgarViejos();
 		ExorPartyLive.Get().PurgarViejos();
+		// Renovar el reloj del CE de los mastiles: sin esto el motor los borra solo cuando
+		// se les agota el lifetime, que es lo que hacia "desaparecer" las bases a los dias.
+		ExorTerritoryManager.Get().RefrescarVidaMastiles();
 	}
 }

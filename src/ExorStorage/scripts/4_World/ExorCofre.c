@@ -1196,15 +1196,16 @@ class ExorCofre
 	static int CountPlayersNear(vector pos, float radius)
 	{
 		int cnt = 0;
-		array<Man> players = new array<Man>;
-		GetGame().GetPlayers(players);
+		// lista compartida del latido de 1 Hz (ver ExorTick1Hz): no se vuelve a pedir
+		array<Man> players = ExorTick1Hz.Jugadores();
+		float r2 = radius * radius;
 		int i;
 		for (i = 0; i < players.Count(); i++)
 		{
 			PlayerBase pb = PlayerBase.Cast(players.Get(i));
 			if (!pb || !pb.IsAlive())
 				continue;
-			if (vector.Distance(pb.GetPosition(), pos) <= radius)
+			if (vector.DistanceSq(pb.GetPosition(), pos) <= r2)
 				cnt++;
 		}
 		return cnt;

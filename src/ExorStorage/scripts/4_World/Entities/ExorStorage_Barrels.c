@@ -223,10 +223,11 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	// mas que cualquier reasentado del motor y menos que una reubicacion real.
 	static const float EXOR_REG_MOVE_M = 1.5;
 
+	// La llama el tick del manager, que ya corre SOLO en el server: el chequeo de IsServer
+	// que habia aca era una llamada al motor por barril y por tick (con 700 barriles, 700
+	// llamadas cada 5 s) para una condicion que el llamador ya garantiza.
 	void ExorRegSyncParented()
 	{
-		if (!GetGame().IsServer())
-			return;
 		bool atadoAhora = (GetHierarchyParent() != null);
 
 		if (atadoAhora == m_ExorRegParented)
@@ -259,7 +260,9 @@ class Exor_Barrel_Base : Barrel_ColorBase
 					m_ExorRegLastPos = GetPosition();
 					m_ExorRegPosInit = true;
 				}
-				else if (vector.Distance(m_ExorRegLastPos, GetPosition()) > EXOR_REG_MOVE_M)
+				// AL CUADRADO: es una raiz por barril y por tick para una comparacion que casi
+				// siempre da "no se movio".
+				else if (vector.DistanceSq(m_ExorRegLastPos, GetPosition()) > EXOR_REG_MOVE_M * EXOR_REG_MOVE_M)
 				{
 					ExorMuebleRegistry.RegisterBarrel(this);
 					m_ExorRegLastPos = GetPosition();

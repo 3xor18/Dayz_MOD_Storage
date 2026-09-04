@@ -41,8 +41,11 @@ class ExorVO_Manager
 			return;
 		ExorVO_Serializer.EnsureDirs();
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().Tick, ExorStorageConstants.TICK_MS, true);
+		// UN SOLO latido de 5 s. El de vehiculos (WakeTick) tenia su propio timer con el
+		// MISMO periodo y pedia su propia lista de jugadores: dos entradas en el CallQueue y
+		// dos GetPlayers() cada 5 s para trabajo que se puede hacer en la misma pasada.
+		// Ahora BarrelTick lo llama al final y le pasa la lista que ya tiene.
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().BarrelTick, ExorStorageConstants.BARREL_TICK_MS, true);
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().WakeTick, ExorStorageConstants.WAKE_TICK_MS, true);
 		// CANARY de neveras: si llegamos a arrancar, la carga de la persistencia TERMINO OK
 		// (ninguna nevera crasheo) -> borrar el canary (si no, la ultima nevera cargada quedaria
 		// marcada y se descartaria de gusto el proximo arranque). Diferido 60s: para cuando el
@@ -541,6 +544,9 @@ class ExorVO_Manager
 			m_BagCursor = (bagStart + done) % bagCount;
 		}
 
+		// --- Vehiculos: dormir/despertar y auto-virtualizar (mismo periodo, misma lista) ---
+		WakeTick(players);
+
 		// --- Cerrar sesiones de saqueo inactivas (escribe la linea agrupada al audit) ---
 		ExorRoboBuffer.Tick();
 
@@ -800,7 +806,8 @@ class ExorVO_Manager
 	}
 
 	// ------------------------- tick rapido (5s): despertar + auto-virtualizar -------------------------
-	void WakeTick()
+	// La llama BarrelTick al final de su pasada, con la lista de jugadores YA obtenida.
+	void WakeTick(array<Man> players)
 	{
 		// Las bolsas de cadaver ya NO se tocan aca: su virtualizar/restaurar por distancia
 		// corre en el BarrelTick (5s, que ya tiene la lista de players) + Open() al abrir.
@@ -809,10 +816,8 @@ class ExorVO_Manager
 		bool autoVirt = st.parking_auto_virtualizar;
 		if (!veh.vehiculos_dormir && !autoVirt)
 			return;
-
-		// players obtenidos UNA vez para todos los chequeos de distancia de este tick
-		array<Man> players = new array<Man>;
-		GetGame().GetPlayers(players);
+		if (!players)
+			return;
 		int now = GetGame().GetTime();
 
 		int i;

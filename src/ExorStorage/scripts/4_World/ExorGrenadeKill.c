@@ -1,44 +1,62 @@
 // ============================================================================
 // 3xor_Vanilla_Optimization - Atribucion de muertes por GRANADA (server)
-// Una granada LANZADA se separa de quien la tiro (GetHierarchyRootPlayer()==null),
-// por eso el killfeed no sabia quien mato y la muerte se perdia (caia en "muerte por
-// entorno"). Aca la granada recuerda a su ULTIMO portador (= el que la lanzo): mientras
-// esta en manos/inventario de un jugador, un tick liviano (1s) guarda su steamid+nombre.
-// Al explotar, el killfeed de la victima lo lee (ver ExorStorage_Player.ExorBuildKillfeed).
-//   - Solo aplica a las granadas de fragmentacion (Grenade_Base): smoke/gas/etc NO matan
-//     por shrapnel y el gas se clasifica aparte por tipo de daño.
-//   - El tick solo escribe cuando hay root player -> una granada en un cajon (sin dueño)
-//     no consume nada util.
+// ----------------------------------------------------------------------------
+// Una granada LANZADA se separa de quien la tiro (GetHierarchyRootPlayer() pasa a ser
+// null), por eso el killfeed no sabia quien mato y la muerte caia en "muerte por
+// entorno". Aca la granada recuerda a su ULTIMO portador (= el que la lanzo) y el
+// killfeed de la victima lo lee (ver ExorStorage_Player.ExorBuildKillfeed).
+// Solo aplica a las de fragmentacion (Grenade_Base): las de humo/gas no matan por
+// shrapnel y el gas se clasifica aparte por tipo de daño.
+//
+// POR EVENTOS, NO POR TICK
+// ----------------------------------------------------------------------------
+// Antes esto era un CallLater REPETITIVO cada 2 s que arrancaba en el EEInit de CADA
+// granada y no paraba nunca. O sea: una granada tirada en el piso de un cuartel, otra
+// dentro de un barril, otra en la mochila de cada jugador... todas con su propio timer
+// vivo en el CallQueue del motor, preguntando dos veces por minuto "seguis en manos de
+// alguien?" para una respuesta que casi siempre es no. Con las granadas que el CE
+// reparte por el mapa eso son cientos de timers permanentes para un dato que cambia
+// solo en dos momentos muy concretos.
+//
+// Esos dos momentos ya los avisa el motor:
+//   - OnInventoryEnter        -> la agarro un jugador (queda anotado el portador);
+//   - EEItemLocationChanged   -> se movio; si SALIO de un jugador, ese es el que la tiro.
+// Cero timers, cero costo mientras nadie toca nada, y el dato queda mas fresco que con
+// un muestreo cada 2 s (con el tick, una granada agarrada y lanzada dentro de la misma
+// ventana no se registraba).
 // ============================================================================
 modded class Grenade_Base
 {
 	protected string m_ExorThrowerId;
 	protected string m_ExorThrowerName;
 
-	override void EEInit()
+	// La agarro un jugador: es el candidato a lanzador.
+	override void OnInventoryEnter(Man player)
 	{
-		super.EEInit();
+		super.OnInventoryEnter(player);
 		if (GetGame() && GetGame().IsServer())
-			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorTrackOwner, 2000, true);
+			ExorRecordarPortador(PlayerBase.Cast(player));
 	}
 
-	override void EEDelete(EntityAI parent)
+	// Se movio. Si venia DE un jugador, ese es el que la esta soltando o lanzando: es el
+	// ultimo instante en que la granada y su dueño estan relacionados.
+	override void EEItemLocationChanged(notnull InventoryLocation oldLoc, notnull InventoryLocation newLoc)
 	{
-		if (GetGame())
-			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(ExorTrackOwner);
-		super.EEDelete(parent);
+		super.EEItemLocationChanged(oldLoc, newLoc);
+		if (!GetGame() || !GetGame().IsServer())
+			return;
+		EntityAI padre = oldLoc.GetParent();
+		if (!padre)
+			return;
+		ExorRecordarPortador(PlayerBase.Cast(padre.GetHierarchyRootPlayer()));
 	}
 
-	// cada 1s: si la granada esta en poder de un jugador, recordarlo. El ULTIMO recordado
-	// antes de salir de manos (al lanzarla) es quien la tiro.
-	void ExorTrackOwner()
+	void ExorRecordarPortador(PlayerBase p)
 	{
-		PlayerBase p = PlayerBase.Cast(GetHierarchyRootPlayer());
-		if (p && p.GetIdentity())
-		{
-			m_ExorThrowerId = p.GetIdentity().GetPlainId();
-			m_ExorThrowerName = p.GetIdentity().GetName();
-		}
+		if (!p || !p.GetIdentity())
+			return;
+		m_ExorThrowerId = p.GetIdentity().GetPlainId();
+		m_ExorThrowerName = p.GetIdentity().GetName();
 	}
 
 	string ExorGetThrowerId()   { return m_ExorThrowerId; }

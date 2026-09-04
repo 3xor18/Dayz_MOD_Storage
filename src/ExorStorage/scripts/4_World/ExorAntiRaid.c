@@ -116,17 +116,16 @@ class ExorAntiRaid
 	// territorio ajeno / parado en territorio propio).
 	// Pasa por el CACHE por jugador: esto lo llama el hook de pickup de cada item y la
 	// respuesta es la misma mientras el jugador no se mueva. Ver ExorTerritoryProbe.
-	static TerritoryFlag EnemyTerritoryOfPlayer(PlayerBase player)
+	static string EnemyTerritoryOfPlayer(PlayerBase player)
 	{
-		return ExorTerritoryProbe.EnemyMastOf(player);
+		return ExorTerritoryProbe.GrupoAjenoDe(player);
 	}
 
 	// Etiqueta legible del territorio para el log: "grupo <id> (lider <nombre>)".
-	static string GroupLabel(TerritoryFlag mast)
+	static string GroupLabel(string gid)
 	{
-		if (!mast)
+		if (gid == "")
 			return "?";
-		string gid = mast.ExorGetGroupId();
 		ExorGroup g = ExorGroupManager.Get().FindById(gid);
 		if (!g)
 			return gid;
@@ -157,7 +156,7 @@ class ExorAntiRaid
 			return false;
 		if (exigirBaseVanilla && !obj.IsInherited(BaseBuildingBase))
 			return false;	// solo muros / portones / torres / partes de base
-		return ExorTerritoryManager.Get().FindEnemyTerritoryAt(player, obj.GetPosition()) != null;
+		return ExorTerritoryManager.Get().FindEnemyTerritoryAt(player, obj.GetPosition()) != "";
 	}
 
 	// ------------------------- #3: robo de items -------------------------
@@ -176,8 +175,8 @@ class ExorAntiRaid
 		if (!ExorHotFlags.TerritorioOn())
 			return;
 
-		TerritoryFlag m = EnemyTerritoryOfPlayer(player);
-		if (!m)
+		string m = EnemyTerritoryOfPlayer(player);
+		if (m == "")
 			return;	// no esta dentro de territorio ajeno: no se loguea
 
 		string sid = ExorGroupManager.SteamId(player);
@@ -205,8 +204,8 @@ class ExorAntiRaid
 		if (!ExorHotFlags.TerritorioOn())
 			return;
 
-		TerritoryFlag m = ExorTerritoryManager.Get().FindEnemyTerritoryAt(player, barrel.GetPosition());
-		if (!m)
+		string m = ExorTerritoryManager.Get().FindEnemyTerritoryAt(player, barrel.GetPosition());
+		if (m == "")
 			return;	// el barril no esta en territorio ajeno: no se loguea
 
 		string sid = ExorGroupManager.SteamId(player);
@@ -228,8 +227,8 @@ class ExorAntiRaid
 		if (!GetExorConfig().party.territorio.habilitado)
 			return;
 
-		TerritoryFlag m = EnemyTerritoryOfPlayer(player);
-		if (!m)
+		string m = EnemyTerritoryOfPlayer(player);
+		if (m == "")
 			return;
 
 		string detalle = string.Format("se deslogueo dentro de territorio de %1", GroupLabel(m));
@@ -281,11 +280,15 @@ class ExorAntiRaid
 	{
 		if (!player)
 			return;
-		TerritoryFlag m = EnemyTerritoryOfPlayer(player);
-		if (!m)
+		string m = EnemyTerritoryOfPlayer(player);
+		if (m == "")
 			return;	// reaparecio fuera de territorio ajeno: nada que hacer
 
-		vector mp = m.GetPosition();
+		// La posicion del mastil sale del indice (dato guardado del grupo) y no de la
+		// entidad: al reconectar, el mastil puede no estar spawneado todavia.
+		vector mp = ExorTerritoryIndex.PosDe(m);
+		if (mp[0] == 0 && mp[2] == 0)
+			return;
 		vector pp = player.GetPosition();
 		float radius = ExorTerritoryRules.Radius();
 
