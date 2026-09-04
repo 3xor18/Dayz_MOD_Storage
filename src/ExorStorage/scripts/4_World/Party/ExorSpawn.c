@@ -13,6 +13,12 @@ class ExorSpawnMenuDTO
 {
 	ref TStringArray nombres;
 	ref array<int> punto_cd_seg;  // por punto: segundos restantes de cooldown (0 = disponible)
+	// INDICE REAL en spawns.json de cada entrada de la lista.
+	// La lista que ve el jugador va FILTRADA (los puntos solo_vip no se le mandan si no es
+	// VIP), asi que la posicion en la lista YA NO coincide con la posicion en la config.
+	// Sin este mapeo, elegir el 2do boton spawnearia en el punto equivocado. El cliente
+	// devuelve el indice REAL, y el server igual lo vuelve a validar (ver ApplyPick).
+	ref array<int> punto_idx;
 	bool base_enabled;            // mostrar el boton "Mi base" (permitido + tiene mastil)
 	int base_cd_seg;              // segundos restantes de cooldown de base (0 = disponible)
 	bool base_flag_down;          // bandera abajo y eso bloquea el respawn en base
@@ -22,6 +28,7 @@ class ExorSpawnMenuDTO
 	{
 		nombres = new TStringArray;
 		punto_cd_seg = new array<int>;
+		punto_idx = new array<int>;
 	}
 }
 
@@ -163,11 +170,15 @@ class ExorSpawn
 			return vector.Zero;	// sin puntos: default vanilla
 
 		int now = GetGame().GetTime();
+		bool esVip = GetExorConfig().vip.IsVip(steamid);
 		array<int> elegibles = new array<int>;
 		int i;
 		for (i = 0; i < spawns.puntos.Count(); i++)
 		{
 			ExorSpawnPunto pt = spawns.puntos.Get(i);
+			// punto exclusivo VIP: el reparto automatico no se lo da a un no-VIP
+			if (pt.solo_vip && !esVip)
+				continue;
 			// COMPATIBILIDAD DE MAPA: un punto de spawn que quedo fuera del terreno (config de
 			// otro mapa) tiraria al jugador al vacio. Se descarta con aviso en el log y se cae
 			// al spawn vanilla si no queda ninguno valido. Ver ExorMapBounds.
@@ -255,12 +266,20 @@ class ExorSpawn
 
 		string sidBase = ExorGroupManager.SteamId(player);
 
+		// Los puntos SOLO-VIP no se le mandan al que no es VIP: no los ve en la lista.
+		// Se filtra en el SERVER y no en el cliente a proposito -mandarle el punto y pedirle
+		// que lo esconda es contarle donde esta y confiar en que no lo use-.
+		bool esVipMenu = GetExorConfig().vip.IsVip(sidBase);
 		ExorSpawnMenuDTO dto = new ExorSpawnMenuDTO();
 		int i;
 		for (i = 0; i < spawns.puntos.Count(); i++)
 		{
-			dto.nombres.Insert(spawns.puntos.Get(i).nombre);
+			ExorSpawnPunto ptm = spawns.puntos.Get(i);
+			if (ptm.solo_vip && !esVipMenu)
+				continue;
+			dto.nombres.Insert(ptm.nombre);
 			dto.punto_cd_seg.Insert(PointCdRemainingSec(sidBase, i));	// 0 = disponible
+			dto.punto_idx.Insert(i);	// indice REAL en spawns.json (la lista va filtrada)
 		}
 
 		// opcion "mi base" si esta habilitada, el gate VIP lo permite y el jugador tiene mastil
@@ -418,6 +437,16 @@ class ExorSpawn
 			if (index >= spawns.puntos.Count())
 				return;
 			ExorSpawnPunto pt = spawns.puntos.Get(index);
+
+			// GATE VIP AUTORITATIVO. El boton bloqueado del cliente es cortesia visual; esto
+			// es lo que de verdad impide usar un punto VIP, porque el indice llega por RPC y
+			// un cliente modificado puede mandar cualquiera.
+			if (pt.solo_vip && !GetExorConfig().vip.IsVip(sid))
+			{
+				player.MessageImportant("Ese punto de aparición es solo para VIP.");
+				Print(string.Format("%1 SPAWN: %2 intento usar el punto VIP '%3' sin serlo", ExorStorageConstants.LOG, sid, pt.nombre));
+				return;
+			}
 
 			int now = GetGame().GetTime();
 			string key = string.Format("%1|%2", sid, index);

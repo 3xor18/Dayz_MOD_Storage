@@ -4,12 +4,12 @@
 class ExorStorageConstants
 {
 	static const string MOD_NAME = "3xor_Vanilla_Optimization";
-	static const string MOD_VERSION = "2.12.0";
+	static const string MOD_VERSION = "2.13.0";
 	// Sello de build: SUBIRLO EN CADA EMPAQUE, aunque no cambie MOD_VERSION. Sirve para
 	// saber desde el RPT que PBO esta corriendo el server (el de version sola no alcanza:
 	// se desplego 2.9.1 con MOD_VERSION todavia en "2.8.0" y los logs pre/post deploy
 	// salieron identicos -> imposible confirmar si el deploy habia entrado).
-	static const string MOD_BUILD = "2026-09-04-territorio-indice";
+	static const string MOD_BUILD = "2026-09-04-spawn-vip-koth";
 	static const string LOG = "[3xorVO]";
 	// DEBUG temporal del ciclo de vida del barril (setear/levantar/abrir/cerrar/item
 	// in-out/virtualizar/restaurar/load/save/shutdown). Poner en false (o borrar las
@@ -37,12 +37,11 @@ class ExorStorageConstants
 	static const string CFG_REPARACION = "$profile:3xorVanillaOptimization\\reparacion.json";
 	static const string CFG_BODYCADAVER = "$profile:3xorVanillaOptimization\\bodycadaver.json";
 	static const string CFG_AUTORUN   = "$profile:3xorVanillaOptimization\\autorun.json";
-	static const string CFG_ANTICHEAT = "$profile:3xorVanillaOptimization\\anticheat.json";
 	static const string CFG_KOTH      = "$profile:3xorVanillaOptimization\\koth.json";
 	static const string CFG_NOBUILD   = "$profile:3xorVanillaOptimization\\nobuild.json";
-	static const string CFG_COFRE     = "$profile:3xorVanillaOptimization\\cofre.json";
+	static const string CFG_COFRE     = "$profile:3xorVanillaOptimization\\evento_apertura_cofre.json";
 	static const string CFG_MENSAJES  = "$profile:3xorVanillaOptimization\\mensajes.json";
-	static const string CFG_AUTOS     = "$profile:3xorVanillaOptimization\\autos.json";
+	static const string CFG_AUTOS     = "$profile:3xorVanillaOptimization\\codelock_autos.json";
 	// candado de autos: 1 JSON de estado por auto (keyed por su id estable), como los lockers.
 	// NUNCA se toca el stream de persistencia del auto -> retro-compatible y no corrompe nada.
 	static const string CARLOCK_DIR   = "$profile:3xorVanillaOptimization\\CarLocks";
@@ -51,14 +50,14 @@ class ExorStorageConstants
 	static const string GROUPS_DIR = "$profile:3xorVanillaOptimization\\groups";
 
 	// Stats persistentes para el Score del panel de server info
-	static const string STATS_FILE = "$profile:3xorVanillaOptimization\\stats.json";
+	static const string STATS_FILE = "$profile:3xorVanillaOptimization\\score_board.json";
 
 	// Marcas personales del mapa (PIN) ??? guardadas en el CLIENTE ($profile del cliente),
 	// privadas de cada jugador, no van al server. Las maneja ExorMapPins (5_Mission).
 	static const string MAP_PINS_FILE = "$profile:3xorVanillaOptimization\\my_map_pins.json";
 
 	// Estado persistente de VIP (fecha de ingreso + usos de equipamiento por ciclo)
-	static const string VIP_STATE_FILE = "$profile:3xorVanillaOptimization\\vip_state.json";
+	static const string VIP_STATE_FILE = "$profile:3xorVanillaOptimization\\vip_usos_consumidos.json";
 
 	// Datos de virtualizacion (contenido de barriles)
 	static const string STORAGE_DIR = "$profile:3xorVanillaOptimization\\storage";

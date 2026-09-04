@@ -2,7 +2,7 @@
 // 3xor_Vanilla_Optimization - Stats persistentes (SOLO server)
 // Cuenta por jugador (steamid): kills (PvP, el del killfeed), deaths (te mato otro
 // jugador), suicidios (muerte sin atacante: caida/hambre/vos), y la distancia
-// maxima de un kill PvP + el arma de ese kill. Persistido en stats.json.
+// maxima de un kill PvP + el arma de ese kill. Persistido en score_board.json.
 // Alimenta la tab Score del panel de server info.
 // ============================================================================
 class ExorStats

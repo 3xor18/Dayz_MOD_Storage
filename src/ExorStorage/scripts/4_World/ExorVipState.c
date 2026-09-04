@@ -1,9 +1,15 @@
 // ============================================================================
 // 3xor_Vanilla_Optimization - Estado VIP persistente (SOLO server)
+// ----------------------------------------------------------------------------
+// OJO: vip_usos_consumidos.json NO es un archivo de configuracion, es ESTADO que
+// escribe el server. El admin no lo edita: lo que edita es vip.json (quien es VIP,
+// desde cuando y cuantos usos le tocan). Aca solo se lleva la cuenta de cuantos usos
+// de equipamiento ya gasto cada uno. Borrarlo no rompe nada: le devuelve a todos los
+// usos como si recien empezaran el ciclo.
 // Por steamid guarda los usos de equipamiento consumidos. Los usos NO se reponen
 // solos: solo se reponen cuando el admin cambia fecha_ingreso en vip.json
 // (= renovacion). El VIP ademas vence a los dias_vip (def 30) dias de fecha_ingreso
-// (eso lo decide ExorCfgVip.IsVip, no este archivo). Persistido en vip_state.json.
+// (eso lo decide ExorCfgVip.IsVip, no este archivo). Persistido en vip_usos_consumidos.json.
 // Tambien aplica el loadout VIP al jugador.
 // ============================================================================
 // La fecha de ingreso vive en vip.json (la maneja el admin). Aca solo guardamos los

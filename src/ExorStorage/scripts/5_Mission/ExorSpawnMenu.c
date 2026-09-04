@@ -13,6 +13,7 @@ class ExorSpawnMenu extends UIScriptedMenu
 
 	protected ref TStringArray m_Names;
 	protected ref array<float> m_PointRemain;	// seg restantes por punto (0 = disponible)
+	protected ref array<int> m_PointIdx;		// indice REAL en spawns.json (la lista viene filtrada)
 	protected int m_Count;
 
 	protected bool m_BaseShown;
@@ -42,6 +43,7 @@ class ExorSpawnMenu extends UIScriptedMenu
 
 		m_Names = new TStringArray;
 		m_PointRemain = new array<float>;
+		m_PointIdx = new array<int>;
 		m_Count = 0;
 		m_BaseShown = false;
 		m_BaseRemain = 0;
@@ -60,6 +62,11 @@ class ExorSpawnMenu extends UIScriptedMenu
 				if (dto.punto_cd_seg && i < dto.punto_cd_seg.Count())
 					cd = dto.punto_cd_seg.Get(i);
 				m_PointRemain.Insert(cd);
+				// indice real en la config: la lista puede venir filtrada (puntos solo-VIP)
+				int real = i;
+				if (dto.punto_idx && i < dto.punto_idx.Count())
+					real = dto.punto_idx.Get(i);
+				m_PointIdx.Insert(real);
 			}
 			m_BaseShown = dto.base_enabled;
 			m_BaseRemain = dto.base_cd_seg;
@@ -251,7 +258,8 @@ class ExorSpawnMenu extends UIScriptedMenu
 			{
 				if (!PointAvailable(i))
 					return true;	// en cooldown: ignora el click (no cierra)
-				p.ExorReqSpawnPick(i);
+				// se manda el indice REAL de spawns.json, no la posicion en la lista
+				p.ExorReqSpawnPick(m_PointIdx.Get(i));
 				Close();
 				return true;
 			}

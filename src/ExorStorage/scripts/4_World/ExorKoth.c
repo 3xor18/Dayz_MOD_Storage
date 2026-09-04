@@ -6,8 +6,10 @@
 // min players, osos, zombies (+lista clase_zombie), radio no-spawn-con-player,
 // tiempos de inicio/reciclo/completar, coordenadas e items. El resto (radios de
 // captura, avisos, bonos, despawn, limpieza, classnames, pallet) es GLOBAL.
-// Coordenadas: se elige una LIBRE (sin player dentro del radio); si ninguna esta
-// libre, espera y reintenta hasta que se alejen.
+// Coordenadas: se elige UNA al azar al programar el ciclo y ESA es la que se anuncia y
+// la que se respeta. Si a la hora de aparecer hay gente encima se avisa por chat y se les
+// da tiempo para alejarse; si no se alejan, ese koth se descarta y se programa uno NUEVO
+// desde cero en otra zona (con su cuenta atras y sus avisos). Ver ExorKothRun.TickOcupado.
 // ============================================================================
 class ExorKothState
 {
@@ -15,6 +17,9 @@ class ExorKothState
 	static const int SCHEDULED = 1;
 	static const int ACTIVE    = 2;
 	static const int COMPLETED = 3;
+	// La hora de aparecer llego pero la coordenada anunciada tiene gente encima: se les
+	// aviso y se les esta dando tiempo para alejarse. Ver ExorKothRun.TickOcupado.
+	static const int OCUPADO   = 4;
 }
 
 // ----------------------------------------------------------------------------
@@ -40,6 +45,9 @@ class ExorKothRun
 	int m_CleanupAtMs;
 	vector m_Pos;
 	int m_SmokeState;
+	// gracia por coordenada ocupada: hasta cuando se espera y cuando fue el ultimo aviso
+	int m_GraciaHastaMs;
+	int m_UltimoAvisoGraciaMs;
 	bool m_MarkerShown;
 	ref ExorKothMarkerDTO m_LastMarker;
 
@@ -69,11 +77,29 @@ class ExorKothRun
 	}
 
 	// una coordenada cualquiera (para la marca preliminar de los avisos)
-	vector ResolvePos(ExorCfgKothColor c)
+	// 'evitar' = coordenada que NO se quiere volver a elegir (la que quedo ocupada y obligo
+	// a reprogramar). Con una sola coordenada configurada se devuelve esa igual: no hay a
+	// donde mudarse y es mejor repetir que quedarse sin koth.
+	vector ResolvePos(ExorCfgKothColor c, vector evitar = "0 0 0")
 	{
 		if (!c.coordenadas || c.coordenadas.Count() == 0)
 			return "0 0 0";
-		int idx = Math.RandomInt(0, c.coordenadas.Count());
+		bool hayQueEvitar = (evitar[0] != 0 || evitar[2] != 0);
+		array<int> candidatas = new array<int>;
+		int k;
+		for (k = 0; k < c.coordenadas.Count(); k++)
+		{
+			ExorCfgKothCoord cc = c.coordenadas.Get(k);
+			if (hayQueEvitar && ExorMath.Dist2DSq(Vector(cc.x, 0, cc.z), Vector(evitar[0], 0, evitar[2])) < 25)
+				continue;	// es la misma que hay que evitar (a menos de 5 m)
+			candidatas.Insert(k);
+		}
+		if (candidatas.Count() == 0)
+		{
+			for (k = 0; k < c.coordenadas.Count(); k++)
+				candidatas.Insert(k);
+		}
+		int idx = candidatas.Get(Math.RandomInt(0, candidatas.Count()));
 		ExorCfgKothCoord co = c.coordenadas.Get(idx);
 		vector p = Vector(co.x, co.y, co.z);
 		if (p[1] <= 0)
@@ -81,41 +107,27 @@ class ExorKothRun
 		return p;
 	}
 
-	// elige una coordenada LIBRE (sin player dentro del radio). false = ninguna libre.
-	bool PickFreeCoord(ExorCfgKothColor c, out vector outPos)
+	// Cuantos jugadores VIVOS hay dentro de 'radio' de 'pos'. Usa la lista compartida del
+	// latido de 1 Hz (ver ExorTick1Hz): no pide la suya.
+	int ContarCerca(vector pos, float radio)
 	{
-		outPos = "0 0 0";
-		if (!c.coordenadas || c.coordenadas.Count() == 0)
-			return false;
-		array<int> free = new array<int>;
+		array<Man> players = ExorTick1Hz.Jugadores();
+		float r2 = radio * radio;
+		int n = 0;
 		int i;
-		for (i = 0; i < c.coordenadas.Count(); i++)
+		for (i = 0; i < players.Count(); i++)
 		{
-			ExorCfgKothCoord co = c.coordenadas.Get(i);
-			// COMPATIBILIDAD DE MAPA: coordenada de otro mapa que cae fuera de este terreno.
-			// Spawnear el evento ahi dejaria la caja y el humo en el vacio. Ver ExorMapBounds.
-			if (!ExorMapBounds.Valida("koth.json", c.color, co.x, co.z, 30))
+			PlayerBase pb = PlayerBase.Cast(players.Get(i));
+			if (!pb || !pb.IsAlive())
 				continue;
-			vector p = Vector(co.x, co.y, co.z);
-			if (p[1] <= 0)
-				p[1] = GetGame().SurfaceY(p[0], p[2]);
-			bool ocupada = (c.no_spawnear_con_player_cerca_en_metros > 0 && ExorVO_Manager.IsAlivePlayerNear(p, c.no_spawnear_con_player_cerca_en_metros));
-			if (!ocupada)
-				free.Insert(i);
+			if (vector.DistanceSq(pb.GetPosition(), pos) <= r2)
+				n++;
 		}
-		if (free.Count() == 0)
-			return false;
-		int pick = free.Get(Math.RandomInt(0, free.Count()));
-		ExorCfgKothCoord ch = c.coordenadas.Get(pick);
-		vector fp = Vector(ch.x, ch.y, ch.z);
-		if (fp[1] <= 0)
-			fp[1] = GetGame().SurfaceY(fp[0], fp[2]);
-		outPos = fp;
-		return true;
+		return n;
 	}
 
 	// ------------------------- transiciones -------------------------
-	void GoScheduled(int delaySec)
+	void GoScheduled(int delaySec, vector evitar = "0 0 0")
 	{
 		ExorCfgKoth g = GetExorConfig().koth;
 		ExorCfgKothColor c = Cfg();
@@ -124,11 +136,13 @@ class ExorKothRun
 		m_ScheduledAtMs = now;
 		m_SpawnAtMs = now + (delaySec * 1000);
 		m_State = ExorKothState.SCHEDULED;
+		m_GraciaHastaMs = 0;
+		m_UltimoAvisoGraciaMs = 0;
 		m_WarnFired = new array<bool>;
 		int i;
 		for (i = 0; i < g.segundos_aviso_antes_crear_koth.Count(); i++)
 			m_WarnFired.Insert(false);
-		m_Pos = ResolvePos(c);
+		m_Pos = ResolvePos(c, evitar);
 		Print(string.Format("%1 KOTH[%2] programado en %3s", ExorStorageConstants.LOG, c.color, delaySec));
 	}
 
@@ -136,6 +150,8 @@ class ExorKothRun
 	{
 		if (m_State == ExorKothState.SCHEDULED)
 			TickScheduled(now);
+		else if (m_State == ExorKothState.OCUPADO)
+			TickOcupado(now);
 		else if (m_State == ExorKothState.ACTIVE)
 			TickActive(now);
 		else if (m_State == ExorKothState.COMPLETED)
@@ -203,15 +219,22 @@ class ExorKothRun
 			m_SpawnAtMs = now + 30000;
 			return;
 		}
-		// elegir una coordenada LIBRE (sin player cerca). Si ninguna libre -> esperar.
-		vector freePos;
-		if (!PickFreeCoord(c, freePos))
+		// LA COORDENADA ANUNCIADA MANDA.
+		// Antes, si habia gente encima se elegia OTRA coordenada en silencio: el koth
+		// aparecia en un lugar distinto al que se venia anunciando y la gente que habia
+		// viajado hasta ahi no encontraba nada. Ahora la posicion anunciada es la que se
+		// respeta: si esta ocupada se avisa por chat y se les da tiempo para alejarse
+		// (estado OCUPADO). Si no se alejan, ese koth se descarta y se programa uno NUEVO
+		// desde cero en otra zona, con sus propios avisos. Ver TickOcupado.
+		if (c.no_spawnear_con_player_cerca_en_metros > 0)
 		{
-			m_ScheduledAtMs = now;
-			m_SpawnAtMs = now + 15000;
-			return;
+			int cuantos = ContarCerca(m_Pos, c.no_spawnear_con_player_cerca_en_metros);
+			if (cuantos > 0)
+			{
+				EntrarEnGracia(now, cuantos);
+				return;
+			}
 		}
-		m_Pos = freePos;
 
 		int argb = ExorKoth.ColorArgb(c.color);
 		int smokeIdx = ExorKoth.SmokeIdx(c.color);
@@ -243,6 +266,73 @@ class ExorKothRun
 		if (g.colocar_marca_mapa_para_todo_el_server)
 			SendMarker(true, argb, "Koth activo");
 		Print(string.Format("%1 KOTH[%2] spawn pos=%3", ExorStorageConstants.LOG, c.color, m_Pos));
+	}
+
+	// ------------------------------------------------------------------------
+	//  COORDENADA OCUPADA: avisar, esperar, y si no se alejan, reprogramar
+	// ------------------------------------------------------------------------
+	// El aviso dice CUANTOS hay y QUE va a pasar, para que sea una decision del jugador y
+	// no una sorpresa. Se repite cada 30 s mientras dura la gracia.
+	void EntrarEnGracia(int now, int cuantos)
+	{
+		ExorCfgKoth g = GetExorConfig().koth;
+		ExorCfgKothColor c = Cfg();
+		int argb = ExorKoth.ColorArgb(c.color);
+
+		// gracia en 0 = comportamiento inmediato: se descarta y se reprograma sin esperar
+		int graciaMs = g.segundos_gracia_para_alejarse * 1000;
+		m_State = ExorKothState.OCUPADO;
+		m_GraciaHastaMs = now + graciaMs;
+		m_UltimoAvisoGraciaMs = now;
+
+		ExorKoth.Alert(string.Format("Existen %1 players cerca del koth, si no se alejan se spawnea en otra area (%2)",
+			cuantos, ExorKoth.FmtTiempo(g.segundos_gracia_para_alejarse)), 15, argb);
+		Print(string.Format("%1 KOTH[%2] coordenada ocupada por %3 player(s) -> gracia de %4s", ExorStorageConstants.LOG, c.color, cuantos, g.segundos_gracia_para_alejarse));
+	}
+
+	void TickOcupado(int now)
+	{
+		ExorCfgKoth g = GetExorConfig().koth;
+		ExorCfgKothColor c = Cfg();
+		int argb = ExorKoth.ColorArgb(c.color);
+
+		int cuantos = 0;
+		if (c.no_spawnear_con_player_cerca_en_metros > 0)
+			cuantos = ContarCerca(m_Pos, c.no_spawnear_con_player_cerca_en_metros);
+
+		// SE ALEJARON: el koth aparece donde se habia anunciado, que es lo que la gente espera.
+		if (cuantos == 0)
+		{
+			ExorKoth.Alert("Se alejaron del koth: aparece donde estaba anunciado", 11, argb);
+			m_State = ExorKothState.SCHEDULED;
+			m_SpawnAtMs = now;	// ya
+			m_GraciaHastaMs = 0;
+			SpawnKoth();
+			return;
+		}
+
+		// todavia dentro de la gracia: recordarselo cada 30 s
+		if (now < m_GraciaHastaMs)
+		{
+			if (now - m_UltimoAvisoGraciaMs >= 30000)
+			{
+				m_UltimoAvisoGraciaMs = now;
+				int restan = (m_GraciaHastaMs - now) / 1000;
+				ExorKoth.Alert(string.Format("Existen %1 players cerca del koth, si no se alejan se spawnea en otra area (%2)",
+					cuantos, ExorKoth.FmtTiempo(restan)), 13, argb);
+			}
+			return;
+		}
+
+		// NO SE ALEJARON: este koth se descarta y se programa uno NUEVO desde cero en otra
+		// zona. No aparece de golpe en otro lado: arranca su cuenta atras y sus avisos.
+		vector ocupada = m_Pos;
+		ClearMarker();
+		int nuevoDelay = g.segundos_reprogramar_si_no_se_alejan;
+		ExorKoth.Alert(string.Format("El koth se cancela por %1 players encima: se creara otro en %2 en OTRA zona",
+			cuantos, ExorKoth.FmtTiempo(nuevoDelay)), 15, argb);
+		Print(string.Format("%1 KOTH[%2] CANCELADO (no se alejaron) -> nuevo koth en %3s en otra coordenada", ExorStorageConstants.LOG, c.color, nuevoDelay));
+		GoScheduled(nuevoDelay, ocupada);
 	}
 
 	// infectados (cantidad_zombies, clase de la lista clase_zombie) + osos (spawnear_osos)

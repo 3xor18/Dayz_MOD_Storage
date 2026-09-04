@@ -1,7 +1,7 @@
 // ============================================================================
 // 3xor_Vanilla_Optimization - COFRE - manager (SOLO server)
 // ----------------------------------------------------------------------------
-// Zonas (cofre.json -> lugares[]) donde se pueden abrir cofres segun horario por
+// Zonas (evento_apertura_cofre.json -> lugares[]) donde se pueden abrir cofres segun horario por
 // dia. Cada zona:
 //   - avisa "en X minutos podran abrir cofres" antes de abrir la ventana,
 //   - avisa "ya se puede abrir cofres" al abrirse,
@@ -552,7 +552,7 @@ class ExorCofre
 		ExorCfgCofre cfg = GetExorConfig().cofre;
 		if (!cfg.activado)
 		{
-			Print(string.Format("%1 COFRE desactivado (cofre.json activado=false)", ExorStorageConstants.LOG));
+			Print(string.Format("%1 COFRE desactivado (evento_apertura_cofre.json activado=false)", ExorStorageConstants.LOG));
 			return;
 		}
 		ExorCofre self = Get();
@@ -568,7 +568,7 @@ class ExorCofre
 		for (i = 0; i < n; i++)
 		{
 			ExorCfgCofreLugar lz = cfg.lugares.Get(i);
-			if (lz && lz.posicion && !ExorMapBounds.Valida("cofre.json", "zona " + i.ToString(), lz.posicion.x, lz.posicion.z, 20))
+			if (lz && lz.posicion && !ExorMapBounds.Valida("evento_apertura_cofre.json", "zona " + i.ToString(), lz.posicion.x, lz.posicion.z, 20))
 			{
 				saltadas++;
 				continue;

@@ -2,12 +2,12 @@
 // 3xorStorage - Accion: Quitar Codelock de un AUTO (raid, para NO-miembros)
 // ----------------------------------------------------------------------------
 // Aparece MIRANDO un auto CON candado, a quien NO es del clan dueño (ni admin) y
-// tiene una HERRAMIENTA habilitada en la mano (array del autos.json). Barra de
+// tiene una HERRAMIENTA habilitada en la mano (array del codelock_autos.json). Barra de
 // progreso cuyo tiempo sale del config de ESA herramienta; al completarse, tira el
 // % de acierto de esa herramienta -> si sale, se quita el candado; si no, no pasa nada
 // (puede reintentar). Al empezar suena la alarma del auto (config alarma_sonido).
 //
-// Defaults (autos.json): Lockpick 60% / 60s, Screwdriver 45% / 120s, cuchillos (menos
+// Defaults (codelock_autos.json): Lockpick 60% / 60s, Screwdriver 45% / 120s, cuchillos (menos
 // el de piedra) 35% / 180s. Todo editable por classname.
 // ============================================================================
 class ExorActionRaidCarLockCB : ActionContinuousBaseCB
