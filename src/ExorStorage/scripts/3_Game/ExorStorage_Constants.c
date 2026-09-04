@@ -4,12 +4,12 @@
 class ExorStorageConstants
 {
 	static const string MOD_NAME = "3xor_Vanilla_Optimization";
-	static const string MOD_VERSION = "2.11.4";
+	static const string MOD_VERSION = "2.11.5";
 	// Sello de build: SUBIRLO EN CADA EMPAQUE, aunque no cambie MOD_VERSION. Sirve para
 	// saber desde el RPT que PBO esta corriendo el server (el de version sola no alcanza:
 	// se desplego 2.9.1 con MOD_VERSION todavia en "2.8.0" y los logs pre/post deploy
 	// salieron identicos -> imposible confirmar si el deploy habia entrado).
-	static const string MOD_BUILD = "2026-09-03-profiler";
+	static const string MOD_BUILD = "2026-09-04-crash-municion";
 	static const string LOG = "[3xorVO]";
 	// DEBUG temporal del ciclo de vida del barril (setear/levantar/abrir/cerrar/item
 	// in-out/virtualizar/restaurar/load/save/shutdown). Poner en false (o borrar las
@@ -167,6 +167,17 @@ class ExorStorageConstants
 	// bolsas en TODOS los ticks (es aritmetica de enteros, no cuesta nada) -> ninguna tumba
 	// se queda de mas por este reparto.
 	static const int MAX_BAGS_PER_TICK = 40;
+
+	// Maximo de tumbas que de verdad VIRTUALIZAN O RESTAURAN en un tick. El cupo de arriba
+	// limita cuantas se REVISAN (comparar distancias es barato); esto limita el trabajo caro.
+	// MEDIDO en el banco de pruebas con una tumba de 5 prendas llenas + 45 items sueltos:
+	// virtualizar ~4 ms, RESTAURAR ~12 ms. Parece poco de a una, pero el cupo de revision
+	// permitia 40 en el MISMO frame, y una oleada de muertes -el final de un raid- es
+	// justamente cuando todas cumplen la condicion a la vez: medio segundo de server clavado,
+	// en el bloque que ya habia sido el peor (pico historico de 656 ms con 250 tumbas).
+	// Loot-safe: la que no entra se hace en el proximo tick (5 s) y el cursor rotativo le
+	// garantiza el turno; y abrir la tumba la restaura EN EL ACTO sin pasar por este cupo.
+	static const int MAX_BAG_OPS_PER_TICK = 4;
 
 	// Debounce del guardado EN VIVO mientras el contenedor esta ABIERTO. Cada snapshot
 	// reserializa el contenedor ENTERO y reescribe su archivo (los JSON de produccion van

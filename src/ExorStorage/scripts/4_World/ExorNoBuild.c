@@ -32,11 +32,14 @@ class ExorNoBuild
 			ExorCfgNoBuildZona z = cfg.lugares_no_permitidos.Get(i);
 			if (!z || !z.posicion || z.desabilitar_construccion_en_metros <= 0)
 				continue;
-			// distancia HORIZONTAL (x,z del mundo); 'y' = altura, se ignora
+			// distancia HORIZONTAL (x,z del mundo); 'y' = altura, se ignora.
+			// AL CUADRADO: comparar d^2 < r^2 es identico a d < r y saca una raiz cuadrada
+			// por zona. Esto corre por FRAME mientras el jugador tiene un holograma en la
+			// mano, asi que la raiz se paga decenas de veces por segundo y por jugador.
 			float dx = pos[0] - z.posicion.x;
 			float dz = pos[2] - z.posicion.z;
-			float dist = Math.Sqrt(dx * dx + dz * dz);
-			if (dist < z.desabilitar_construccion_en_metros)
+			float r = z.desabilitar_construccion_en_metros;
+			if ((dx * dx) + (dz * dz) < r * r)
 				return false;
 		}
 		return true;
@@ -45,10 +48,33 @@ class ExorNoBuild
 	// whitelist por 'contains' case-insensitive: la entrada de config puede ser el
 	// classname exacto o un pedazo (ej. "FireworksLauncher" pega tambien en
 	// "Anniversary_FireworksLauncher").
+	//
+	// MEMOIZADO POR CLASSNAME. Esto lo llama CanBuildAt, que corre por frame desde
+	// ItemBase.CanBePlaced mientras alguien esta colocando algo: cada llamada hacia un
+	// ToLower() del classname (que ALOCA un string) MAS un ToLower() y un barrido de
+	// substring por cada entrada de la whitelist. El classname de un item no cambia nunca,
+	// asi que la respuesta se calcula una vez por tipo en toda la vida del server.
+	// La whitelist se lee UNA vez por arranque (los JSON del admin no se recargan en
+	// caliente), asi que el cache vive toda la sesion. Si alguna vez se agrega recarga en
+	// caliente de nobuild.json, hay que llamar a InvalidarCache ahi.
+	static ref map<string, bool> s_WlCache;
+
+	static void InvalidarCache()
+	{
+		s_WlCache = null;
+	}
+
 	static bool IsWhitelisted(ExorCfgNoBuild cfg, string itemType)
 	{
 		if (!cfg.whiteList || itemType == "")
 			return false;
+		if (!s_WlCache)
+			s_WlCache = new map<string, bool>;
+		bool cached;
+		if (s_WlCache.Find(itemType, cached))
+			return cached;
+
+		bool res = false;
 		string t = itemType;
 		t.ToLower();
 		int i;
@@ -59,9 +85,13 @@ class ExorNoBuild
 				continue;
 			w.ToLower();
 			if (t.Contains(w))
-				return true;
+			{
+				res = true;
+				break;
+			}
 		}
-		return false;
+		s_WlCache.Set(itemType, res);
+		return res;
 	}
 
 	// aviso al jugador (server). Reusa el canal de mensaje importante de vanilla.

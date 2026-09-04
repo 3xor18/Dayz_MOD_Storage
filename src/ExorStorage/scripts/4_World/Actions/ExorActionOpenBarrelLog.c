@@ -38,6 +38,11 @@ modded class ActionOpenBarrel
 			}
 		}
 
+		// TECHO DE CONTENEDORES REALES POR BASE (mismo criterio que los muebles): si la base
+		// ya llego al maximo, se guarda solo el mas viejo sin usar antes de abrir este.
+		if (barril)
+			ExorMuebleRules.HacerLugarParaAbrir(quien, barril, barril.GetPosition());
+
 		ExorStorageBootLock.s_Abriendo = quien;
 		super.OnExecuteServer(action_data);
 		ExorStorageBootLock.s_Abriendo = null;

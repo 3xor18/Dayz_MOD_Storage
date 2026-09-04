@@ -560,6 +560,16 @@ class Exor_Barrel_Base : Barrel_ColorBase
 			return false;
 		if (ExorCargoCount() == 0)
 			return false;
+		// NO VIRTUALIZAR CON EL JUGADOR AL LADO (mismo criterio que los muebles): si se
+		// guarda apenas se cierra, el que esta parado ahi acomodando su base paga un restore
+		// completo cada vez que reabre. Se espera a que se aleje, con TECHO de tiempo para
+		// que una base con gente adentro no se quede nunca sin virtualizar.
+		if (settings.virtualizar_distancia_metros > 0 && ExorVO_Manager.IsAlivePlayerNearList(players, GetPosition(), settings.virtualizar_distancia_metros))
+		{
+			int esperaMax = settings.virtualizar_espera_max_segundos * 1000;
+			if (esperaMax <= 0 || now - m_ExorLastInteractMs < esperaMax)
+				return false;
+		}
 
 		ExorVirtualize();
 		return true;
@@ -622,6 +632,15 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	// Ignora la cercania del jugador a proposito: si alguien esta arrastrando un item justo
 	// en ese instante, se prefiere perder ESE item antes que dejar el barril explotable
 	// (decision del owner del server). Devuelve true si hizo trabajo.
+	// ULTIMA VEZ QUE ALGUIEN LO TOCO (para el techo de contenedores reales por base).
+	int ExorUltimoUsoMs() { return m_ExorLastInteractMs; }
+
+	// "REAL" = su contenido esta en el mundo. Un barril virtualizado no le cuesta nada al motor.
+	bool ExorEsReal()
+	{
+		return !m_ExorVirt && ExorCargoCount() > 0;
+	}
+
 	bool ExorForzarVirtualizar()
 	{
 		if (m_ExorVirt || ExorCargoCount() == 0)

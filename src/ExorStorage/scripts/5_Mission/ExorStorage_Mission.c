@@ -23,6 +23,10 @@ modded class MissionServer
 		// Resuelve si el apagado anterior fue limpio (define si los contenedores barren el
 		// piso en su 1ra apertura) y deja la marca de esta sesion. Ver ExorApagadoLimpio.
 		ExorApagadoLimpio.Init();
+		// Canario de la lectura de cartuchos: si el arranque anterior murio dentro de la
+		// llamada nativa que lee la municion de un cargador, esta sesion no la usa. Ver
+		// ExorAmmoCanary (que explica que se pierde y que no).
+		ExorAmmoCanary.Init();
 		// Deja en el RPT QUE MAPA y de que tamaño cree el mod que esta corriendo. Es la
 		// primera cosa que uno quiere ver al cambiar de terreno, y sin esto la deteccion
 		// es perezosa: si ningun JSON tiene coordenadas, nunca se evalua y no se entera nadie.
@@ -30,6 +34,12 @@ modded class MissionServer
 		// Banco de pruebas automatico: si hay marcador perf_test.txt, el server monta la
 		// carga y se perfila solo, sin necesidad de que nadie entre al juego. Ver ExorAutoPerf.
 		ExorAutoPerf.Init();
+		// Banco de pruebas de INTEGRIDAD + cronometro: si hay marcador autotest.txt, el
+		// server llena un locker y un barril, les hace el ciclo completo (cerrar ->
+		// virtualizar -> abrir) y compara el contenido item por item, ademas de cronometrar
+		// las operaciones caras. Es lo que permite decir "no se pierde loot" y "esta
+		// optimizacion sirvio" con un numero y no con una impresion. Ver ExorAutoTest.
+		ExorAutoTest.Init();
 		// VALVULA DE EMERGENCIA del admin: este arranque no deserializa las neveras. Se traduce
 		// aca, en OnInit (que corre ANTES de que el CE cargue la persistencia), y no dentro del
 		// OnStoreLoad de la nevera: la carga de entidades es justo el momento en el que no

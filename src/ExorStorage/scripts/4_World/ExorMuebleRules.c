@@ -275,6 +275,145 @@ class ExorMuebleRules
 		return true;
 	}
 
+	// ========================================================================
+	//  TECHO DE CONTENEDORES "REALES" POR BASE
+	// ========================================================================
+	// EL PROBLEMA.  El limite que ya existia (cantidad_maxima_muebles_por_base) acota
+	// cuantos muebles hay, no cuantos estan ABIERTOS. Y lo que le cuesta al server no es el
+	// mueble: es su contenido de-virtualizado. Un locker lleno son cientos de entidades que
+	// el motor simula y replica a todos los clientes cercanos. En horario de raid el clan
+	// abre TODO lo suyo a la vez y ahi es donde el server se cae o se arrastra.
+	//
+	// LA REGLA.  La base puede tener los muebles que quiera, pero solo N pueden estar
+	// reales al mismo tiempo. Al abrir el N+1, el que hace mas rato que nadie usa se cierra
+	// y se guarda solo. Es un techo DURO al pico de entidades por base, y no le saca nada
+	// al jugador: lo que se guarda vuelve entero al abrirlo.
+	//
+	// POR QUE SE EXPULSA EN VEZ DE BLOQUEAR.  Bloquear en medio de un raid es una funcion
+	// rota desde el punto de vista del jugador ("no me deja abrir mi propio locker").
+	// Cerrar el mas viejo hace lo mismo para el server y es invisible en la practica: si
+	// nadie lo estaba mirando hace rato, cerrarlo no interrumpe nada.
+	//
+	// COSTO.  Un recorrido de los registros vivos del manager (arrays en memoria, sin scan
+	// del mundo) y SOLO cuando alguien abre algo. Cero costo por frame.
+	// No devuelve nada a proposito: el contenedor SIEMPRE se abre. Esto solo hace lugar
+	// antes. Trabarle el locker al jugador seria peor que un pico de entidades, y ademas
+	// dejaria el techo dependiendo de que la expulsion nunca falle.
+	static void HacerLugarParaAbrir(PlayerBase quien, Object nuevo, vector pos)
+	{
+		ExorCfgStorage s = GetExorConfig().storage;
+		if (!s || s.maximo_contenedores_reales_por_base <= 0)
+			return;
+
+		ExorVO_Manager vo = ExorVO_Manager.Get();
+		if (!vo)
+			return;
+
+		// El radio de la base sale del territorio. Si el modulo de territorio esta apagado
+		// (radio 0) el techo igual tiene que servir, asi que se cae a un radio fijo: sin esto
+		// no habria candidatos y la proteccion no existiria justo en los servers sin party.
+		float radio = ExorTerritoryRules.Radius();
+		if (radio <= 0)
+			radio = 60.0;
+		float r2 = radio * radio;
+
+		// candidatos = contenedores REALES de esta base, con su ultimo uso y si estan abiertos
+		array<Object> cand = new array<Object>;
+		array<int> usoMs = new array<int>;
+		array<int> abierto = new array<int>;
+		int i;
+
+		if (vo.m_Openables)
+		{
+			for (i = 0; i < vo.m_Openables.Count(); i++)
+			{
+				Exor_OpenableStorage f = vo.m_Openables.Get(i);
+				if (!f || f == nuevo || !f.ExorEsReal())
+					continue;
+				if (ExorMath.Dist2DSq(pos, f.GetPosition()) > r2)
+					continue;
+				cand.Insert(f);
+				usoMs.Insert(f.ExorUltimoUsoMs());
+				if (f.IsOpen())
+					abierto.Insert(1);
+				else
+					abierto.Insert(0);
+			}
+		}
+		if (vo.m_Barrels)
+		{
+			for (i = 0; i < vo.m_Barrels.Count(); i++)
+			{
+				Exor_Barrel_Base b = vo.m_Barrels.Get(i);
+				if (!b || b == nuevo || !b.ExorEsReal())
+					continue;
+				if (b.GetHierarchyParent())		// barril atado a un auto: no es de la base
+					continue;
+				if (ExorMath.Dist2DSq(pos, b.GetPosition()) > r2)
+					continue;
+				cand.Insert(b);
+				usoMs.Insert(b.ExorUltimoUsoMs());
+				if (b.IsOpen())
+					abierto.Insert(1);
+				else
+					abierto.Insert(0);
+			}
+		}
+
+		int limite = s.maximo_contenedores_reales_por_base;
+		if (cand.Count() < limite)
+			return;
+
+		// hay que liberar hasta dejar lugar para el que se esta por abrir
+		int liberar = cand.Count() - limite + 1;
+		int liberados = 0;
+		int vuelta;
+		for (vuelta = 0; vuelta < liberar; vuelta++)
+		{
+			// ELEGIR VICTIMA: primero los CERRADOS (nadie los esta usando) y, dentro de cada
+			// grupo, el que hace mas rato que nadie toca. Con pocos candidatos, buscar el
+			// minimo es mas simple -y mas facil de leer- que ordenar la lista.
+			int mejor = -1;
+			int mejorUso = 0;
+			int mejorAbierto = 2;
+			for (i = 0; i < cand.Count(); i++)
+			{
+				if (!cand.Get(i))
+					continue;
+				if (abierto.Get(i) > mejorAbierto)
+					continue;
+				if (abierto.Get(i) < mejorAbierto || mejor < 0 || usoMs.Get(i) < mejorUso)
+				{
+					mejor = i;
+					mejorUso = usoMs.Get(i);
+					mejorAbierto = abierto.Get(i);
+				}
+			}
+			if (mejor < 0)
+				break;
+
+			Object victima = cand.Get(mejor);
+			cand.Set(mejor, null);		// no volver a elegirla
+
+			Exor_OpenableStorage fv = Exor_OpenableStorage.Cast(victima);
+			if (fv && fv.ExorForzarVirtualizar())
+				liberados++;
+			else
+			{
+				Exor_Barrel_Base bv = Exor_Barrel_Base.Cast(victima);
+				if (bv && bv.ExorForzarVirtualizar())
+					liberados++;
+			}
+		}
+
+		if (liberados > 0)
+		{
+			Print(string.Format("%1 CUPO: la base en %2 llego a %3 contenedores abiertos (max %4) -> %5 guardado(s) automaticamente",
+				ExorStorageConstants.LOG, pos.ToString(), cand.Count(), limite, liberados));
+			SendVerde(quien, string.Format("Tu base ya tenia %1 contenedores abiertos: se guardo el mas viejo para no lagear el server.", limite));
+		}
+	}
+
 	// -------- puede 'player' LOOTEAR (abrir) el mueble 'fur'? --------
 	// Misma regla que CanLootMueble pero por POSICION (para objetos que no son
 	// Exor_OpenableStorage, ej. el parking): solo miembros salvo en horario libre.

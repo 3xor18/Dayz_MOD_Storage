@@ -87,6 +87,10 @@ class ExorActionOpenCloseFridge : ActionInteractBase
 				return;	// no abrir hasta que ingrese la clave correcta
 			}
 		}
+		// TECHO DE CONTENEDORES REALES POR BASE: si la base ya llego al maximo, se guarda
+		// solo el que hace mas rato que nadie usa y despues se abre este. Ver
+		// ExorMuebleRules.HacerLugarParaAbrir.
+		ExorMuebleRules.HacerLugarParaAbrir(player, fur, fur.GetPosition());
 		fur.Open();
 	}
 }

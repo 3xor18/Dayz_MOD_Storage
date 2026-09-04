@@ -209,10 +209,12 @@ class ExorContainerOps
 			// (perforante -> normal) con la misma cantidad no cambiaria la firma y el JSON
 			// se quedaria con la municion vieja: justo el bug que arreglamos hoy.
 			// Una sola consulta por cargador, no por cartucho.
-			if (ammo > 0)
+			if (ammo > 0 && ExorAmmoCanary.PuedeLeer())
 			{
-				float cdmg;
-				string ctype;
+				// inicializados: son parametros de salida de una llamada NATIVA y con la
+				// cadena sin crear el motor escribe fuera y se cae el server (ver CaptureAmmoLista)
+				float cdmg = 0;
+				string ctype = "";
 				if (mag.GetCartridgeAtIndex(0, cdmg, ctype) && ctype != "")
 					h = (h * 31) + ctype.Hash();
 			}
@@ -225,18 +227,24 @@ class ExorContainerOps
 			food = ed.GetFoodStage().GetFoodStageType();
 		h = (h * 31) + food;
 
-		// posicion en la grilla del padre (mover un item ES un cambio)
+		// posicion en la grilla del padre (mover o rotar un item ES un cambio).
+		// La InventoryLocation es COMPARTIDA y reutilizada: crear una por item convertia
+		// cada firma de un contenedor de 300 items en 300 objetos creados y tirados, y la
+		// firma se calcula cada vez que hay que decidir si guardar. Ver CasillaDe.
 		int cidx = 0;
 		int crow = -1;
 		int ccol = -1;
-		InventoryLocation loc = new InventoryLocation();
-		if (e.GetInventory() && e.GetInventory().GetCurrentInventoryLocation(loc) && loc.GetType() == InventoryLocationType.CARGO)
+		int cflip = 0;
+		InventoryLocation loc = CasillaDe(e);
+		if (loc)
 		{
 			cidx = loc.GetIdx();
 			crow = loc.GetRow();
 			ccol = loc.GetCol();
+			if (loc.GetFlip())
+				cflip = 1;
 		}
-		h = (h * 31) + (cidx * 7919) + (crow * 31) + ccol;
+		h = (h * 31) + (cidx * 7919) + (crow * 31) + ccol + (cflip * 131);
 
 		// recursion: attachments y cargo anidado
 		GameInventory inv = e.GetInventory();
@@ -265,17 +273,28 @@ class ExorContainerOps
 	// nada: el llamador decide si hace falta escribirlo (ver la firma de contenido).
 	// 'conAttachments' = tambien capturar los attachments del contenedor (el mueble de
 	// armas guarda las armas en slots; el barril no tiene nada de eso).
-	static ExorVO_ContainerFile ArmarSnapshot(EntityAI duenio, string id, bool conAttachments)
+	// Solo la CABECERA: id, tipo y sello de tiempo, sin recorrer un solo item. La usa
+	// ArmarSnapshot y tambien la tumba, que arma su lista de items a su manera (la ropa de
+	// los slots va como ITEM, no como attachment).
+	static ExorVO_ContainerFile CabeceraSnapshot(EntityAI duenio, string id)
 	{
 		ExorVO_ContainerFile f = new ExorVO_ContainerFile();
-		if (!duenio)
-			return f;
 		f.id = id;
-		f.owner_type = duenio.GetType();
+		if (duenio)
+			f.owner_type = duenio.GetType();
 		// SELLO DE TIEMPO: desde que el contenido se virtualiza deja de existir para el
 		// motor, asi que lo que dependa del paso del tiempo (la pudricion de la comida en
 		// la nevera) hay que cobrarlo al restaurar. Ver Exor_Fridge.ExorOnItemsRestored.
 		f.vmin = ExorTimeUtil.NowMinutes();
+		return f;
+	}
+
+	// Recorre el contenido REAL y arma el objeto que se serializa al JSON.
+	static ExorVO_ContainerFile ArmarSnapshot(EntityAI duenio, string id, bool conAttachments)
+	{
+		ExorVO_ContainerFile f = CabeceraSnapshot(duenio, id);
+		if (!duenio)
+			return f;
 
 		GameInventory inv = duenio.GetInventory();
 		if (!inv)
@@ -326,6 +345,19 @@ class ExorContainerOps
 	//
 	// El lector acepta tambien el formato viejo (objeto unico): si la primera linea no trae
 	// la marca, cae a JsonFileLoader. Migrar es gratis y sin ventana de riesgo.
+	// MEDIDO, PARA QUE NADIE LO VUELVA A INTENTAR (banco de pruebas del 4-sep, un locker
+	// con 305 entidades, 20 iteraciones):
+	//     armar el DTO ......................... 1.6 ms
+	//     GuardarJL con JsonSerializer ......... 4.9 ms   -> 6.5 ms en total
+	//     escribir DIRECTO del inventario vivo . 8.9 ms
+	// La "optimizacion obvia" -saltarse el DTO y armar el JSON a mano para ahorrarse ~900
+	// objetos y 300 llamadas de reflexion- salio 36% MAS LENTA. La razon es que
+	// JsonSerializer.WriteToString es NATIVO y concatenar strings en Enforce es codigo
+	// interpretado que aloca una cadena nueva en cada '+'. El DTO, que parecia el problema,
+	// resulto ser la parte barata del asunto.
+	// (De paso quedo probado que el archivo se puede escribir un 23% mas chico omitiendo los
+	// campos que valen su default. NO se hace: un campo ausente NO vuelve al valor del
+	// constructor al releerlo, vuelve en CERO, y "health = 0" es un item destruido.)
 	static const string EXOR_JL_MAGIC = "#EXORJL1 ";
 	// lineas que se juntan en memoria antes de volcarlas de una (ver GuardarJL)
 	static const int EXOR_JL_LOTE = 25;
@@ -488,6 +520,32 @@ class ExorContainerOps
 		if (podados > 0)
 			Print(string.Format("%1 GUARD: contenedor %2 -> %3 item(s) corruptos descartados antes de restaurar", ExorStorageConstants.LOG, idParaLog, podados));
 		return f;
+	}
+
+	// ------------------------------------------------------------------------
+	//  CASILLA DEL ITEM, SIN ALOCAR
+	// ------------------------------------------------------------------------
+	// GetCurrentInventoryLocation necesita un InventoryLocation donde escribir. Crear uno
+	// POR ITEM significa, en un contenedor de 300 items, 300 objetos creados y tirados en
+	// cada firma y en cada volcado -y la firma corre cada vez que se evalua si hay que
+	// guardar-. Como el valor se lee y se descarta en el acto, alcanza con UNA instancia
+	// reutilizada. Devuelve null si el item no esta en un cargo.
+	static ref InventoryLocation s_Loc;
+
+	static InventoryLocation CasillaDe(EntityAI e)
+	{
+		if (!e)
+			return null;
+		GameInventory inv = e.GetInventory();
+		if (!inv)
+			return null;
+		if (!s_Loc)
+			s_Loc = new InventoryLocation();
+		if (!inv.GetCurrentInventoryLocation(s_Loc))
+			return null;
+		if (s_Loc.GetType() != InventoryLocationType.CARGO)
+			return null;
+		return s_Loc;
 	}
 
 	// ------------------------------------------------------------------------

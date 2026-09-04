@@ -521,6 +521,12 @@ class ExorVO_Manager
 		if (bagCount > 0)
 		{
 			int bagBudget = ScaleBudget(ExorStorageConstants.MAX_BAGS_PER_TICK);
+			// CUPO APARTE PARA EL TRABAJO PESADO. El de arriba limita cuantas bolsas se
+			// REVISAN (chequeo de distancia, barato); este limita cuantas de verdad
+			// VIRTUALIZAN O RESTAURAN, que MEDIDO cuesta ~47 ms cada una. Sin este, una
+			// oleada de muertes hacia 40 operaciones en un mismo frame = ~2 s de server
+			// clavado. Ver ExorBodyBag.ExorBagProximityTick.
+			int bagOps = ScaleBudget(ExorStorageConstants.MAX_BAG_OPS_PER_TICK);
 			int bagStart = m_BagCursor % bagCount;
 			int done = 0;
 			for (int bi = 0; bi < bagCount && done < bagBudget; bi++)
@@ -528,7 +534,8 @@ class ExorVO_Manager
 				Exor_BodyBag bag2 = m_BodyBags.Get((bagStart + bi) % bagCount);
 				if (!bag2)
 					continue;	// el pase 1 ya limpia los nulos; aca solo se saltea
-				bag2.ExorBagProximityTick(now, alivePos);
+				if (bag2.ExorBagProximityTick(now, alivePos, bagOps > 0))
+					bagOps--;
 				done++;
 			}
 			m_BagCursor = (bagStart + done) % bagCount;

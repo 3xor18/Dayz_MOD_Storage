@@ -114,6 +114,27 @@ class ExorCfgStorage
 	// anti-dupe casi no aporta: el pase de reconcile tarda horas en recorrer todo. 0 = off.
 	int bloqueo_abrir_al_entrar_segundos = 60;
 
+	// ---- TECHO DE CONTENEDORES "REALES" POR BASE (lo que de verdad pesa) ----
+	// Lo caro no es tener 40 lockers en una base: es tener 40 lockers DE-VIRTUALIZADOS a la
+	// vez, porque cada uno devuelve al mundo cientos de entidades que el motor simula y
+	// replica a todos los clientes cercanos. En horario de raid el clan abre todo lo suyo y
+	// eso es justo lo que tira el server.
+	// Con esto la base puede seguir teniendo los muebles que quiera, pero solo N pueden
+	// estar abiertos/reales al mismo tiempo: al abrir el N+1, el mas viejo sin usar se
+	// cierra y se guarda solo. Es un techo DURO al pico de entidades por base.
+	// 0 = sin limite (comportamiento viejo).
+	int maximo_contenedores_reales_por_base = 8;
+
+	// ---- NO VIRTUALIZAR CON EL JUGADOR AL LADO ----
+	// Si se virtualiza apenas se cierra, el que esta parado ahi acomodando su base paga un
+	// restore completo cada vez que vuelve a abrir: el vaiven cuesta mas que dejarlo real
+	// unos segundos. Se espera a que se aleje estos metros. 0 = virtualizar igual.
+	float virtualizar_distancia_metros = 4.0;
+	// ...pero con TECHO: pasados estos segundos se virtualiza aunque siga alguien al lado.
+	// Sin este tope, una base con gente adentro no virtualizaria nunca, que es exactamente
+	// el problema que se quiere evitar. 0 = sin techo (no recomendado).
+	int virtualizar_espera_max_segundos = 120;
+
 	void ExorCfgStorage()
 	{
 		blacklist = new TStringArray;
@@ -125,8 +146,12 @@ class ExorCfgStorage
 	void SetDefaults()
 	{
 		version = 1;
-		auto_cerrar_segundos = 5;
-		virtualizar_segundos = 5;
+		// 10/10 y no 5/5: estos dos mandan el ritmo de cierre/virtualizacion de CIENTOS de
+		// contenedores, asi que a la mitad de segundos es el doble de churn. El valor probado
+		// en produccion es 10; el 5 de aca abajo era una incoherencia con el default del campo
+		// (arriba decia 10) y se colaba en el storage.json de cualquier server nuevo.
+		auto_cerrar_segundos = 10;
+		virtualizar_segundos = 10;
 		cerrar_distancia_metros = 10.0;
 		multiplicador_comida = 2.0;
 		permitir_ropa_con_items = true;
@@ -153,6 +178,9 @@ class ExorCfgStorage
 		}
 		cerrar_antes_reinicio_minutos = 2;
 		bloqueo_abrir_al_entrar_segundos = 60;
+		maximo_contenedores_reales_por_base = 8;
+		virtualizar_distancia_metros = 4.0;
+		virtualizar_espera_max_segundos = 120;
 		if (reinicios_horas)
 		{
 			reinicios_horas.Clear();

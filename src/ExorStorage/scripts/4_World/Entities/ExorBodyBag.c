@@ -190,9 +190,33 @@ class Exor_BodyBag extends Container_Base
 		return true;
 	}
 
+	// ESTADO VIRTUALIZADO, CACHEADO.
+	// Era un FileExist -o sea una llamada al sistema de archivos- y lo consulta el tick de
+	// proximidad de CADA tumba: con 250 tumbas vivas eso son cientos de stats por tick, en
+	// el mismo bloque que ya habia sido el peor del server (pico medido de 656 ms).
+	// El archivo lo escribe y lo borra SOLO este mod, y siempre por los tres caminos de
+	// abajo, asi que la cache no se puede desincronizar sola. Se resuelve perezosamente la
+	// primera vez (ahi si vale el FileExist: es cuando de verdad no se sabe).
+	protected bool m_ExorVirtResuelto;
+	protected bool m_ExorVirtCache;
+
 	bool ExorIsVirtualized()
 	{
-		return FileExist(ExorGetStoragePath());
+		if (!m_ExorVirtResuelto)
+		{
+			m_ExorVirtResuelto = true;
+			m_ExorVirtCache = FileExist(ExorGetStoragePath());
+		}
+		return m_ExorVirtCache;
+	}
+
+	// Unico punto donde se mueve la cache: que quede claro que va SIEMPRE junto con la
+	// escritura o el borrado del archivo.
+	void ExorSetVirtualizada(bool v)
+	{
+		m_ExorVirtResuelto = true;
+		m_ExorVirtCache = v;
+		m_ExorVirtualizedSync = v;
 	}
 
 	void ExorStampSpawn()
@@ -240,6 +264,7 @@ class Exor_BodyBag extends Container_Base
 		// quedaba huerfano para siempre: se encontraron 273 JSON acumulados desde
 		// hacia 4 dias, con tumbas que duran 30 minutos.
 		DeleteFile(ExorGetStoragePath());
+		ExorSetVirtualizada(false);
 		Print(string.Format("%1 BodyBag %2 expirada (%3 min) -> borrada", ExorStorageConstants.LOG, ExorGetID(), age));
 		// ObjectDelete es DIFERIDO (el puntero sigue vivo en el array hasta fin de frame), asi
 		// que se marca: el pase 2 de este mismo tick tiene que saltearla en vez de ponerse a
@@ -255,30 +280,49 @@ class Exor_BodyBag extends Container_Base
 	// player: con 250 tumbas y 50 players eran 12.500 casts por tick (pico medido: 656ms).
 	// Diferir esto es seguro: el restore CONFIABLE es sincrono al abrir la tumba (Open()), esto
 	// es solo el backup por proximidad.
-	void ExorBagProximityTick(int nowMs, array<vector> alivePos)
+	// 'permitirOps' = queda cupo en este tick para hacer el trabajo PESADO (virtualizar o
+	// restaurar). Devuelve true si LO HIZO, para que el manager descuente ese cupo.
+	//
+	// POR QUE HACE FALTA EL CUPO. El chequeo de distancia es barato; virtualizar o restaurar
+	// no (medido: ~4 ms y ~12 ms para una tumba de 5 prendas llenas + 45 items). Sin cupo,
+	// una oleada -el final de un raid, con decenas de muertos a la vez- llega al limite de
+	// tumbas revisadas por tick y hace las 40 operaciones en el MISMO frame. El cupo las
+	// reparte; nada se pierde: la que no entro se hace en el siguiente tick, el cursor
+	// rotativo le garantiza el turno, y abrir la tumba la restaura en el acto igual.
+	bool ExorBagProximityTick(int nowMs, array<vector> alivePos, bool permitirOps)
 	{
 		if (m_ExorExpirada)
-			return;		// ya la borro el pase de TTL en este mismo tick
+			return false;	// ya la borro el pase de TTL en este mismo tick
 		ExorCfgBodyCadaver cfg = GetExorConfig().bodycadaver;
 
 		// YA virtualizada: restaurar si un player vivo se acerca (backup del restore-on-open).
 		if (ExorIsVirtualized())
 		{
-			if (ExorPlayerNear(alivePos, cfg.acercar_metros))
-				ExorRestore();
-			return;
+			if (!ExorPlayerNear(alivePos, cfg.acercar_metros))
+				return false;
+			if (!permitirOps)
+				return false;	// sin cupo: el proximo tick. Abrir la tumba restaura igual, en el acto.
+			ExorRestore();
+			return true;
 		}
 
 		// NO virtualizada: virtualizar si esta activo y hace virtualizar_minutos que no hay
 		// nadie vivo a <alejar_metros. Solo si tiene loot real (si no, no hay nada que sacar).
-		if (cfg.virtualizar_minutos > 0)
+		if (cfg.virtualizar_minutos <= 0)
+			return false;
+		if (ExorPlayerNear(alivePos, cfg.alejar_metros))
 		{
-			bool near = ExorPlayerNear(alivePos, cfg.alejar_metros);
-			if (near)
-				m_ExorLastNearMs = nowMs;
-			else if (nowMs - m_ExorLastNearMs >= cfg.virtualizar_minutos * 60000 && ExorContentCount() > 0)
-				ExorVirtualize();
+			m_ExorLastNearMs = nowMs;
+			return false;
 		}
+		if (nowMs - m_ExorLastNearMs < cfg.virtualizar_minutos * 60000)
+			return false;
+		if (ExorContentCount() == 0)
+			return false;
+		if (!permitirOps)
+			return false;
+		ExorVirtualize();
+		return true;
 	}
 
 	// hay algun player VIVO dentro de 'radius' de la tumba?
@@ -310,16 +354,19 @@ class Exor_BodyBag extends Container_Base
 
 	void ExorVirtualize()
 	{
-		ExorVO_ContainerFile f = new ExorVO_ContainerFile();
-		f.id = ExorGetID();
-		f.owner_type = GetType();
-
 		GameInventory inv = GetInventory();
+		if (!inv)
+			return;
+
+		// Lo que hay que sacar del mundo: la ropa de los SLOTS DE EQUIPO (donde vive la mayor
+		// parte del loot del muerto, cada prenda con su cargo anidado) mas el CARGO directo
+		// de la bolsa (armas movidas al morir / sobrante reubicado).
+		// La ropa se guarda como ITEM y no como attachment a proposito: al restaurarla se la
+		// deja caer en su slot con FindInventoryLocationType.ANY, y este restore solo mira la
+		// lista de items. Guardarla en la otra lista seria perder toda la ropa del muerto.
+		ExorVO_ContainerFile f = ExorContainerOps.CabeceraSnapshot(this, ExorGetID());
 		array<EntityAI> toDelete = new array<EntityAI>;
 		int i;
-
-		// 1) SLOTS DE EQUIPO (ropa: vest/back/body/legs/feet/headgear...). Aca vive la mayor
-		//    parte del loot del muerto; cada prenda con su cargo anidado (CaptureItem recursa).
 		for (i = 0; i < inv.AttachmentCount(); i++)
 		{
 			EntityAI att = inv.GetAttachmentFromIndex(i);
@@ -329,8 +376,6 @@ class Exor_BodyBag extends Container_Base
 				toDelete.Insert(att);
 			}
 		}
-
-		// 2) CARGO directo de la bolsa (armas movidas al morir / sobrante reubicado).
 		CargoBase cargo = inv.GetCargo();
 		if (cargo)
 		{
@@ -344,18 +389,17 @@ class Exor_BodyBag extends Container_Base
 				}
 			}
 		}
-
-		if (f.items.Count() == 0)
+		if (toDelete.Count() == 0)
 			return;	// nada real que virtualizar
 
-		// El dir bodybags\ DEBE existir o JsonSaveFile falla en SILENCIO (este era el bug
+		// El dir bodybags\ DEBE existir o la escritura falla en SILENCIO (este era el bug
 		// historico: se borraba el loot sin haberlo guardado -> tumbas vacias, 0 restauraciones).
 		if (!FileExist(ExorStorageConstants.BODYBAG_DIR))
 			MakeDirectory(ExorStorageConstants.BODYBAG_DIR);
 
-		// ANTI-DUPE + ANTI-PERDIDA: escribir el JSON ANTES de borrar, y borrar SOLO si el
-		// archivo quedo realmente escrito. Si el save fallo por lo que sea, dejamos el loot
-		// como entidades reales (no se pierde nada) y no marcamos virtualizado.
+		// ANTI-DUPE + ANTI-PERDIDA: escribir ANTES de borrar, y borrar SOLO si el archivo
+		// quedo realmente escrito. Si la escritura fallo, el loot se queda como entidades
+		// reales (no se pierde nada) y la tumba no se marca virtualizada.
 		string path = ExorGetStoragePath();
 		ExorContainerOps.GuardarJL(path, f);
 		if (!FileExist(path))
@@ -366,9 +410,9 @@ class Exor_BodyBag extends Container_Base
 		for (i = 0; i < toDelete.Count(); i++)
 			GetGame().ObjectDelete(toDelete.Get(i));
 
-		m_ExorVirtualizedSync = true;
+		ExorSetVirtualizada(true);
 		SetSynchDirty();
-		ExorDbg(string.Format("virtualizada: %1 items a disco", f.items.Count()));	// rutina -> a debug
+		ExorDbg(string.Format("virtualizada: %1 items a disco", toDelete.Count()));	// rutina -> a debug
 	}
 
 	void ExorRestore()
@@ -385,7 +429,7 @@ class Exor_BodyBag extends Container_Base
 		if (real > 0)
 		{
 			DeleteFile(path);
-			m_ExorVirtualizedSync = false;
+			ExorSetVirtualizada(false);
 			SetSynchDirty();
 			Print(string.Format("%1 BodyBag %2: tenia %3 items reales -> JSON descartado (anti-dupe)", ExorStorageConstants.LOG, ExorGetID(), real));
 			return;
@@ -401,6 +445,7 @@ class Exor_BodyBag extends Container_Base
 		if (!f || !f.items)
 		{
 			DeleteFile(path);
+			ExorSetVirtualizada(false);
 			Print(string.Format("%1 GUARD: BodyBag %2 con JSON corrupto/ilegible -> tumba ELIMINADA", ExorStorageConstants.LOG, ExorGetID()));
 			GetGame().ObjectDelete(this);
 			return;
@@ -427,7 +472,7 @@ class Exor_BodyBag extends Container_Base
 		}
 
 		DeleteFile(path);	// consumido tras restaurar (anti-dupe)
-		m_ExorVirtualizedSync = false;
+		ExorSetVirtualizada(false);
 		SetSynchDirty();
 
 		// GUARD DE TUMBA (3): tenia loot y no se pudo restaurar NADA -> la tumba queda vacia

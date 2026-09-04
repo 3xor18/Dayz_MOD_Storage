@@ -370,12 +370,24 @@ class ExorTimeUtil
 	// Numero de minuto monotono (reloj real del server). Persistente entre
 	// reinicios y con granularidad de minutos (para ventanas tipo "1 min").
 	// 1440 min/dia; aprox en bordes de mes (31 d), suficiente para diferencias.
+	// MEMOIZADO POR SEGUNDO. Devuelve MINUTOS, asi que recalcularlo mas de una vez por
+	// segundo no puede dar un resultado distinto -y son dos llamadas al motor-. Lo llaman el
+	// TTL de CADA tumba en CADA tick (con 250 tumbas son 500 llamadas cada 5 s) y todos los
+	// guardados de contenedor.
+	static int s_MinCache;
+	static int s_MinCacheMs;
+
 	static int NowMinutes()
 	{
+		int ahora = GetGame().GetTime();
+		if (s_MinCache != 0 && ahora - s_MinCacheMs < 1000 && ahora >= s_MinCacheMs)
+			return s_MinCache;
 		int y, mo, d;
 		GetYearMonthDay(y, mo, d);
-		int h, mi, s;
-		GetHourMinuteSecond(h, mi, s);
-		return (DayNumber(y, mo, d) * 1440) + (h * 60) + mi;
+		int h, mi, sec;
+		GetHourMinuteSecond(h, mi, sec);
+		s_MinCache = (DayNumber(y, mo, d) * 1440) + (h * 60) + mi;
+		s_MinCacheMs = ahora;
+		return s_MinCache;
 	}
 }

@@ -133,9 +133,11 @@ class ExorVO_Serializer
 		}
 
 		// guardar la posicion del item en el cargo de su padre (si esta en un cargo),
-		// para restaurarlo en el MISMO lugar y no desordenar la grilla
-		InventoryLocation loc = new InventoryLocation();
-		if (e.GetInventory() && e.GetInventory().GetCurrentInventoryLocation(loc) && loc.GetType() == InventoryLocationType.CARGO)
+		// para restaurarlo en el MISMO lugar y no desordenar la grilla.
+		// La InventoryLocation sale de ExorContainerOps y es COMPARTIDA: se lee y se
+		// descarta en el acto, asi que crear una por item era allocar de gusto.
+		InventoryLocation loc = ExorContainerOps.CasillaDe(e);
+		if (loc)
 		{
 			data.cargo_idx = loc.GetIdx();
 			data.cargo_row = loc.GetRow();
@@ -217,11 +219,85 @@ class ExorVO_Serializer
 		return true;
 	}
 
+	// ------------------------------------------------------------------------
+	//  COMPATIBILIDAD DE MUNICION
+	// ------------------------------------------------------------------------
+	// ServerStoreCartridge acepta SIN CHISTAR un cartucho de un calibre que no es el del
+	// cargador: no devuelve false ni avisa, deja el cargador en un estado que ningun
+	// jugador podria haber creado. De ahi no sale nada bueno -en el mejor caso el jugador
+	// se encuentra con balas que su arma no dispara-, asi que se corta antes.
+	//
+	// Como llega data asi en produccion: el JSON guarda el classname de cada bala, y alcanza
+	// con que un mod cambie de que calibre es un cargador (o que se restaure el archivo de
+	// otro server) para que la bala guardada ya no le entre. Antes se metia igual; ahora esa
+	// bala se descarta y el resto del cargador se restaura normal.
+	//
+	// Como se decide: en DayZ el calibre es el campo 'ammo' de CfgMagazines, y lo tienen
+	// TANTO el cargador como el classname del cartucho. Si los dos dicen lo mismo, entra.
+	static string ExorCalibreDe(string type)
+	{
+		if (type == "")
+			return "";
+		if (!GetGame().ConfigIsExisting("CfgMagazines " + type))
+			return "";
+		return GetGame().ConfigGetTextOut("CfgMagazines " + type + " ammo");
+	}
+
+	// entra el cartucho 'cartType' en el cargador 'magType'?
+	static bool ExorBalaCalzaEnCargador(string magType, string cartType)
+	{
+		string a = ExorCalibreDe(magType);
+		string b = ExorCalibreDe(cartType);
+		if (a == "" || b == "")
+			return true;	// sin dato en config -> no bloquear (falla del lado permisivo)
+		return a == b;
+	}
+
+	// entra el cartucho 'cartType' en la recamara / cargador interno del arma 'wpnType'?
+	// El arma declara de donde puede chambrear en 'chamberableFrom[]' (cartuchos sueltos y
+	// cargadores). Se compara por CALIBRE, no por classname, para que una bala trazadora
+	// del mismo calibre siga entrando.
+	static bool ExorBalaCalzaEnArma(string wpnType, string cartType)
+	{
+		if (wpnType == "" || cartType == "")
+			return false;
+		TStringArray de = new TStringArray;
+		GetGame().ConfigGetTextArray("CfgWeapons " + wpnType + " chamberableFrom", de);
+		if (de.Count() == 0)
+			return true;	// sin dato -> no bloquear
+		string cal = ExorCalibreDe(cartType);
+		if (cal == "")
+			return true;
+		int i;
+		for (i = 0; i < de.Count(); i++)
+		{
+			if (ExorCalibreDe(de.Get(i)) == cal)
+				return true;
+		}
+		return false;
+	}
+
 	static void CaptureAmmo(EntityAI e, ExorVO_ItemData data)
 	{
+		TStringArray l = CaptureAmmoLista(e);
+		if (l)
+			data.ammo = l;
+	}
+
+	// Misma captura pero DEVOLVIENDO la lista (o null si el item no tiene municion que
+	// guardar, que es la inmensa mayoria de los items). Separada de CaptureAmmo para poder
+	// pedir la lista sin tener que armar un ExorVO_ItemData de por medio.
+	static TStringArray CaptureAmmoLista(EntityAI e)
+	{
 		int i;
-		float d;
-		string t;
+		// OJO: los parametros de salida de estas llamadas NATIVAS se declaran INICIALIZADOS.
+		// Con "string t;" a secas el motor escribe sobre una cadena que todavia no existe y
+		// tira ACCESS_VIOLATION -se cae el server entero, y no es atrapable desde script
+		// porque pasa adentro de la llamada-. Reproducido en el banco de pruebas leyendo un
+		// cargador recien creado, sin tocarle nada.
+		float d = 0;
+		string t = "";
+		TStringArray res = null;
 
 		// --- CARGADOR ---
 		// Las PILAS SUELTAS de balas (Ammunition_Base) quedan afuera A PROPOSITO: su classname
@@ -232,9 +308,14 @@ class ExorVO_Serializer
 		// aceptan mezcla y cuyo classname no dice nada de la municion.
 		Magazine mag = Magazine.Cast(e);
 		if (mag && e.IsInherited(Ammunition_Base))
-			return;
+			return null;
 		if (mag)
 		{
+			// CANARIO: leer los cartuchos uno por uno es una llamada NATIVA que se vio matar
+			// el server. Si el arranque anterior murio ahi, esta sesion NO lee: el cargador
+			// se guarda solo con su cantidad de balas. Ver ExorAmmoCanary.
+			if (!ExorAmmoCanary.PuedeLeer())
+				return null;
 			int n = mag.GetAmmoCount();
 			string curT = "";
 			float curD = 0;
@@ -249,34 +330,55 @@ class ExorVO_Serializer
 					continue;
 				}
 				if (run > 0)
-					data.AmmoList().Insert(ExorAmmoEnc("M", run, curD, curT));
+				{
+					if (!res)
+						res = new TStringArray;
+					res.Insert(ExorAmmoEnc("M", run, curD, curT));
+				}
 				curT = t;
 				curD = d;
 				run = 1;
 			}
 			if (run > 0)
-				data.AmmoList().Insert(ExorAmmoEnc("M", run, curD, curT));
-			return;		// un cargador no es un arma: no hay recamara que mirar
+			{
+				if (!res)
+					res = new TStringArray;
+				res.Insert(ExorAmmoEnc("M", run, curD, curT));
+			}
+			ExorAmmoCanary.MarcarOk();	// la lectura volvio viva -> borrar la marca de disco
+			return res;		// un cargador no es un arma: no hay recamara que mirar
 		}
 
 		// --- ARMA: recamara + cargador interno, por boca ---
 		Weapon_Base w = Weapon_Base.Cast(e);
 		if (!w)
-			return;
+			return null;
+		if (!ExorAmmoCanary.PuedeLeer())
+			return null;
 		int muzzles = w.GetMuzzleCount();
 		int m;
 		int c;
 		for (m = 0; m < muzzles; m++)
 		{
 			if (!w.IsChamberEmpty(m) && w.GetCartridgeInfo(m, d, t) && t != "")
-				data.AmmoList().Insert(ExorAmmoEnc("C", m, d, t));
+			{
+				if (!res)
+					res = new TStringArray;
+				res.Insert(ExorAmmoEnc("C", m, d, t));
+			}
 			int ic = w.GetInternalMagazineCartridgeCount(m);
 			for (c = 0; c < ic; c++)
 			{
 				if (w.GetInternalMagazineCartridgeInfo(m, c, d, t) && t != "")
-					data.AmmoList().Insert(ExorAmmoEnc("I", m, d, t));
+				{
+					if (!res)
+						res = new TStringArray;
+					res.Insert(ExorAmmoEnc("I", m, d, t));
+				}
 			}
 		}
+		ExorAmmoCanary.MarcarOk();
+		return res;
 	}
 
 	// Restaura la municion guardada. Devuelve true si escribio cartuchos en un CARGADOR
@@ -318,6 +420,13 @@ class ExorVO_Serializer
 					continue;
 				if (a < 0)
 					continue;
+				// GUARD DE CALIBRE: el motor deja meter una bala que no es la del cargador
+				// sin avisar de nada. Se descarta ese tramo y se sigue con el resto.
+				if (!ExorBalaCalzaEnCargador(e.GetType(), type))
+				{
+					Print(string.Format("%1 GUARD: '%2' no es municion de '%3' -> ese tramo se DESCARTA (el resto del cargador se restaura)", ExorStorageConstants.LOG, type, e.GetType()));
+					continue;
+				}
 				for (k = 0; k < a; k++)
 				{
 					if (!mag.ServerStoreCartridge(dmg, type))
@@ -334,8 +443,9 @@ class ExorVO_Serializer
 
 		int muzzles = w.GetMuzzleCount();
 		int m;
-		float fd;
-		string ft;
+		// inicializados por lo mismo que arriba: son parametros de salida de llamadas nativas
+		float fd = 0;
+		string ft = "";
 		// Un arma recien creada puede nacer con municion (varias armas -sobre todo de mods-
 		// traen la recamara/cargador interno cargados por defecto). Sin vaciar, lo guardado
 		// se SUMARIA a lo de fabrica = municion duplicada.
@@ -362,6 +472,11 @@ class ExorVO_Serializer
 				continue;
 			if (a < 0 || a >= muzzles)
 				continue;
+			if (!ExorBalaCalzaEnArma(w.GetType(), type))
+			{
+				Print(string.Format("%1 GUARD: '%2' no es municion de '%3' -> no se carga en el cargador interno", ExorStorageConstants.LOG, type, w.GetType()));
+				continue;
+			}
 			if (w.PushCartridgeToInternalMagazine(a, dmg, type))
 				toco = true;
 		}
@@ -373,6 +488,11 @@ class ExorVO_Serializer
 				continue;
 			if (w.IsChamberFull(a))
 				continue;
+			if (!ExorBalaCalzaEnArma(w.GetType(), type))
+			{
+				Print(string.Format("%1 GUARD: '%2' no es municion de '%3' -> no se carga en la recamara", ExorStorageConstants.LOG, type, w.GetType()));
+				continue;
+			}
 			if (w.PushCartridgeToChamber(a, dmg, type))
 				toco = true;
 		}

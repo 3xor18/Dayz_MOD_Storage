@@ -836,9 +836,27 @@ class Exor_OpenableStorage : Container_Base
 	// (ver ExorStorageBootLock.CercaDeReinicio). Mismo criterio que el barril: se ignora la
 	// cercania del jugador y, si alguien esta arrastrando un item justo ahi, se prefiere
 	// perder ESE item antes que dejar el mueble explotable. Devuelve true si hizo trabajo.
+	// ULTIMA VEZ QUE ALGUIEN LO TOCO. Lo usa el techo de contenedores reales por base para
+	// elegir a cual guardar primero (el que hace mas rato que nadie usa).
+	int ExorUltimoUsoMs() { return m_ExorLastInteractMs; }
+
+	// "REAL" = sus items estan en el mundo (no virtualizados) y hay algo que sacar. Es la
+	// unidad que de verdad pesa: un mueble virtualizado no le cuesta nada al motor.
+	bool ExorEsReal()
+	{
+		if (m_ExorVirt)
+			return false;
+		if (ExorCargoCount() > 0)
+			return true;
+		return ExorVirtualizeAttachments() && GetInventory() && GetInventory().AttachmentCount() > 0;
+	}
+
 	bool ExorForzarVirtualizar()
 	{
-		if (m_ExorVirt || ExorCargoCount() == 0)
+		// OJO: antes esto miraba SOLO el cargo, asi que un mueble de armas con las armas en
+		// sus slots (y el cargo vacio) NUNCA se virtualizaba a la fuerza -ni en el pase
+		// anti-dupe previo al reinicio-. ExorEsReal si cuenta los attachments.
+		if (!ExorEsReal())
 			return false;
 		if (IsOpen())
 			Close();
@@ -1269,9 +1287,19 @@ class Exor_OpenableStorage : Container_Base
 		if (now - m_ExorLastInteractMs < virtMs)
 			return false;
 		// nada que virtualizar? (cargo vacio Y -si aplica- sin attachments)
-		bool hasAtt = ExorVirtualizeAttachments() && GetInventory() && GetInventory().AttachmentCount() > 0;
-		if (ExorCargoCount() == 0 && !hasAtt)
+		if (!ExorEsReal())
 			return false;
+		// NO VIRTUALIZAR CON EL JUGADOR AL LADO. Si se guarda apenas se cierra, el que esta
+		// parado ahi acomodando su base paga un restore completo cada vez que reabre: ese
+		// vaiven cuesta mas que dejarlo real unos segundos mas. Se espera a que se aleje.
+		// Con TECHO, porque si no una base con gente adentro no virtualizaria nunca -que es
+		// justo lo que hay que evitar-.
+		if (settings.virtualizar_distancia_metros > 0 && ExorVO_Manager.IsAlivePlayerNearList(players, GetPosition(), settings.virtualizar_distancia_metros))
+		{
+			int esperaMax = settings.virtualizar_espera_max_segundos * 1000;
+			if (esperaMax <= 0 || now - m_ExorLastInteractMs < esperaMax)
+				return false;
+		}
 		if (!ExorCanVirtualizeNow())	// la subclase puede vetar (ej: nevera sin bateria con comida)
 			return false;
 
