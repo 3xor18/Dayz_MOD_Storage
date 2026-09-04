@@ -17,6 +17,28 @@ modded class MissionServer
 		ExorBootRepair.Run();
 
 		ExorConfig cfg = GetExorConfig();
+		// Banderas de config al camino caliente: se leen UNA vez aca y los hooks que corren
+		// por item / por frame las consultan como un simple bool estatico. Ver ExorHotFlags.
+		ExorHotFlags.Refresh();
+		// Resuelve si el apagado anterior fue limpio (define si los contenedores barren el
+		// piso en su 1ra apertura) y deja la marca de esta sesion. Ver ExorApagadoLimpio.
+		ExorApagadoLimpio.Init();
+		// Deja en el RPT QUE MAPA y de que tamaño cree el mod que esta corriendo. Es la
+		// primera cosa que uno quiere ver al cambiar de terreno, y sin esto la deteccion
+		// es perezosa: si ningun JSON tiene coordenadas, nunca se evalua y no se entera nadie.
+		ExorMapBounds.Size();
+		// Banco de pruebas automatico: si hay marcador perf_test.txt, el server monta la
+		// carga y se perfila solo, sin necesidad de que nadie entre al juego. Ver ExorAutoPerf.
+		ExorAutoPerf.Init();
+		// VALVULA DE EMERGENCIA del admin: este arranque no deserializa las neveras. Se traduce
+		// aca, en OnInit (que corre ANTES de que el CE cargue la persistencia), y no dentro del
+		// OnStoreLoad de la nevera: la carga de entidades es justo el momento en el que no
+		// conviene depender de que la config este sana. Ver ExorBootRepair.SaltearTipo.
+		if (cfg.storage.saltear_carga_neveras)
+		{
+			ExorBootRepair.MarcarTipoSalteado("Exor_Fridge");
+			Print(string.Format("%1 CARGA-SEGURA: saltear_carga_neveras=true -> las neveras no se deserializan en este arranque", ExorStorageConstants.LOG));
+		}
 		ExorVO_AutoPopulateAmmo(cfg.municion);
 		ExorVO_Manager.Start();
 		ExorGroupManager.Init();

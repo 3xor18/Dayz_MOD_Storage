@@ -148,6 +148,9 @@ modded class MissionGameplay
 		return super.CreateScriptedMenu(id);
 	}
 
+	protected float m_ExorMarksAccum;	// acumulador del throttle de marcas 3D
+	protected float m_ExorTextAccum;	// acumulador del throttle de killfeed + chat
+
 	override void OnUpdate(float timeslice)
 	{
 		super.OnUpdate(timeslice);
@@ -174,29 +177,46 @@ modded class MissionGameplay
 		}
 		m_ExorPlates.Update(timeslice);
 
-		// Marcas 3D: cada frame
-		if (!m_ExorMarks)
+		// Marcas 3D: a 20 Hz, no por frame.
+		// Los nameplates SI necesitan cada frame (siguen la camara y se notaria el tironeo),
+		// pero las marcas del party son puntos fijos del mundo: a 20 Hz el ojo no distingue
+		// la diferencia y en un mapa denso con 70 jugadores se recupera FPS de cliente.
+		m_ExorMarksAccum += timeslice;
+		if (m_ExorMarksAccum >= 0.05)
 		{
-			m_ExorMarks = new ExorMarkersHud();
-			m_ExorMarks.Create();
+			m_ExorMarksAccum = 0;
+			if (!m_ExorMarks)
+			{
+				m_ExorMarks = new ExorMarkersHud();
+				m_ExorMarks.Create();
+			}
+			m_ExorMarks.Update();
 		}
-		m_ExorMarks.Update();
 
-		// Killfeed: crear una vez y barrer lineas vencidas cada frame
+		// Killfeed y chat: a 10 Hz. Los dos solo hacen barrer lineas VENCIDAS por timestamp
+		// (nada se mueve ni se interpola), asi que hacerlo cada frame era gastar 60 pasadas
+		// por segundo para un cambio que ocurre cada varios segundos.
+		m_ExorTextAccum += timeslice;
+		bool tocaTexto = (m_ExorTextAccum >= 0.1);
+		if (tocaTexto)
+			m_ExorTextAccum = 0;
+
 		if (!m_ExorKf)
 		{
 			m_ExorKf = new ExorKillfeed();
 			m_ExorKf.Create();
 		}
-		m_ExorKf.Update();
+		if (tocaTexto)
+			m_ExorKf.Update();
 
-		// Chat custom: crear una vez y drenar/expirar lineas cada frame
+		// Chat custom: crear una vez; el drenaje/expiracion va con el mismo throttle de 10 Hz
 		if (!m_ExorChat)
 		{
 			m_ExorChat = new ExorChatHud();
 			m_ExorChat.Create();
 		}
-		m_ExorChat.Update();
+		if (tocaTexto)
+			m_ExorChat.Update();
 
 		// Tecla "." -> cambiar canal de chat (global/zona)
 		ExorChatKey();

@@ -313,6 +313,21 @@ modded class TerritoryFlag
 			return;
 		m_ExorInitDone = true;
 
+		// RE-LIGADO POR POSICION. El id del grupo ya no viaja en el stream de persistencia
+		// (era un string, y leer un string de un stream corrido mata el arranque del server).
+		// Se recupera comparando la posicion de este mastil contra el mast_x/mast_z que cada
+		// grupo tiene guardado en su propio JSON. Es el mismo dato, por un camino que no puede
+		// romper la carga del mundo.
+		if (m_ExorGroupId == "" && !m_ExorIsKothMast)
+		{
+			string gidPos = ExorGroupManager.Get().GroupIdEnPos(GetPosition());
+			if (gidPos != "")
+			{
+				m_ExorGroupId = gidPos;
+				Print(string.Format("%1 mastil re-ligado por posicion al grupo '%2' en %3", ExorStorageConstants.LOG, gidPos, GetPosition().ToString()));
+			}
+		}
+
 		// KOTH huerfano (mastil de koth persistido de una sesion anterior tras crash/reinicio):
 		// borrarlo. El estado del koth se reinicia en cada arranque, asi que no debe quedar.
 		if (m_ExorIsKothMast)
@@ -869,10 +884,14 @@ modded class TerritoryFlag
 	}
 
 	// ------------------------- persistencia -------------------------
+	// PERSISTENCIA: solo ENTEROS. El id de grupo es un string, asi que NO va al stream: se
+	// resuelve al cargar buscando en los grupos el que tenga este mastil (mast_id), que es
+	// dato que ya vive en groups/<id>.json. Un ctx.Read(string) sobre un stream corrido tira
+	// una Virtual Machine Exception que mata el arranque. Ver ExorPid.
 	override void OnStoreSave(ParamsWriteContext ctx)
 	{
 		super.OnStoreSave(ctx);
-		ctx.Write(m_ExorGroupId);
+		ctx.Write(ExorPid.EXOR_MAGIC);
 		ctx.Write(m_ExorFlagRaised);
 		ctx.Write(m_ExorClaimMinute);
 		ctx.Write(m_ExorIsKothMast);	// para poder borrar mastiles de koth huerfanos al recargar
@@ -882,9 +901,19 @@ modded class TerritoryFlag
 	{
 		if (!super.OnStoreLoad(ctx, version))
 			return false;
-		string gid;
-		if (!ctx.Read(gid)) return false;
-		m_ExorGroupId = gid;
+
+		int magic;
+		if (!ctx.Read(magic))
+			return false;
+		if (magic != ExorPid.EXOR_MAGIC)
+		{
+			Print(string.Format("%1 GUARD: stream de mastil DESALINEADO (magico %2) -> mastil descartado (el GRUPO NO se disuelve: se auto-restaura por posicion)", ExorStorageConstants.LOG, magic));
+			return false;
+		}
+		// El id del grupo NO viaja en el stream (es un string). Se resuelve en AfterStoreLoad
+		// comparando la POSICION de este mastil contra el mast_x/mast_z que cada grupo ya
+		// tiene guardado en groups/<id>.json. Aca la posicion todavia no esta seteada.
+
 		bool raised;
 		if (!ctx.Read(raised)) return false;
 		m_ExorFlagRaised = raised;

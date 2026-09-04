@@ -19,6 +19,11 @@ class ExorMuebleRules
 		SendMsg(p, text, 1);
 	}
 
+	static void SendVerde(PlayerBase p, string text)
+	{
+		SendMsg(p, text, 1);	// 1 = verde (info)
+	}
+
 	static void SendRed(PlayerBase p, string text)
 	{
 		SendMsg(p, text, 2);
@@ -80,13 +85,85 @@ class ExorMuebleRules
 		return n;
 	}
 
+	// -------- conteo de BARRILES dentro de 'radius' de 'center' --------
+	// Aparte de los muebles a proposito: los barriles tienen su propio cupo por base
+	// (cantidad_maxima_barriles_por_base). Recorre el registro vivo del manager, no el
+	// mundo: es un array en memoria, sin scan de objetos ni consultas al motor.
+	static int CountBarrilesNear(vector center, float radius, Object exclude)
+	{
+		ExorVO_Manager vo = ExorVO_Manager.Get();
+		if (!vo || !vo.m_Barrels)
+			return 0;
+		float r2 = radius * radius;
+		int n = 0;
+		int i;
+		for (i = 0; i < vo.m_Barrels.Count(); i++)
+		{
+			Exor_Barrel_Base b = vo.m_Barrels.Get(i);
+			if (!b || b == exclude)
+				continue;
+			// los barriles ATADOS (slot de un auto, dentro de un cargo) no ocupan lugar en la
+			// base: no estan puestos en el piso del territorio.
+			if (b.GetHierarchyParent())
+				continue;
+			if (ExorMath.Dist2DSq(center, b.GetPosition()) <= r2)
+				n++;
+		}
+		return n;
+	}
+
+	// -------- puede 'player' COLOCAR un barril en 'pos'? (reason = msg rojo) --------
+	// Misma politica que los muebles pero con sus propios parametros: el barril se setea
+	// solo dentro del radio del mastil de tu base y con su propio tope por base.
+	static bool CanPlaceBarril(PlayerBase player, vector pos, out string reason)
+	{
+		reason = "";
+		ExorCfgStorage s = GetExorConfig().storage;
+		if (!s || !player)
+			return true;
+
+		if (s.setear_barriles_solo_cerca_mastil)
+		{
+			ExorTerritoryManager tm = ExorTerritoryManager.Get();
+			if (!tm || !tm.IsInOwnGroupTerritory(player, pos))
+			{
+				reason = "Solo podés setear barriles dentro del radio del mástil de tu base.";
+				return false;
+			}
+		}
+
+		if (s.cantidad_maxima_barriles_por_base > 0)
+		{
+			vector center;
+			if (!BaseCenter(player, center))
+				center = pos;
+			int count = CountBarrilesNear(center, ExorTerritoryRules.Radius(), null);
+			if (count >= s.cantidad_maxima_barriles_por_base)
+			{
+				reason = string.Format("Alcanzaste el máximo de barriles en tu base (%1).", s.cantidad_maxima_barriles_por_base);
+				return false;
+			}
+		}
+		return true;
+	}
+
 	static bool HasMueblesNear(vector center, float radius)
 	{
 		return CountMueblesNear(center, radius, null) > 0;
 	}
 
 	// -------- horario: estamos en una ventana de looteo LIBRE (ej raid)? --------
+	// Pasa por ExorLootWindow, que memoiza el resultado por MINUTO: el calculo de abajo
+	// parsea strings ("22:00" -> minutos) y compara dias, y lo llaman cada apertura de
+	// mueble, cada tick del manager y cada pase del self-heal. El resultado solo puede
+	// cambiar cuando cambia el minuto del reloj.
 	static bool IsLootFreeNow()
+	{
+		return ExorLootWindow.IsRaidNow();
+	}
+
+	// Calculo real (sin cache). No llamarlo directo: usar IsLootFreeNow().
+	static bool CalcularLootFree()
 	{
 		ExorCfgStorage s = GetExorConfig().storage;
 		if (!s || !s.horario_looteo_libre || s.horario_looteo_libre.Count() == 0)

@@ -55,10 +55,14 @@ class Exor_BodyBag extends Container_Base
 		super.EEDelete(parent);
 	}
 
+	// PERSISTENCIA: solo ENTEROS en el stream (magico + id + minuto de spawn). Ningun string:
+	// un ctx.Read(string) sobre un stream corrido tira una Virtual Machine Exception que mata
+	// el arranque del server y no se puede atrapar desde script. Ver ExorPid.
 	override void OnStoreSave(ParamsWriteContext ctx)
 	{
 		super.OnStoreSave(ctx);
-		ctx.Write(m_ExorID);
+		ctx.Write(ExorPid.EXOR_MAGIC);
+		ctx.Write(ExorGetPid());
 		ctx.Write(m_ExorSpawnMin);
 	}
 
@@ -66,10 +70,25 @@ class Exor_BodyBag extends Container_Base
 	{
 		if (!super.OnStoreLoad(ctx, version))
 			return false;
-		string id;
-		if (!ctx.Read(id))
+
+		int magic;
+		if (!ctx.Read(magic))
 			return false;
-		m_ExorID = id;
+		if (magic != ExorPid.EXOR_MAGIC)
+		{
+			// Stream corrido. Se descarta la tumba en vez de arriesgarse a cargar con el id de
+			// OTRA: dos tumbas con el mismo id comparten su JSON, o sea su loot.
+			Print(string.Format("%1 GUARD: stream de tumba DESALINEADO (magico %2) -> tumba descartada", ExorStorageConstants.LOG, magic));
+			return false;
+		}
+		int pid;
+		if (!ctx.Read(pid))
+			return false;
+		if (!ExorPid.Plausible(pid))
+			return false;
+		m_ExorPid = pid;
+		m_ExorID = pid.ToString();
+
 		int sm;
 		if (!ctx.Read(sm))
 			return false;
@@ -88,10 +107,24 @@ class Exor_BodyBag extends Container_Base
 		}
 	}
 
+	// Id NUMERICO persistente (ver ExorPid): unica identidad de la tumba. El string de las
+	// rutas es su representacion decimal.
+	protected int m_ExorPid;
+
+	int ExorGetPid()
+	{
+		if (m_ExorPid <= 0)
+		{
+			m_ExorPid = ExorPid.Nuevo();
+			m_ExorID = m_ExorPid.ToString();
+		}
+		return m_ExorPid;
+	}
+
 	string ExorGetID()
 	{
 		if (m_ExorID == "")
-			m_ExorID = ExorVO_Serializer.GenerateId();
+			m_ExorID = ExorGetPid().ToString();
 		return m_ExorID;
 	}
 
@@ -324,7 +357,7 @@ class Exor_BodyBag extends Container_Base
 		// archivo quedo realmente escrito. Si el save fallo por lo que sea, dejamos el loot
 		// como entidades reales (no se pierde nada) y no marcamos virtualizado.
 		string path = ExorGetStoragePath();
-		JsonFileLoader<ExorVO_ContainerFile>.JsonSaveFile(path, f);
+		ExorContainerOps.GuardarJL(path, f);
 		if (!FileExist(path))
 		{
 			Print(string.Format("%1 ERROR: BodyBag %2 no se pudo escribir el JSON -> NO virtualizo (loot intacto como entidades)", ExorStorageConstants.LOG, ExorGetID()));
@@ -359,7 +392,9 @@ class Exor_BodyBag extends Container_Base
 		}
 
 		ExorVO_ContainerFile f = new ExorVO_ContainerFile();
-		JsonFileLoader<ExorVO_ContainerFile>.JsonLoadFile(path, f);
+		ExorVO_ContainerFile jl = ExorContainerOps.LeerJL(path);
+		if (jl)
+			f = jl;
 
 		// GUARD DE TUMBA (1): JSON ilegible/vacio -> la tumba no tiene nada que devolver y
 		// quedaria de adorno. Se borra el archivo Y la tumba (no dejar fantasmas colgados).

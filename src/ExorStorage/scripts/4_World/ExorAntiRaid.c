@@ -114,11 +114,11 @@ class ExorAntiRaid
 
 	// El mastil AJENO en cuyo radio cae 'player' (o null si esta fuera de todo
 	// territorio ajeno / parado en territorio propio).
+	// Pasa por el CACHE por jugador: esto lo llama el hook de pickup de cada item y la
+	// respuesta es la misma mientras el jugador no se mueva. Ver ExorTerritoryProbe.
 	static TerritoryFlag EnemyTerritoryOfPlayer(PlayerBase player)
 	{
-		if (!player)
-			return null;
-		return ExorTerritoryManager.Get().FindEnemyTerritoryAt(player, player.GetPosition());
+		return ExorTerritoryProbe.EnemyMastOf(player);
 	}
 
 	// Etiqueta legible del territorio para el log: "grupo <id> (lider <nombre>)".
@@ -168,10 +168,12 @@ class ExorAntiRaid
 			return;
 		if (!player || !item)
 			return;
-		ExorCfgPartyProteccion p = GetExorConfig().party.proteccion;
-		if (!p.log_robo_contenedor)
+		// GATE BARATO PRIMERO: dos bools estaticos ya leidos de la config. Esto corre por
+		// CADA item que entra a un inventario, asi que lo primero tiene que ser lo mas
+		// barato posible; antes eran 4 llamadas + derefs a la config por item.
+		if (!ExorHotFlags.LogRoboContenedor())
 			return;
-		if (!GetExorConfig().party.territorio.habilitado)
+		if (!ExorHotFlags.TerritorioOn())
 			return;
 
 		TerritoryFlag m = EnemyTerritoryOfPlayer(player);
@@ -196,10 +198,11 @@ class ExorAntiRaid
 			return;
 		if (!player || !barrel)
 			return;
-		ExorCfgPartyProteccion p = GetExorConfig().party.proteccion;
-		if (!p.log_abrir_barril_ajeno)
+		// GATE BARATO PRIMERO: bandera ya leida de la config. Corre por CADA apertura de
+		// barril; con la feature apagada el costo es un bool y nada mas.
+		if (!ExorHotFlags.LogAbrirBarril())
 			return;
-		if (!GetExorConfig().party.territorio.habilitado)
+		if (!ExorHotFlags.TerritorioOn())
 			return;
 
 		TerritoryFlag m = ExorTerritoryManager.Get().FindEnemyTerritoryAt(player, barrel.GetPosition());

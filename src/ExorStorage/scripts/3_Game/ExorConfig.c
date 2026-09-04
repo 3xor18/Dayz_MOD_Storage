@@ -84,7 +84,13 @@ class ExorCfgStorage
 	// ---- LIMITES DE MUEBLES / TERRITORIO (todo se chequea SOLO en eventos: colocar
 	// mueble, poner mastil, quitar mastil -> cero costo por-frame) ----
 	bool setear_muebles_solo_cerca_mastil = false;  // muebles solo se colocan dentro del radio del mastil de TU grupo
-	int cantidad_maxima_muebles_por_base = 10;       // maximo de muebles+barriles por base (0 = sin limite)
+	int cantidad_maxima_muebles_por_base = 10;       // maximo de MUEBLES por base (0 = sin limite)
+	// --- BARRILES: mismas reglas que los muebles pero con cupo APARTE ---
+	// Los barriles se cuentan por separado a proposito: son contenedores mas chicos y baratos,
+	// y mezclarlos en el mismo cupo obligaba a elegir entre "pocos muebles" o "muchos barriles".
+	// Con dos topes distintos el admin decide cuanto storage de cada tipo permite por base.
+	bool setear_barriles_solo_cerca_mastil = true;   // el barril solo se setea dentro del radio del mastil de TU grupo
+	int cantidad_maxima_barriles_por_base = 0;       // maximo de BARRILES por base (0 = sin limite)
 	bool solo_miembros_lotean_muebles = false;       // solo miembros del territorio pueden abrir/lotear los muebles
 	int offset_horas = 0;                            // server corre en UTC; offset para el horario libre (ej Chile = -4)
 	// Ventanas (por dia) donde el looteo solo-miembros queda DESHABILITADO (ej: raid = cualquiera lootea)
@@ -133,6 +139,8 @@ class ExorCfgStorage
 		parking_radio_metros = 30.0;
 		setear_muebles_solo_cerca_mastil = false;
 		cantidad_maxima_muebles_por_base = 10;
+		setear_barriles_solo_cerca_mastil = true;
+		cantidad_maxima_barriles_por_base = 0;
 		solo_miembros_lotean_muebles = false;
 		offset_horas = 0;
 		blacklist.Clear();
@@ -458,6 +466,12 @@ class ExorCfgMapa
 	bool abrir_con_m = true;           // abrir mapa con M sin el ItemMap fisico
 	bool mostrar_mi_posicion = true;   // siempre ver tu posicion
 	bool mostrar_miembros_party = true;// ver a los miembros del party en el mapa
+	// Tamaño del terreno en metros (un mapa es cuadrado: 12800 = Livonia, 15360 = Chernarus,
+	// 8192 = un mapa de 8x8 km). 0 = detectar solo desde el config del mundo.
+	// Solo se usa para DESCARTAR coordenadas imposibles de los otros JSON al cambiar de mapa
+	// (spawns/koth/cofre). Si la deteccion automatica falla y este valor es 0, no se descarta
+	// nada: el mod funciona igual, solo pierde ese chequeo. Ver ExorMapBounds.
+	int tamano_mapa_metros = 0;
 
 	void SetDefaults()
 	{
@@ -465,6 +479,7 @@ class ExorCfgMapa
 		abrir_con_m = true;
 		mostrar_mi_posicion = true;
 		mostrar_miembros_party = true;
+		tamano_mapa_metros = 0;
 	}
 }
 
@@ -1953,6 +1968,71 @@ class ExorConfig
 		GetExorConfig().serverinfo = si;
 	}
 
+	// ------------------------------------------------------------------------
+	//  ESCRITURA NO DESTRUCTIVA DE LA CONFIG
+	// ------------------------------------------------------------------------
+	// Antes CADA modulo hacia JsonSaveFile despues de cargar, o sea 20+ reescrituras de los
+	// archivos del admin en CADA arranque. Dos problemas:
+	//   - I/O al pedo en el momento mas cargado del server;
+	//   - round-trip DESTRUCTIVO: el formato que el admin haya dado se pierde, y cualquier
+	//     clave que el mod no conozca (un comentario en JSON, un campo de otra version)
+	//     desaparece sin aviso.
+	//
+	// La UNICA razon legitima para reescribir es sembrar campos NUEVOS cuando el mod se
+	// actualiza. Asi que se reescribe solo si: el archivo no existia, o cambio la build del
+	// mod desde la ultima vez. Entre arranques de la misma build no se toca nada.
+	static bool s_ResembrarConfig;
+	static bool s_ResembrarResuelto;
+
+	static string PathBuildConfig()
+	{
+		return ExorStorageConstants.CONFIG_DIR + "\config_build.txt";
+	}
+
+	static bool DebeResembrar()
+	{
+		if (s_ResembrarResuelto)
+			return s_ResembrarConfig;
+		s_ResembrarResuelto = true;
+		s_ResembrarConfig = true;	// ante la duda, sembrar (nunca dejar al admin sin campos nuevos)
+
+		string path = PathBuildConfig();
+		if (FileExist(path))
+		{
+			FileHandle fh = OpenFile(path, FileMode.READ);
+			if (fh != 0)
+			{
+				string line = "";
+				FGets(fh, line);
+				CloseFile(fh);
+				line.Trim();
+				if (line == ExorStorageConstants.MOD_BUILD)
+					s_ResembrarConfig = false;	// misma build: los archivos ya tienen todo
+			}
+		}
+		if (s_ResembrarConfig)
+		{
+			if (!FileExist(ExorStorageConstants.CONFIG_DIR))
+				MakeDirectory(ExorStorageConstants.CONFIG_DIR);
+			FileHandle fw = OpenFile(path, FileMode.WRITE);
+			if (fw != 0)
+			{
+				FPrintln(fw, ExorStorageConstants.MOD_BUILD);
+				CloseFile(fw);
+			}
+			Print(string.Format("%1 config: build nueva (%2) -> se resiembran los JSON para agregar campos nuevos", ExorStorageConstants.LOG, ExorStorageConstants.MOD_BUILD));
+		}
+		return s_ResembrarConfig;
+	}
+
+	// true si hay que escribir ESTE archivo: no existe (hay que crearlo) o toca resembrar.
+	static bool GuardarConfig(string path)
+	{
+		if (!FileExist(path))
+			return true;
+		return DebeResembrar();
+	}
+
 	static ref ExorConfig Load()
 	{
 		ExorConfig c = new ExorConfig();
@@ -2008,7 +2088,8 @@ class ExorConfig
 			storage.reinicios_horas.Insert(16);
 			storage.reinicios_horas.Insert(20);
 		}
-		JsonFileLoader<ExorCfgStorage>.JsonSaveFile(ExorStorageConstants.CFG_STORAGE, storage);
+		if (GuardarConfig(ExorStorageConstants.CFG_STORAGE))
+			JsonFileLoader<ExorCfgStorage>.JsonSaveFile(ExorStorageConstants.CFG_STORAGE, storage);
 	}
 
 	void LoadVehiculos()
@@ -2017,7 +2098,8 @@ class ExorConfig
 			JsonFileLoader<ExorCfgVehiculos>.JsonLoadFile(ExorStorageConstants.CFG_VEHICULOS, vehiculos);
 		else
 			vehiculos.SetDefaults();
-		JsonFileLoader<ExorCfgVehiculos>.JsonSaveFile(ExorStorageConstants.CFG_VEHICULOS, vehiculos);
+		if (GuardarConfig(ExorStorageConstants.CFG_VEHICULOS))
+			JsonFileLoader<ExorCfgVehiculos>.JsonSaveFile(ExorStorageConstants.CFG_VEHICULOS, vehiculos);
 	}
 
 	void LoadMunicion()
@@ -2026,7 +2108,8 @@ class ExorConfig
 			JsonFileLoader<ExorCfgMunicion>.JsonLoadFile(ExorStorageConstants.CFG_MUNICION, municion);
 		else
 			municion.SetDefaults();
-		JsonFileLoader<ExorCfgMunicion>.JsonSaveFile(ExorStorageConstants.CFG_MUNICION, municion);
+		if (GuardarConfig(ExorStorageConstants.CFG_MUNICION))
+			JsonFileLoader<ExorCfgMunicion>.JsonSaveFile(ExorStorageConstants.CFG_MUNICION, municion);
 	}
 
 	void LoadParty()
@@ -2035,7 +2118,8 @@ class ExorConfig
 			JsonFileLoader<ExorCfgParty>.JsonLoadFile(ExorStorageConstants.CFG_PARTY, party);
 		else
 			party.SetDefaults();
-		JsonFileLoader<ExorCfgParty>.JsonSaveFile(ExorStorageConstants.CFG_PARTY, party);
+		if (GuardarConfig(ExorStorageConstants.CFG_PARTY))
+			JsonFileLoader<ExorCfgParty>.JsonSaveFile(ExorStorageConstants.CFG_PARTY, party);
 	}
 
 	void LoadSpawns()
@@ -2044,7 +2128,8 @@ class ExorConfig
 			JsonFileLoader<ExorCfgSpawns>.JsonLoadFile(ExorStorageConstants.CFG_SPAWNS, spawns);
 		else
 			spawns.SetDefaults();
-		JsonFileLoader<ExorCfgSpawns>.JsonSaveFile(ExorStorageConstants.CFG_SPAWNS, spawns);
+		if (GuardarConfig(ExorStorageConstants.CFG_SPAWNS))
+			JsonFileLoader<ExorCfgSpawns>.JsonSaveFile(ExorStorageConstants.CFG_SPAWNS, spawns);
 	}
 
 	void LoadMapa()
@@ -2053,7 +2138,8 @@ class ExorConfig
 			JsonFileLoader<ExorCfgMapa>.JsonLoadFile(ExorStorageConstants.CFG_MAPA, mapa);
 		else
 			mapa.SetDefaults();
-		JsonFileLoader<ExorCfgMapa>.JsonSaveFile(ExorStorageConstants.CFG_MAPA, mapa);
+		if (GuardarConfig(ExorStorageConstants.CFG_MAPA))
+			JsonFileLoader<ExorCfgMapa>.JsonSaveFile(ExorStorageConstants.CFG_MAPA, mapa);
 	}
 
 	void LoadAutorun()
@@ -2062,7 +2148,8 @@ class ExorConfig
 			JsonFileLoader<ExorCfgAutorun>.JsonLoadFile(ExorStorageConstants.CFG_AUTORUN, autorun);
 		else
 			autorun.SetDefaults();
-		JsonFileLoader<ExorCfgAutorun>.JsonSaveFile(ExorStorageConstants.CFG_AUTORUN, autorun);
+		if (GuardarConfig(ExorStorageConstants.CFG_AUTORUN))
+			JsonFileLoader<ExorCfgAutorun>.JsonSaveFile(ExorStorageConstants.CFG_AUTORUN, autorun);
 	}
 
 	void LoadAnticheat()
@@ -2071,7 +2158,8 @@ class ExorConfig
 			JsonFileLoader<ExorCfgAnticheat>.JsonLoadFile(ExorStorageConstants.CFG_ANTICHEAT, anticheat);
 		else
 			anticheat.SetDefaults();
-		JsonFileLoader<ExorCfgAnticheat>.JsonSaveFile(ExorStorageConstants.CFG_ANTICHEAT, anticheat);
+		if (GuardarConfig(ExorStorageConstants.CFG_ANTICHEAT))
+			JsonFileLoader<ExorCfgAnticheat>.JsonSaveFile(ExorStorageConstants.CFG_ANTICHEAT, anticheat);
 	}
 
 	void LoadKoth()
@@ -2088,7 +2176,8 @@ class ExorConfig
 		{
 			koth.SetDefaults();
 			koth.Validate();
-			JsonFileLoader<ExorCfgKoth>.JsonSaveFile(ExorStorageConstants.CFG_KOTH, koth);
+			if (GuardarConfig(ExorStorageConstants.CFG_KOTH))
+				JsonFileLoader<ExorCfgKoth>.JsonSaveFile(ExorStorageConstants.CFG_KOTH, koth);
 		}
 	}
 
@@ -2098,7 +2187,8 @@ class ExorConfig
 			JsonFileLoader<ExorCfgItems>.JsonLoadFile(ExorStorageConstants.CFG_ITEMS, items);
 		else
 			items.SetDefaults();
-		JsonFileLoader<ExorCfgItems>.JsonSaveFile(ExorStorageConstants.CFG_ITEMS, items);
+		if (GuardarConfig(ExorStorageConstants.CFG_ITEMS))
+			JsonFileLoader<ExorCfgItems>.JsonSaveFile(ExorStorageConstants.CFG_ITEMS, items);
 	}
 
 	void LoadVip()
@@ -2109,7 +2199,8 @@ class ExorConfig
 			vip.SetDefaults();
 		// Migra vip_steamids[] viejo y sella la fecha de ingreso (hoy) de los nuevos.
 		vip.MigrateAndStamp();
-		JsonFileLoader<ExorCfgVip>.JsonSaveFile(ExorStorageConstants.CFG_VIP, vip);
+		if (GuardarConfig(ExorStorageConstants.CFG_VIP))
+			JsonFileLoader<ExorCfgVip>.JsonSaveFile(ExorStorageConstants.CFG_VIP, vip);
 	}
 
 	void LoadKillfeed()
@@ -2118,7 +2209,8 @@ class ExorConfig
 			JsonFileLoader<ExorCfgKillfeed>.JsonLoadFile(ExorStorageConstants.CFG_KILLFEED, killfeed);
 		else
 			killfeed.SetDefaults();
-		JsonFileLoader<ExorCfgKillfeed>.JsonSaveFile(ExorStorageConstants.CFG_KILLFEED, killfeed);
+		if (GuardarConfig(ExorStorageConstants.CFG_KILLFEED))
+			JsonFileLoader<ExorCfgKillfeed>.JsonSaveFile(ExorStorageConstants.CFG_KILLFEED, killfeed);
 	}
 
 	void LoadServerInfo()
@@ -2134,7 +2226,8 @@ class ExorConfig
 		else
 		{
 			serverinfo.SetDefaults();
-			JsonFileLoader<ExorCfgServerInfo>.JsonSaveFile(ExorStorageConstants.CFG_SERVERINFO, serverinfo);
+			if (GuardarConfig(ExorStorageConstants.CFG_SERVERINFO))
+				JsonFileLoader<ExorCfgServerInfo>.JsonSaveFile(ExorStorageConstants.CFG_SERVERINFO, serverinfo);
 		}
 	}
 
@@ -2144,7 +2237,8 @@ class ExorConfig
 			JsonFileLoader<ExorCfgChat>.JsonLoadFile(ExorStorageConstants.CFG_CHAT, chat);
 		else
 			chat.SetDefaults();
-		JsonFileLoader<ExorCfgChat>.JsonSaveFile(ExorStorageConstants.CFG_CHAT, chat);
+		if (GuardarConfig(ExorStorageConstants.CFG_CHAT))
+			JsonFileLoader<ExorCfgChat>.JsonSaveFile(ExorStorageConstants.CFG_CHAT, chat);
 	}
 
 	void LoadReparacion()
@@ -2153,7 +2247,8 @@ class ExorConfig
 			JsonFileLoader<ExorCfgReparacion>.JsonLoadFile(ExorStorageConstants.CFG_REPARACION, reparacion);
 		else
 			reparacion.SetDefaults();
-		JsonFileLoader<ExorCfgReparacion>.JsonSaveFile(ExorStorageConstants.CFG_REPARACION, reparacion);
+		if (GuardarConfig(ExorStorageConstants.CFG_REPARACION))
+			JsonFileLoader<ExorCfgReparacion>.JsonSaveFile(ExorStorageConstants.CFG_REPARACION, reparacion);
 	}
 
 	void LoadBodyCadaver()
@@ -2162,7 +2257,8 @@ class ExorConfig
 			JsonFileLoader<ExorCfgBodyCadaver>.JsonLoadFile(ExorStorageConstants.CFG_BODYCADAVER, bodycadaver);
 		else
 			bodycadaver.SetDefaults();
-		JsonFileLoader<ExorCfgBodyCadaver>.JsonSaveFile(ExorStorageConstants.CFG_BODYCADAVER, bodycadaver);
+		if (GuardarConfig(ExorStorageConstants.CFG_BODYCADAVER))
+			JsonFileLoader<ExorCfgBodyCadaver>.JsonSaveFile(ExorStorageConstants.CFG_BODYCADAVER, bodycadaver);
 	}
 
 	void LoadNoBuild()
@@ -2171,7 +2267,8 @@ class ExorConfig
 			JsonFileLoader<ExorCfgNoBuild>.JsonLoadFile(ExorStorageConstants.CFG_NOBUILD, nobuild);
 		else
 			nobuild.SetDefaults();
-		JsonFileLoader<ExorCfgNoBuild>.JsonSaveFile(ExorStorageConstants.CFG_NOBUILD, nobuild);
+		if (GuardarConfig(ExorStorageConstants.CFG_NOBUILD))
+			JsonFileLoader<ExorCfgNoBuild>.JsonSaveFile(ExorStorageConstants.CFG_NOBUILD, nobuild);
 	}
 
 	void LoadCofre()
@@ -2187,7 +2284,8 @@ class ExorConfig
 		{
 			cofre.SetDefaults();
 			cofre.Validate();
-			JsonFileLoader<ExorCfgCofre>.JsonSaveFile(ExorStorageConstants.CFG_COFRE, cofre);
+			if (GuardarConfig(ExorStorageConstants.CFG_COFRE))
+				JsonFileLoader<ExorCfgCofre>.JsonSaveFile(ExorStorageConstants.CFG_COFRE, cofre);
 		}
 	}
 
@@ -2197,7 +2295,8 @@ class ExorConfig
 			JsonFileLoader<ExorCfgCarLock>.JsonLoadFile(ExorStorageConstants.CFG_AUTOS, carlock);
 		else
 			carlock.SetDefaults();
-		JsonFileLoader<ExorCfgCarLock>.JsonSaveFile(ExorStorageConstants.CFG_AUTOS, carlock);
+		if (GuardarConfig(ExorStorageConstants.CFG_AUTOS))
+			JsonFileLoader<ExorCfgCarLock>.JsonSaveFile(ExorStorageConstants.CFG_AUTOS, carlock);
 	}
 
 	// ---- migracion del settings.json monolitico viejo ----
@@ -2268,9 +2367,12 @@ class ExorConfig
 		}
 
 		// Guardar los 3 modulos migrados (party/spawns/mapa se crean con defaults en sus Load)
-		JsonFileLoader<ExorCfgStorage>.JsonSaveFile(ExorStorageConstants.CFG_STORAGE, storage);
-		JsonFileLoader<ExorCfgVehiculos>.JsonSaveFile(ExorStorageConstants.CFG_VEHICULOS, vehiculos);
-		JsonFileLoader<ExorCfgMunicion>.JsonSaveFile(ExorStorageConstants.CFG_MUNICION, municion);
+		if (GuardarConfig(ExorStorageConstants.CFG_STORAGE))
+			JsonFileLoader<ExorCfgStorage>.JsonSaveFile(ExorStorageConstants.CFG_STORAGE, storage);
+		if (GuardarConfig(ExorStorageConstants.CFG_VEHICULOS))
+			JsonFileLoader<ExorCfgVehiculos>.JsonSaveFile(ExorStorageConstants.CFG_VEHICULOS, vehiculos);
+		if (GuardarConfig(ExorStorageConstants.CFG_MUNICION))
+			JsonFileLoader<ExorCfgMunicion>.JsonSaveFile(ExorStorageConstants.CFG_MUNICION, municion);
 
 		// Respaldar (re-escribiendo el DTO ya cargado) y sacar de en medio el viejo
 		JsonFileLoader<ExorStorageSettings>.JsonSaveFile(ExorStorageConstants.CONFIG_MIGRATED, old);

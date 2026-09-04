@@ -82,15 +82,84 @@ class ExorGroupManager
 	}
 
 	// ------------------------- busqueda -------------------------
+	// ------------------------------------------------------------------------
+	//  INDICE steamid -> grupo  (O(1) en vez de O(grupos x miembros))
+	// ------------------------------------------------------------------------
+	// FindByPlayer es de los lookups mas calientes del mod: lo llaman el hook de
+	// pickup de CADA item (ExorAntiRaid.OnPickupInEnemyTerritory), CanPlaceServer
+	// (que corre por frame mientras colocas algo), cada apertura de mueble y el sync
+	// de territorio. Recorrer todos los grupos comparando strings miembro por miembro
+	// era O(grupos x miembros) POR ITEM LOOTEADO: con ~80 clanes de 10 son ~800
+	// comparaciones de string cada vez.
+	//
+	// Ahora hay un map que se arma una sola vez y se mantiene: cualquier cosa que
+	// toque la composicion de un grupo llama a InvalidarIndice() y el proximo lookup
+	// lo reconstruye. Se invalida en vez de actualizarse punto a punto a proposito:
+	// los cambios de roster son rarisimos (invitar/expulsar/salir) comparados con las
+	// lecturas, y un indice que se reconstruye entero no puede quedar inconsistente.
+	ref map<string, ExorGroup> m_MemberIdx;
+	int m_IdxVersion;	// version del roster con la que se construyo (0 = sin construir)
+
+	void InvalidarIndice()
+	{
+		m_IdxVersion = 0;
+	}
+
+	void ReconstruirIndice()
+	{
+		if (!m_MemberIdx)
+			m_MemberIdx = new map<string, ExorGroup>;
+		m_MemberIdx.Clear();
+		int i;
+		int k;
+		for (i = 0; i < m_Groups.Count(); i++)
+		{
+			ExorGroup g = m_Groups.Get(i);
+			if (!g || !g.members)
+				continue;
+			for (k = 0; k < g.members.Count(); k++)
+			{
+				ExorGroupMember mm = g.members.Get(k);
+				if (mm && mm.steamid != "")
+					m_MemberIdx.Set(mm.steamid, g);
+			}
+		}
+		m_IdxVersion = ExorRosterVersion.Get();
+	}
+
 	ExorGroup FindByPlayer(string sid)
 	{
+		if (sid == "")
+			return null;
+		if (!m_MemberIdx || m_IdxVersion != ExorRosterVersion.Get())
+			ReconstruirIndice();
+		ExorGroup g;
+		if (m_MemberIdx.Find(sid, g))
+			return g;
+		return null;
+	}
+
+	// Grupo cuyo mastil guardado esta en 'pos' (dentro de una tolerancia). Reemplaza al id de
+	// grupo que antes viajaba como STRING en el stream de persistencia del mastil: la posicion
+	// del mastil ya vive en groups/<id>.json (mast_x/mast_z), asi que el dato es el mismo pero
+	// no pasa por el stream del engine, que es donde un string mal leido mata el arranque.
+	static const float EXOR_MAST_POS_TOL = 3.0;
+
+	string GroupIdEnPos(vector pos)
+	{
+		float tolSq = EXOR_MAST_POS_TOL * EXOR_MAST_POS_TOL;
 		int i;
 		for (i = 0; i < m_Groups.Count(); i++)
 		{
-			if (m_Groups.Get(i).HasMember(sid))
-				return m_Groups.Get(i);
+			ExorGroup g = m_Groups.Get(i);
+			if (!g)
+				continue;
+			if (g.mast_x == 0 && g.mast_z == 0)
+				continue;
+			if (ExorMath.Dist2DSq(Vector(g.mast_x, 0, g.mast_z), Vector(pos[0], 0, pos[2])) <= tolSq)
+				return g.id;
 		}
-		return null;
+		return "";
 	}
 
 	ExorGroup FindById(string id)
@@ -167,13 +236,17 @@ class ExorGroupManager
 		if (g.borrado == 1)
 			return;
 		m_Groups.Insert(g);
+		ExorRosterVersion.Bump();
 	}
 
 	void DeleteGroup(ExorGroup g)
 	{
 		int idx = m_Groups.Find(g);
 		if (idx != -1)
+		{
 			m_Groups.Remove(idx);
+			ExorRosterVersion.Bump();
+		}
 		string path = GroupPath(g.id);
 		if (FileExist(path))
 			DeleteFile(path);
@@ -238,6 +311,7 @@ class ExorGroupManager
 		g.owner_id = sid;
 		g.AddOrUpdate(sid, PlayerName(owner), ExorTimeUtil.TodayNumber());
 		m_Groups.Insert(g);
+		ExorRosterVersion.Bump();
 
 		// Sellar procedencia: si el fundador figura como EX-MIEMBRO de otro clan
 		// activo (p.ej. lo expulsaron y se armo su propia base), dejar constancia
@@ -297,7 +371,10 @@ class ExorGroupManager
 		SaveGroup(g);	// persiste el file con la marca (NO se borra del disco)
 		int idx = m_Groups.Find(g);
 		if (idx != -1)
+		{
 			m_Groups.Remove(idx);
+			ExorRosterVersion.Bump();
+		}
 		Print(string.Format("%1 Party: grupo %2 marcado BORRADO por %3 (%4) -> file conservado", ExorStorageConstants.LOG, g.id, bySteamId, g.borrado_fecha));
 	}
 

@@ -67,6 +67,17 @@ class ExorActionDeployBarrel : ActionContinuousBase
 		dir.Normalize();
 		vector pos = player.GetPosition() + dir * 1.5;
 
+		// El barril solo se setea DENTRO del radio del mastil de tu propia base, y respetando
+		// el tope de BARRILES por base (cupo propio, aparte del de muebles). Se valida en el
+		// SERVER al terminar la accion y no en ActionCondition, que corre en el cliente y se
+		// puede saltear con un cliente modificado. Ver ExorMuebleRules.CanPlaceBarril.
+		string denyReason;
+		if (!ExorMuebleRules.CanPlaceBarril(player, pos, denyReason))
+		{
+			ExorMuebleRules.SendRed(player, denyReason);
+			return;		// la caja NO se consume: el jugador se queda con su barril
+		}
+
 		EntityAI barrel = EntityAI.Cast(GetGame().CreateObjectEx(deployedType, pos, ECE_PLACE_ON_SURFACE));
 		if (!barrel)
 		{

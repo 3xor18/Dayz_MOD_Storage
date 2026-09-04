@@ -36,6 +36,35 @@ class ExorSpawn
 {
 	static ref map<string, int> s_LastBaseMs;   // steamid -> ms del ultimo spawn en base
 	static ref map<string, int> s_LastPointMs;  // "steamid|idx" -> ms del ultimo uso del punto
+
+	// PURGA: mismo caso que el chat. Las entradas solo sirven para cooldowns de minutos;
+	// lo mas viejo que 'ttlMs' no lo va a consultar nadie. La llama ExorHousekeeping.
+	static void PurgarViejos(int now, int ttlMs)
+	{
+		int i;
+		if (s_LastBaseMs)
+		{
+			array<string> m1 = new array<string>;
+			foreach (string k1, int v1 : s_LastBaseMs)
+			{
+				if (now - v1 > ttlMs)
+					m1.Insert(k1);
+			}
+			for (i = 0; i < m1.Count(); i++)
+				s_LastBaseMs.Remove(m1.Get(i));
+		}
+		if (s_LastPointMs)
+		{
+			array<string> m2 = new array<string>;
+			foreach (string k2, int v2 : s_LastPointMs)
+			{
+				if (now - v2 > ttlMs)
+					m2.Insert(k2);
+			}
+			for (i = 0; i < m2.Count(); i++)
+				s_LastPointMs.Remove(m2.Get(i));
+		}
+	}
 	static ref map<string, bool> s_NeedSelect;  // steamid -> debe mostrarse la pantalla de spawn
 
 	static void Ensure()
@@ -139,6 +168,11 @@ class ExorSpawn
 		for (i = 0; i < spawns.puntos.Count(); i++)
 		{
 			ExorSpawnPunto pt = spawns.puntos.Get(i);
+			// COMPATIBILIDAD DE MAPA: un punto de spawn que quedo fuera del terreno (config de
+			// otro mapa) tiraria al jugador al vacio. Se descarta con aviso en el log y se cae
+			// al spawn vanilla si no queda ninguno valido. Ver ExorMapBounds.
+			if (!ExorMapBounds.Valida("spawns.json", pt.nombre, pt.x, pt.z, 50))
+				continue;
 			int last;
 			string key = string.Format("%1|%2", steamid, i);
 			if (s_LastPointMs.Find(key, last))

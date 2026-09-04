@@ -69,7 +69,10 @@ modded class ItemBase
 		super.EEItemLocationChanged(oldLoc, newLoc);
 		if (!GetGame() || !GetGame().IsServer())
 			return;
-		if (!GetExorConfig().bodycadaver.forense_registrar_looteadores)
+		// Bandera ya leida de la config (bool estatico). Este hook corre en CADA movimiento
+		// de inventario de CADA item del mundo -incluidos los miles que genera restaurar un
+		// contenedor-, asi que la salida temprana tiene que ser un solo acceso a memoria.
+		if (!ExorHotFlags.ForenseLooteadores())
 			return;
 		EntityAI oldParent = oldLoc.GetParent();
 		if (!oldParent)

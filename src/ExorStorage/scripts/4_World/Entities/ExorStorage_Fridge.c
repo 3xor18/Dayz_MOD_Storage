@@ -22,10 +22,8 @@
 class Exor_Fridge : Exor_OpenableStorage
 {
 	// --- BATERIA / energia ---
-	protected bool		m_ExorPowered;			// true = bateria puesta y con carga
-	protected bool		m_ExorPoweredPrev;		// para detectar el cambio powered->unpowered
-	protected int		m_ExorLastBatteryMs;	// ultimo tick de bateria (throttle)
-	protected const int	EXOR_FRIDGE_BATTERY_MS = 60000;	// procesar bateria cada 60s
+	// No hay estado de bateria cacheado ni timers: todo se deriva de la carga real de la
+	// bateria puesta y del tiempo transcurrido. Ver ExorMinutosDeCarga / ExorDrenarBateria.
 	// temperatura "fria pero NO congelada" que se pone a la comida al restaurarla con bateria
 	protected const float	EXOR_FRIDGE_COLD_TEMP = 3.0;
 
@@ -39,8 +37,9 @@ class Exor_Fridge : Exor_OpenableStorage
 	// identificar la nevera ANTES de super. La POSICION NO sirve (no esta seteada antes de super en
 	// una entidad persistida). Lo que SI esta disponible es un contador de secuencia (el N-esimo
 	// fridge en cargar, en orden determinista). Ver ExorFridgeCanary.
-	//   - VALVULA DE EMERGENCIA (config saltear_carga_neveras=true): descarto TODAS las neveras sin
-	//     tocar su cargo -> arranque garantizado (arrancan vacias). Ultimo recurso, sin build nuevo.
+	//   - La CARGA SEGURA por tipo (BootRepair + la valvula de config saltear_carga_neveras) ya
+	//     esta en Exor_OpenableStorage.OnStoreLoad, que corre en el super de abajo... salvo que
+	//     el canary tiene que decidir ANTES, asi que se consulta aca tambien.
 	//   - Si el canary tiene MI numero N (crashee el boot pasado cargando la N) -> return false SIN
 	//     llamar a super -> el motor NO deserializa mi cargo corrupto -> el server ARRANCA. El
 	//     self-heal me recrea VACIA. Aisla SOLO a mi; las demas neveras cargan normal.
@@ -51,26 +50,20 @@ class Exor_Fridge : Exor_OpenableStorage
 	{
 		if (GetGame().IsServer())
 		{
-			// valvula de emergencia: saltear la carga de TODAS las neveras
-			if (GetExorConfig().storage.saltear_carga_neveras)
-			{
-				Print(string.Format("%1 nevera SALTEADA por config saltear_carga_neveras -> arranca vacia", ExorStorageConstants.LOG));
-				return false;
-			}
-			// AUTO: el arranque anterior murio y el RPT acusaba a una nevera corrupta. Saltear
-			// el contenido de TODAS las neveras por este arranque levanta el server sin tocar
-			// ningun archivo de persistencia (bases/carpas/loot de la zona quedan intactos).
-			// Es mas barato que la cuarentena. Ver ExorBootRepair, etapa 3.
-			if (ExorBootRepair.SaltearNeveras())
-			{
-				Print(string.Format("%1 nevera SALTEADA por BootRepair (nevera corrupta detectada en el arranque anterior) -> arranca vacia", ExorStorageConstants.LOG));
-				return false;
-			}
+			// carga segura de esta clase (config saltear_carga_neveras o rastro en el RPT del
+			// arranque anterior): ni canary ni stream, se delega en el super, que corta solo.
+			// Se chequea aca para no gastar el numero de secuencia del canary al pedo.
+			if (ExorBootRepair.SaltearTipo(GetType()))
+				return super.OnStoreLoad(ctx, version);
 			int myseq = ExorFridgeCanary.NextSeq();		// soy la nevera N-esima en cargar
 			if (ExorFridgeCanary.ReadSeq() == myseq)
 			{
 				ExorFridgeCanary.Clear();
-				Print(string.Format("%1 nevera #%2 con cargo CORRUPTO descartada -> se recrea VACIA", ExorStorageConstants.LOG, myseq));
+				// el texto lleva CARGA-SEGURA a proposito: marca este arranque como "cura
+				// aplicada" para ExorBootRepair.ExorAcusadosEnRpt, asi las lineas de corrupcion
+				// que el engine loguee por esta nevera descartada no se leen como una
+				// acusacion nueva en el arranque siguiente (evita el bucle).
+				Print(string.Format("%1 CARGA-SEGURA: nevera #%2 con cargo CORRUPTO descartada -> se recrea VACIA", ExorStorageConstants.LOG, myseq));
 				return false;	// NO llamar a super -> el motor no deserializa el cargo corrupto
 			}
 			ExorFridgeCanary.WriteSeq(myseq);	// marca: cargando la N-esima (antes de super)
@@ -83,15 +76,11 @@ class Exor_Fridge : Exor_OpenableStorage
 		return true;
 	}
 
-	// La nevera NUNCA es idle: aunque este cerrada+virtualizada, su ExorPeriodicTick tiene que
-	// correr para descargar la bateria. Si se salteara, la bateria no se drenaria.
-	override bool ExorIsIdle() { return false; }
-
 	// FILTRO: comida (vegetales, carnes, latas, sodas = Edible_Base) + agua (cantimplora,
 	// botella, water pouch = Bottle_Base). NO acepta CONTENEDORES (ollas/Pot y cualquier item
 	// con cargo propio): un contenedor anidado dentro de la nevera es la fuente probable del
-	// inventario corrupto que crashea el server al cargar (y del NULL de Pot sin food-stage
-	// visto 20-jul). Solo comida/bebida SUELTA, sin items que metan items adentro.
+	// inventario corrupto que rompia el arranque (y del NULL de Pot sin food-stage visto
+	// 20-jul). Solo comida/bebida SUELTA, sin items que metan items adentro.
 	override bool ExorCanStore(EntityAI item)
 	{
 		if (!item)
@@ -102,128 +91,153 @@ class Exor_Fridge : Exor_OpenableStorage
 		return item.IsInherited(Edible_Base) || item.IsInherited(Bottle_Base);
 	}
 
-	// VIRTUALIZAR: con bateria siempre; sin bateria solo si NO hay comida perecedera
-	// (para dejarla real y que se pudra). Agua/bebidas no cuentan (no se pudren).
-	override bool ExorCanVirtualizeNow()
+	// VIRTUALIZAR SIEMPRE (se hereda el default de la base, que ahora es true).
+	// CAUSA RAIZ del "el server no arranca por la nevera": esta era la UNICA clase del mod
+	// que a proposito dejaba items REALES en el cargo del motor (sin bateria, para que la
+	// comida se pudriera sola). Todo lo demas virtualiza a JSON y llega al guardado con el
+	// cargo VACIO, asi que el motor no tiene nada suyo que serializar ni que corromper.
+	// La regla de juego NO cambia: sin bateria la comida se sigue pudriendo, solo que el
+	// tiempo se le cobra al restaurarla (ver ExorOnItemsRestored).
+
+	// La nevera YA NO tiene tick propio: el drenaje de bateria y el envejecimiento de la
+	// comida se calculan POR TIEMPO TRANSCURRIDO cuando hacen falta (ver ExorDrenarBateria y
+	// ExorEnvejecerComida), no tickeando. Por eso puede ser idle como cualquier otro mueble y
+	// el fast-skip del manager vuelve a servir para ella.
+	//
+	// POR QUE IMPORTA: ExorIsIdle() devolvia SIEMPRE false para poder drenar la bateria, o sea
+	// que CADA nevera del mapa entraba a ExorTick + ExorPeriodicTick cada 5 segundos aunque
+	// estuviera cerrada, virtualizada y sin tocar hace dias. Con cientos de neveras eso anulaba
+	// justo la optimizacion que hace que el tick escale.
+	//
+	// Un estado que solo depende del tiempo no necesita que nadie lo actualice: se deriva
+	// cuando alguien lo mira. Es la diferencia entre O(neveras) por tick y O(1) por apertura.
+
+	// --- BATERIA (calculo perezoso) ---
+	// Minutos de carga que le quedan a la bateria puesta (0 = sin bateria o agotada).
+	int ExorMinutosDeCarga()
 	{
-		if (m_ExorPowered)
-			return true;
-		return !ExorHasPerishableFood();
+		CarBattery battery = ExorGetBattery();
+		if (!battery || !battery.GetCompEM())
+			return 0;
+		float energy = battery.GetCompEM().GetEnergy();
+		if (energy <= 0)
+			return 0;
+		float maxEnergy = battery.GetCompEM().GetEnergyMax();
+		if (maxEnergy <= 0)
+			return 0;
+		float days = GetExorConfig().storage.nevera_bateria_dias;
+		if (battery.IsInherited(TruckBattery))
+			days = days * 2.0;	// bateria de CAMION dura el DOBLE que la de auto
+		if (days <= 0)
+			return 999999;		// 0 en config = la bateria no se descarga nunca
+		float minutosLlena = days * 1440.0;
+		return (int)(minutosLlena * (energy / maxEnergy));
 	}
 
-	// La lee Edible_Base::CanProcessDecay() -> la comida real dentro de una nevera
-	// con energia NO se pudre.
+	// Le descuenta a la bateria los 'minutos' que pasaron. Devuelve cuantos de esos minutos
+	// quedaron SIN energia (los que la comida tiene que envejecer).
+	int ExorDrenarBateria(int minutos)
+	{
+		if (minutos <= 0)
+			return 0;
+		CarBattery battery = ExorGetBattery();
+		if (!battery || !battery.GetCompEM())
+			return minutos;		// sin bateria: todo el tiempo fue sin energia
+
+		float days = GetExorConfig().storage.nevera_bateria_dias;
+		if (battery.IsInherited(TruckBattery))
+			days = days * 2.0;
+		if (days <= 0)
+			return 0;			// config: la bateria no se descarga -> siempre refrigerado
+
+		float maxEnergy = battery.GetCompEM().GetEnergyMax();
+		float energy = battery.GetCompEM().GetEnergy();
+		if (maxEnergy <= 0 || energy <= 0)
+			return minutos;
+
+		float minutosLlena = days * 1440.0;
+		float minutosRestantes = minutosLlena * (energy / maxEnergy);
+		if (minutosRestantes >= minutos)
+		{
+			// alcanzo para todo el periodo: descontar lo consumido
+			float gasto = maxEnergy * (minutos / minutosLlena);
+			float left = energy - gasto;
+			if (left < 0)
+				left = 0;
+			battery.GetCompEM().SetEnergy(left);
+			return 0;
+		}
+		// se agoto en el medio: el resto del periodo fue sin energia
+		battery.GetCompEM().SetEnergy(0);
+		return minutos - (int)minutosRestantes;
+	}
+
+	// Estado de energia AHORA (lo lee Edible_Base.CanProcessDecay para la comida real que
+	// hay adentro mientras la nevera esta abierta).
 	bool ExorIsPowered()
 	{
-		return m_ExorPowered;
+		return ExorMinutosDeCarga() > 0;
 	}
 
 	protected CarBattery ExorGetBattery()
 	{
 		// UN SOLO slot ("ExorBattery", en config): acepta bateria de AUTO o de CAMION.
-		// TruckBattery hereda CarBattery -> el Cast funciona para ambas; luego
-		// ExorPeriodicTick chequea IsInherited(TruckBattery) para el drenaje x2.
+		// TruckBattery hereda CarBattery -> el Cast funciona para ambas.
 		return CarBattery.Cast(FindAttachmentBySlotName("ExorBattery"));
 	}
 
-	// hay comida perecedera (no podrida) en el cargo?
-	bool ExorHasPerishableFood()
+	// Al guardar el JSON queda anotado si la nevera tenia ENERGIA en ese momento: con bateria
+	// el contenido se conserva y NO se le cobra el tiempo; sin bateria si.
+	override void ExorOnSnapshotWrite(ExorVO_ContainerFile f)
 	{
-		GameInventory inv = GetInventory();
-		if (!inv)
-			return false;
-		CargoBase cargo = inv.GetCargo();
-		if (!cargo)
-			return false;
-		int i;
-		for (i = 0; i < cargo.GetItemCount(); i++)
-		{
-			Edible_Base food = Edible_Base.Cast(cargo.GetItem(i));
-			// GUARD: un Edible SIN food stage (olla vacia, etc.) tira NULL pointer en
-			// GetFoodStageType() -> CRASH del server. Visto en produccion 20-jul 17:49
-			// (una Pot en la nevera). Chequear GetFoodStage() antes.
-			if (!food || !food.GetFoodStage())
-				continue;	// sin comida real adentro -> no cuenta como perecedero
-			if (food.GetFoodStageType() != FoodStageType.ROTTEN)
-				return true;
-		}
-		return false;
+		int carga = ExorMinutosDeCarga();
+		f.vbat = carga;
+		if (carga > 0)
+			f.vpow = 1;
+		else
+			f.vpow = 0;
 	}
 
-	// Logica de bateria. La llama el MANAGER en su tick central (cada 5s); throttleamos
-	// a cada 60s. Drenaje calculado por el TIEMPO REAL transcurrido -> exacto sin importar
-	// la cadencia. Los dias que dura una bateria llena salen del config (nevera_bateria_dias).
-	override void ExorPeriodicTick(int now)
-	{
-		if (!GetGame().IsServer())
-			return;
-		// DESFASE INICIAL: si todas las neveras arrancan con el contador en 0 (carga del
-		// server), sus ventanas de 60s quedan alineadas y se agotan/procesan TODAS en el
-		// mismo tick. Al primer paso se les reparte un offset aleatorio dentro de la ventana
-		// para que queden escalonadas. Solo afecta CUANDO corre el chequeo, no el drenaje:
-		// el consumo se calcula por tiempo real transcurrido.
-		if (m_ExorLastBatteryMs == 0)
-		{
-			m_ExorLastBatteryMs = now - Math.RandomInt(0, EXOR_FRIDGE_BATTERY_MS);
-			return;
-		}
-		// throttle: correr esto cada ~60s (el manager llama cada 5s)
-		if (now - m_ExorLastBatteryMs < EXOR_FRIDGE_BATTERY_MS)
-			return;
-		// tiempo REAL desde el ultimo chequeo (m_ExorLastBatteryMs ya no puede ser 0 aca)
-		float elapsedSec = (now - m_ExorLastBatteryMs) / 1000.0;
-		m_ExorLastBatteryMs = now;
-
-		CarBattery battery = ExorGetBattery();
-		bool powered = false;
-
-		if (battery && battery.GetCompEM())
-		{
-			float energy = battery.GetCompEM().GetEnergy();
-			if (energy > 0)
-			{
-				powered = true;
-				float days = GetExorConfig().storage.nevera_bateria_dias;
-				if (battery.IsInherited(TruckBattery))
-					days = days * 2.0;	// bateria de CAMION dura el DOBLE que la de auto
-				if (days > 0)	// 0 = la bateria no se descarga
-				{
-					// una bateria LLENA (max real) dura 'days' dias -> drenaje por seg transcurrido.
-					float maxEnergy = battery.GetCompEM().GetEnergyMax();
-					float drain = maxEnergy * elapsedSec / (days * 86400.0);
-					float left = energy - drain;
-					if (left < 0)
-						left = 0;
-					battery.GetCompEM().SetEnergy(left);
-				}
-			}
-		}
-
-		m_ExorPowered = powered;
-
-		// Si la bateria se AGOTO mientras la comida estaba virtualizada, restaurarla para
-		// que se pudra real (si no, quedaria congelada fuera del mundo para siempre).
-		// Va por ExorRestoreRetry (no ExorDoRestore directo): esto corre DENTRO del loop del
-		// manager, sin presupuesto, y un restore completo son cientos de entidades creadas.
-		// Si varias neveras se quedan sin bateria en el mismo tick, se reparten en vez de
-		// apilarse en un frame.
-		if (m_ExorPoweredPrev && !powered && ExorIsVirtualized())
-			ExorRestoreRetry();
-
-		m_ExorPoweredPrev = powered;
-	}
-
-	// Al restaurar del JSON: si hay bateria, la comida aparece FRIA (no congelada).
-	// (Si no hay bateria la comida perecedera ni se virtualiza, asi que aca ya tiene
-	// bateria o es agua/bebida -> ponerla fria no molesta.)
+	// Al restaurar del JSON, la nevera pone al dia DOS cosas que mientras estuvo virtualizada
+	// nadie pudo ir actualizando (el contenido no existia y no hay tick por nevera):
+	//
+	//   1) la BATERIA se descarga por los minutos transcurridos;
+	//   2) la comida ENVEJECE solo por los minutos en que NO hubo energia.
+	//
+	// El "cuanto hubo energia" sale del propio archivo: al guardarlo se anoto cuantos minutos
+	// de carga le quedaban (vbat). Si estuvo virtualizada 3 dias y tenia 1 dia de bateria,
+	// se refrigero 1 dia y se pudrio 2. Es exacto y no cuesta ningun tick.
+	//
+	// Ademas, si al final quedo energia, la comida aparece FRIA (no congelada).
 	override void ExorOnItemsRestored(ExorVO_ContainerFile f)
 	{
 		if (!GetGame().IsServer())
 			return;
-		if (!m_ExorPowered)
-			return;
 
-		CargoBase cargo = GetInventory().GetCargo();
+		int minutos = 0;
+		if (f && f.vmin > 0)
+		{
+			minutos = ExorTimeUtil.NowMinutes() - f.vmin;
+			if (minutos < 0)
+				minutos = 0;
+			if (minutos > EXOR_FRIDGE_MAX_ENVEJ_MIN)
+				minutos = EXOR_FRIDGE_MAX_ENVEJ_MIN;
+		}
+
+		// 1) bateria al dia. Devuelve los minutos que quedaron SIN energia.
+		int sinEnergia = ExorDrenarBateria(minutos);
+
+		// 2) envejecer la comida solo por esos minutos
+		if (sinEnergia > 0)
+			ExorEnvejecerComida(sinEnergia);
+
+		// 3) si todavia hay carga, la comida sale fria
+		if (ExorMinutosDeCarga() <= 0)
+			return;
+		GameInventory inv = GetInventory();
+		if (!inv)
+			return;
+		CargoBase cargo = inv.GetCargo();
 		if (!cargo)
 			return;
 		int i;
@@ -233,6 +247,41 @@ class Exor_Fridge : Exor_OpenableStorage
 			if (it && it.GetTemperature() > EXOR_FRIDGE_COLD_TEMP)
 				it.SetTemperature(EXOR_FRIDGE_COLD_TEMP);
 		}
+	}
+
+	// Tope de lo que se le cobra a la comida de una sola vez. 7 dias alcanzan de sobra: el
+	// timer vanilla mas largo (carne seca) son 8 dias y cualquier cosa perecedera ya se
+	// pudrio mucho antes. Evita que un sello de tiempo raro (JSON viejo, reloj del host
+	// movido, borde de mes) le pegue un salto absurdo.
+	protected const int EXOR_FRIDGE_MAX_ENVEJ_MIN = 10080;
+
+	// Le cobra a la comida REAL del cargo los 'minutos' que la nevera estuvo sin energia.
+	void ExorEnvejecerComida(int minutos)
+	{
+		if (minutos <= 0)
+			return;
+		GameInventory inv = GetInventory();
+		if (!inv)
+			return;
+		CargoBase cargo = inv.GetCargo();
+		if (!cargo)
+			return;
+
+		float segundos = minutos * 60.0;
+		int envejecidos = 0;
+		int i;
+		for (i = 0; i < cargo.GetItemCount(); i++)
+		{
+			Edible_Base food = Edible_Base.Cast(cargo.GetItem(i));
+			// GUARD: un Edible SIN food stage tira NULL pointer en la pudricion vanilla.
+			// (crash de produccion del 20-jul: una Pot en la nevera).
+			if (!food || !food.GetFoodStage())
+				continue;
+			food.ExorEnvejecer(segundos);
+			envejecidos++;
+		}
+		if (envejecidos > 0)
+			Print(string.Format("%1 nevera %2: %3 comida(s) envejecidas %4 min (tiempo sin bateria)", ExorStorageConstants.LOG, ExorGetID(), envejecidos, minutos));
 	}
 }
 

@@ -74,6 +74,47 @@ modded class PlayerBase
 	protected int m_ExorConnectMs;
 	int ExorConnectMs() { return m_ExorConnectMs; }
 
+	// Auto-stack de municion: hay un pase ya agendado para este jugador? (ver ExorVO_Ammo).
+	// Evita agendar una enumeracion completa del inventario por CADA pila que recoge.
+	protected bool m_ExorStackPend;
+	bool ExorStackPendiente() { return m_ExorStackPend; }
+	void ExorSetStackPendiente(bool v) { m_ExorStackPend = v; }
+
+	// ------------------------------------------------------------------------
+	//  CACHE de "en que territorio ajeno estoy parado" (ver ExorTerritoryProbe)
+	// ------------------------------------------------------------------------
+	// Vive aca, en el propio jugador, y no en un map global: el acceso es un campo
+	// directo, sin hash ni lookup, que es justo lo que hace falta en un camino que
+	// corre una vez por item recogido. El puntero al mastil NO es 'ref' a proposito:
+	// si la entidad se borra, el motor lo deja en null solo y el cache falla seguro.
+	protected vector        m_ExorTerrPos;
+	protected int           m_ExorTerrMs;
+	protected int           m_ExorTerrVer;
+	protected TerritoryFlag m_ExorTerrFlag;
+
+	// El cache sirve? Tres condiciones, todas baratas: misma version, dentro del TTL y
+	// sin haberse movido mas de la tolerancia (comparada AL CUADRADO).
+	bool ExorTerrCacheValido(int now, vector pos, int ver, int ttlMs, float moveTolSq)
+	{
+		if (m_ExorTerrMs == 0)
+			return false;
+		if (m_ExorTerrVer != ver)
+			return false;
+		if (now - m_ExorTerrMs > ttlMs)
+			return false;
+		return ExorMath.Dist2DSq(pos, m_ExorTerrPos) <= moveTolSq;
+	}
+
+	TerritoryFlag ExorTerrCacheFlag() { return m_ExorTerrFlag; }
+
+	void ExorTerrCacheSet(int now, vector pos, int ver, TerritoryFlag m)
+	{
+		m_ExorTerrMs = now;
+		m_ExorTerrPos = pos;
+		m_ExorTerrVer = ver;
+		m_ExorTerrFlag = m;
+	}
+
 	override void EEInit()
 	{
 		super.EEInit();
@@ -886,6 +927,27 @@ modded class PlayerBase
 		if (!ExorIsOwnRPC(rpc_type))
 		{
 			super.OnRPC(sender, rpc_type, ctx);
+			return;
+		}
+
+		// ---------------------------------------------------------------------------
+		// CONTROL DE AUTORIDAD POR DIRECCION (agujero de seguridad, corregido)
+		// ---------------------------------------------------------------------------
+		// Los RPC de servidor->cliente se descartan si llegan AL SERVIDOR. No hay forma
+		// legitima de que eso pase: significa que un cliente modificado los esta mandando.
+		// Antes se ejecutaban igual, y CONFIG_SYNC terminaba en ExorConfig.ApplyClientJson,
+		// que reescribe la config VIVA del server -> el atacante se agregaba a
+		// admin_steamids (abre el baul y maneja el auto de CUALQUIER clan) y ponia
+		// permitir_construir_cerca=true (desactiva la proteccion de territorio para todos).
+		//
+		// De paso queda logueado con SteamID: un jugador mandando RPCs de esta direccion no
+		// es un error de red, es alguien probando el server. Sirve de detector.
+		if (GetGame().IsServer() && ExorRPC.EsHaciaCliente(rpc_type))
+		{
+			string atacante = "?";
+			if (sender)
+				atacante = sender.GetPlainId();
+			Print(string.Format("%1 SEGURIDAD: RPC %2 (servidor->cliente) recibido DESDE un cliente [%3] -> DESCARTADO. Cliente modificado.", ExorStorageConstants.LOG, rpc_type, atacante));
 			return;
 		}
 

@@ -107,7 +107,10 @@ class ExorTerritoryManager
 	void RegisterMast(TerritoryFlag m)
 	{
 		if (m_Masts.Find(m) == -1)
+		{
 			m_Masts.Insert(m);
+			ExorTerritoryProbe.Bump();	// caduca el cache de "en que territorio estoy"
+		}
 		RequestSyncToAll();
 	}
 
@@ -115,7 +118,10 @@ class ExorTerritoryManager
 	{
 		int idx = m_Masts.Find(m);
 		if (idx != -1)
+		{
 			m_Masts.Remove(idx);
+			ExorTerritoryProbe.Bump();	// caduca el cache de "en que territorio estoy"
+		}
 		RequestSyncToAll();
 	}
 
@@ -264,7 +270,7 @@ class ExorTerritoryManager
 	// Base reutilizable para: anti-construccion, anti-desmantelar y logs anti-raid.
 	TerritoryFlag FindEnemyTerritoryAt(PlayerBase player, vector pos)
 	{
-		if (!GetExorConfig().party.territorio.habilitado)
+		if (!ExorHotFlags.TerritorioOn())
 			return null;
 
 		string myGroupId = "";
@@ -274,8 +280,20 @@ class ExorTerritoryManager
 			if (g)
 				myGroupId = g.id;
 		}
+		return FindEnemyTerritoryAtEx(myGroupId, pos);
+	}
 
+	// Igual que FindEnemyTerritoryAt pero recibiendo el id de grupo YA resuelto. Existe
+	// para los caminos calientes (ver ExorTerritoryProbe): resolver el grupo del jugador y
+	// barrer los mastiles son dos costos distintos y el primero se puede cachear aparte.
+	// Distancias AL CUADRADO: comparar a^2 <= r^2 da el mismo resultado que a <= r y ahorra
+	// una raiz cuadrada por mastil por llamada.
+	TerritoryFlag FindEnemyTerritoryAtEx(string myGroupId, vector pos)
+	{
+		if (!ExorHotFlags.TerritorioOn())
+			return null;
 		float radius = ExorTerritoryRules.Radius();
+		float r2 = radius * radius;
 		int i;
 		for (i = 0; i < m_Masts.Count(); i++)
 		{
@@ -284,7 +302,7 @@ class ExorTerritoryManager
 				continue;
 			if (m.ExorGetGroupId() == myGroupId && myGroupId != "")
 				continue;	// mi propio territorio
-			if (ExorTerritoryRules.Dist2D(pos, m.GetPosition()) <= radius)
+			if (ExorMath.Dist2DSq(pos, m.GetPosition()) <= r2)
 				return m;	// territorio ajeno
 		}
 		return null;

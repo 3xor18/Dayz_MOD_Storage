@@ -39,6 +39,7 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	protected bool m_ExorLoadDone;    // ya se reconcilio JSON vs persistencia tras cargar
 	protected bool m_ExorRestoring;   // estamos recreando items DESDE el JSON (no marcar dirty)
 	protected bool m_ExorFloorCleaned;// ya se limpio el piso (drops de DayZ) tras este arranque
+	protected int  m_ExorSnapFirma;   // firma del contenido del ULTIMO volcado (ver ExorWriteSnapshot)
 
 	void Exor_Barrel_Base()
 	{
@@ -89,6 +90,12 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	{
 		if (GetGame().IsServer())
 		{
+			// cortar un restore por lotes en curso (quedaria un CallLater a una entidad muerta)
+			if (m_ExorJobFile)
+			{
+				m_ExorJobFile = null;
+				GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(ExorRestorePump);
+			}
 			ExorDbg("EEDelete (barril sacado del mundo: levantado, borrado o descargado)");
 			ExorVO_Manager.UnregisterBarrel(this);
 		}
@@ -123,10 +130,14 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		return s_ExorSlotLoc.GetType() == InventoryLocationType.ATTACHMENT;
 	}
 
+	// PERSISTENCIA: el stream lleva SOLO DOS ENTEROS (magico + id). Nada de strings: un
+	// ctx.Read(string) sobre un stream corrido tira una Virtual Machine Exception que mata el
+	// arranque y no se puede atrapar desde script. Ver ExorPid.
 	override void OnStoreSave(ParamsWriteContext ctx)
 	{
 		super.OnStoreSave(ctx);
-		ctx.Write(m_ExorID);
+		ctx.Write(ExorPid.EXOR_MAGIC);
+		ctx.Write(ExorGetPid());
 		// CLAVE para el dupe: muestra el estado del cargo JUSTO cuando la persistencia
 		// guarda. Si cargo>0 aca = el barril se guarda con items reales -> al cargar DayZ
 		// los anidados caen al piso. Si virt=true/cargo=0 = guardado limpio (sin drop).
@@ -135,12 +146,36 @@ class Exor_Barrel_Base : Barrel_ColorBase
 
 	override bool OnStoreLoad(ParamsReadContext ctx, int version)
 	{
+		// CARGA SEGURA: ver el comentario largo en Exor_OpenableStorage.OnStoreLoad. Si el
+		// arranque anterior acuso a esta clase, no se toca el stream (el ctx.Read(string) de
+		// abajo sobre un stream corrido tira una Virtual Machine Exception que mata el
+		// arranque). El barril lo recrea el self-heal y su contenido sale del JSON.
+		if (GetGame().IsServer() && ExorBootRepair.SaltearTipo(GetType()))
+		{
+			Print(string.Format("%1 CARGA-SEGURA: '%2' no se deserializa en este arranque -> lo recrea el self-heal con su contenido del JSON", ExorStorageConstants.LOG, GetType()));
+			return false;
+		}
 		if (!super.OnStoreLoad(ctx, version))
 			return false;
-		string id;
-		if (!ctx.Read(id))
+
+		int magic;
+		if (!ctx.Read(magic))
 			return false;
-		m_ExorID = id;
+		if (magic != ExorPid.EXOR_MAGIC)
+		{
+			Print(string.Format("%1 GUARD: stream de barril DESALINEADO (magico %2) -> barril descartado, se recrea del registro", ExorStorageConstants.LOG, magic));
+			return false;
+		}
+		int pid;
+		if (!ctx.Read(pid))
+			return false;
+		if (!ExorPid.Plausible(pid))
+		{
+			Print(string.Format("%1 GUARD: id de barril ilegible (%2) -> barril descartado, se recrea del registro", ExorStorageConstants.LOG, pid));
+			return false;
+		}
+		m_ExorPid = pid;
+		m_ExorID = pid.ToString();
 		ExorDbg("OnStoreLoad (persistencia cargando este barril; ID leido del disco)");
 		return true;
 	}
@@ -161,15 +196,14 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	string ExorGetID()
 	{
 		if (m_ExorID == "")
-		{
-			m_ExorID = ExorVO_Serializer.GenerateId();
-		}
+			m_ExorID = ExorGetPid().ToString();
 		return m_ExorID;
 	}
 
+	// ruta del JSON con el contenido de este contenedor. Ver ExorContainerOps.
 	string ExorGetStoragePath()
 	{
-		return string.Format("%1\\%2.json", ExorStorageConstants.STORAGE_DIR, ExorGetID());
+		return ExorContainerOps.StoragePath(ExorGetID());
 	}
 
 	// ------------------------- registro del self-heal: atado vs en el piso -------------------------
@@ -251,10 +285,26 @@ class Exor_Barrel_Base : Barrel_ColorBase
 	// Re-liga el id al recrear el barril desde el registro (self-heal): con el id viejo,
 	// ExorRestoreIfNeeded encuentra su JSON y le devuelve TODO el contenido. Solo lo llama
 	// ExorMuebleRegistry.ExorRecreate. Ver [[ExorMuebleRegistry]].
+	// Id NUMERICO persistente: unica identidad del barril. El string de las rutas es su
+	// representacion decimal. Ver ExorPid.
+	protected int m_ExorPid;
+
+	int ExorGetPid()
+	{
+		if (m_ExorPid <= 0)
+		{
+			m_ExorPid = ExorPid.Nuevo();
+			m_ExorID = m_ExorPid.ToString();
+		}
+		return m_ExorPid;
+	}
+
 	void ExorSetIDForHeal(string id)
 	{
-		if (id != "")
-			m_ExorID = id;
+		if (id == "")
+			return;
+		m_ExorID = id;
+		m_ExorPid = id.ToInt();
 	}
 
 	// virtualizado = items reales sacados del mundo (estan en el JSON). Estado runtime.
@@ -271,7 +321,9 @@ class Exor_Barrel_Base : Barrel_ColorBase
 
 	// Vuelca el cargo ACTUAL del barril al JSON (los items SIGUEN en el mundo). Es el
 	// "guardado en vivo": el JSON queda siempre al dia con item+posicion+anidado.
-	void ExorWriteSnapshot()
+	// 'forzar' = escribir si o si aunque el contenido no haya cambiado. Lo usa el camino de
+	// VIRTUALIZAR, que ademas de guardar necesita refrescar el sello de tiempo del archivo.
+	void ExorWriteSnapshot(bool forzar = false)
 	{
 		GameInventory inv = GetInventory();
 		if (!inv)
@@ -280,16 +332,20 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		if (!cargo)
 			return;
 
-		ExorVO_ContainerFile f = new ExorVO_ContainerFile();
-		f.id = ExorGetID();
-		f.owner_type = GetType();
-		int i;
-		for (i = 0; i < cargo.GetItemCount(); i++)
+		// armado del DTO: compartido con los muebles (ver ExorContainerOps.ArmarSnapshot).
+		// El barril no tiene attachments virtualizables -> false.
+		// FIRMA PRIMERO, DTO DESPUES. Armar el DTO de un contenedor lleno son ~1500 objetos
+		// (un ExorVO_ItemData con sus dos arrays por item, recursivo); en el caso comun -nada
+		// cambio- se tiraban enteros. Firmar el inventario VIVO no aloca nada.
+		int firma = ExorContainerOps.FirmaViva(this, false);
+		if (!forzar && firma == m_ExorSnapFirma && m_ExorSnapFirma != 0 && FileExist(ExorGetStoragePath()))
 		{
-			EntityAI it = cargo.GetItem(i);
-			if (it)
-				f.items.Insert(ExorVO_Serializer.CaptureItem(it));
+			m_ExorSnapDirty = false;
+			return;
 		}
+
+		ExorVO_ContainerFile f = ExorContainerOps.ArmarSnapshot(this, ExorGetID(), false);
+
 		// si quedo vacio, borrar el JSON (barril sin contenido = no hay nada que guardar)
 		if (f.items.Count() == 0)
 		{
@@ -309,9 +365,10 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		}
 		else
 		{
-			JsonFileLoader<ExorVO_ContainerFile>.JsonSaveFile(ExorGetStoragePath(), f);
+			ExorContainerOps.GuardarJL(ExorGetStoragePath(), f);
 			ExorDbg(string.Format("ExorWriteSnapshot: JSON actualizado en vivo con %1 items top-level", f.items.Count()));
 		}
+		m_ExorSnapFirma = firma;
 		m_ExorSnapDirty = false;
 	}
 
@@ -361,6 +418,9 @@ class Exor_Barrel_Base : Barrel_ColorBase
 
 	override void Close()
 	{
+		// Cerrar a mitad de un restore por lotes dejaria el resto de los items sin ubicar.
+		if (GetGame().IsServer() && m_ExorJobFile)
+			ExorRestoreDrain();
 		super.Close();
 		if (GetGame().IsServer())
 		{
@@ -417,6 +477,13 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		// Si todavia no reconcilio, no hacer nada este tick (espera su turno).
 		if (!m_ExorLoadDone)
 			return false;
+		// restore por lotes en curso -> no auto-cerrar, no volcar, no virtualizar hasta que
+		// termine (dura decimas de segundo)
+		if (m_ExorJobFile)
+		{
+			m_ExorLastInteractMs = now;
+			return false;
+		}
 
 		// Barril ATTACHED a un SLOT de barril de un vehiculo (no en cargo suelto): mantenerlo
 		// ABIERTO para que acepte items (un barril cerrado rechaza el cargo -regla vanilla- y en
@@ -539,15 +606,10 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		}
 	}
 
+	// cantidad de items REALES en el cargo (no cuenta lo virtualizado). Ver ExorContainerOps.
 	int ExorCargoCount()
 	{
-		GameInventory inv = GetInventory();
-		if (!inv)
-			return 0;
-		CargoBase cargo = inv.GetCargo();
-		if (!cargo)
-			return 0;
-		return cargo.GetItemCount();
+		return ExorContainerOps.CargoCount(this);
 	}
 
 	// Saca los items reales del mundo. El JSON ya esta al dia (guardado en vivo), pero
@@ -595,8 +657,8 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		// EXCEPCION: si el ultimo restore quedo INCOMPLETO (un item no entro y quedo afuera),
 		// re-capturar achicaria el JSON y ESO si perderia loot -> se conserva el archivo
 		// entero y se reintenta la proxima vez.
-		if (m_ExorSnapDirty && !m_ExorRestoreParcial)
-			ExorWriteSnapshot();
+		if (!m_ExorRestoreParcial)
+			ExorWriteSnapshot(true);	// FORZADO: el sello de tiempo tiene que ser el del momento en que el contenido sale del mundo
 
 		if (toDelete.Count() == 0)
 			return;
@@ -702,8 +764,14 @@ class Exor_Barrel_Base : Barrel_ColorBase
 			return;
 		}
 
-		ExorVO_ContainerFile f = new ExorVO_ContainerFile();
-		JsonFileLoader<ExorVO_ContainerFile>.JsonLoadFile(path, f);
+		// lector JSON-Lines (tolera el formato viejo). Una linea rota pierde UN item,
+		// no el contenedor entero. Ver ExorContainerOps.LeerJL.
+		ExorVO_ContainerFile f = ExorContainerOps.LeerJL(path);
+		if (!f)
+		{
+			m_ExorVirt = false;
+			return;
+		}
 
 		// ANTI-DUPE: SOLO en la 1ra apertura tras el arranque, limpiar lo que DayZ tiro al piso
 		// por "invalid location" al cargar (contenido de mochilas anidadas). En el reconcile del
@@ -720,10 +788,12 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		// desde el arranque de la mision; los spills reales ya se limpiaron en el reconcile
 		// de carga + su reintento a los 8s, muy dentro de esta ventana.
 		int floorCleanWindowMs = 300000;	// 5 min tras el arranque
+		// Ademas: solo si el apagado anterior NO fue limpio (ver ExorApagadoLimpio). Con un
+		// cierre en regla no hay derrame que barrer y esto es el gasto mas caro del arranque.
 		if (!m_ExorFloorCleaned)
 		{
 			m_ExorFloorCleaned = true;
-			if (GetGame().GetTime() < floorCleanWindowMs)
+			if (GetGame().GetTime() < floorCleanWindowMs && !ExorApagadoLimpio.FueLimpio())
 			{
 				int dropped = ExorCleanDroppedNearby();
 				if (dropped > 0)
@@ -746,9 +816,62 @@ class Exor_Barrel_Base : Barrel_ColorBase
 		int podados = ExorVO_Serializer.Sanitize(f.items, "", false);
 		if (podados > 0)
 			Print(string.Format("%1 GUARD: barril %2 -> %3 item(s) corruptos descartados antes de restaurar", ExorStorageConstants.LOG, ExorGetID(), podados));
+		// RESTORE INCREMENTAL: mismo criterio que los muebles (ver Exor_OpenableStorage.
+		// ExorRestorePump). Un barril tambien tiene 500 slots y puede tener mochilas adentro:
+		// hacerlo todo en un frame es un hitch de segundos, y en un raid se abren muchos.
 		m_ExorRestoring = true;
 		ExorVO_Serializer.ResetFallosUbicacion();
-		ExorVO_Serializer.RestoreItemsBigFirst(f.items, this, hidden);
+		m_ExorJobFile = f;
+		m_ExorJobPos = hidden;
+		m_ExorJobIdx = 0;
+		ExorRestorePump();
+	}
+
+	// Estado del restore por lotes en curso (null = ninguno)
+	protected ref ExorVO_ContainerFile m_ExorJobFile;
+	protected vector m_ExorJobPos;
+	protected int m_ExorJobIdx;
+
+	bool ExorRestoreEnCurso() { return m_ExorJobFile != null; }
+
+	// Procesa UN lote y se re-agenda si queda trabajo.
+	void ExorRestorePump()
+	{
+		if (!m_ExorJobFile)
+			return;
+		ExorVO_ContainerFile f = m_ExorJobFile;
+		int lote = ExorStorageConstants.EXOR_RESTORE_LOTE;
+		int hechos = 0;
+		while (f.items && m_ExorJobIdx < f.items.Count() && hechos < lote)
+		{
+			ExorVO_Serializer.RestoreItemTop(f.items.Get(m_ExorJobIdx), this, m_ExorJobPos);
+			m_ExorJobIdx++;
+			hechos++;
+		}
+		if (f.items && m_ExorJobIdx < f.items.Count())
+		{
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorRestorePump, 1, false);
+			return;
+		}
+		ExorRestoreFin();
+	}
+
+	// Termina AHORA lo que quede (cerrar o borrar el barril a mitad de restore dejaria
+	// items sin ubicar).
+	void ExorRestoreDrain()
+	{
+		int guard = 0;
+		while (m_ExorJobFile && guard < 5000)
+		{
+			ExorRestorePump();
+			guard++;
+		}
+	}
+
+	void ExorRestoreFin()
+	{
+		ExorVO_ContainerFile f = m_ExorJobFile;
+		m_ExorJobFile = null;
 		m_ExorRestoring = false;
 		// Si algo no entro (quedo suelto en el piso), este barril NO puede re-capturar su
 		// contenido al virtualizar: lo achicaria y ese item se perderia. Ver ExorVirtualize.
@@ -838,89 +961,17 @@ class Exor_Barrel_Base : Barrel_ColorBase
 			Print(string.Format("%1 Barril %2: %3 items del piso borrados (reintento diferido)", ExorStorageConstants.LOG, ExorGetID(), dropped));
 	}
 
-	// Borra items SUELTOS en el piso cerca del barril cuyo tipo esta en el JSON = lo que
-	// DayZ tiro por "invalid location" al cargar (contenido anidado de mochilas). Conservador
-	// para no tocar loot legitimo: solo items sin parent, de un tipo que el barril guarda, y
-	// CERCA en HORIZONTAL. La distancia se mide en el plano XZ (ignora la altura) porque el
-	// barril suele estar ELEVADO sobre un piso de base y los drops caen al terreno varios
-	// metros ABAJO -> con un radio esferico chico (2m) quedaban afuera y no se borraban (bug
-	// del dupe). scanRadius grande para que la esfera ALCANCE el suelo aunque este elevado;
-	// maxHoriz chico para no borrar loot que un player dejo tirado lejos a proposito.
-	// Extrae TODOS los classnames del JSON leyendo el TEXTO crudo (busca cada `"type": "X"`).
-	// Robusto: NO depende de la deserializacion de JsonFileLoader+CollectTypes, que cargaba
-	// solo el 1er tipo (los items anidados quedaban medio rotos en ese load) -> el scan no
-	// matcheaba nada. Asi juntamos cada tipo top-level Y anidado (latas en mochilas, etc.).
+	// Tipos que este contenedor guarda, leidos del texto crudo del JSON. Ver ExorContainerOps.
 	TStringArray ExorTypesFromJsonText(string path)
 	{
-		TStringArray result = new TStringArray;
-		// dedup con map en vez de result.Find() lineal: ver la nota en ExorStorage_Openable.
-		map<string, bool> seen = new map<string, bool>;
-		FileHandle fh = OpenFile(path, FileMode.READ);
-		if (fh == 0)
-			return result;
-		string line;
-		while (FGets(fh, line) >= 0)
-		{
-			int kp = line.IndexOf("\"type\"");
-			if (kp < 0)
-				continue;
-			string rest = line.Substring(kp + 6, line.Length() - (kp + 6));	// despues de "type"
-			int q1 = rest.IndexOf("\"");
-			if (q1 < 0)
-				continue;
-			string rest2 = rest.Substring(q1 + 1, rest.Length() - (q1 + 1));	// despues de la 1ra comilla
-			int q2 = rest2.IndexOf("\"");
-			if (q2 < 0)
-				continue;
-			string val = rest2.Substring(0, q2);
-			if (val != "" && !seen.Contains(val))
-			{
-				seen.Set(val, true);
-				result.Insert(val);
-			}
-		}
-		CloseFile(fh);
-		return result;
+		return ExorContainerOps.TiposDelJson(path);
 	}
 
+	// Borra los items SUELTOS cerca que son de un tipo que este contenedor guarda: son los
+	// drops de "invalid location" que DayZ tira al cargar el mundo. Ver ExorContainerOps.
 	int ExorCleanDroppedNearby(float scanRadius = 15.0, float maxHoriz = 10.0)
 	{
-		string path = ExorGetStoragePath();
-		if (!FileExist(path))
-			return 0;
-		// tipos desde el TEXTO crudo del JSON (la deserializacion solo traia el 1er tipo).
-		TStringArray types = ExorTypesFromJsonText(path);
-		if (types.Count() == 0)
-			return 0;
-
-		vector bpos = GetPosition();
-		array<Object> nearby = new array<Object>;
-		array<CargoBase> proxy = new array<CargoBase>;
-		GetGame().GetObjectsAtPosition(bpos, scanRadius, nearby, proxy);
-
-		int removed = 0;
-		int i;
-		for (i = 0; i < nearby.Count(); i++)
-		{
-			EntityAI e = EntityAI.Cast(nearby.Get(i));
-			if (!e || e == this)
-				continue;
-			if (e.GetHierarchyParent())	// solo items SUELTOS (no dentro de un inventario)
-				continue;
-			if (!e.IsInherited(ItemBase))
-				continue;
-			if (types.Find(e.GetType()) < 0)	// solo tipos que este barril guarda
-				continue;
-			// distancia HORIZONTAL (plano XZ): ignora la altura -> agarra los drops aunque
-			// el barril este elevado sobre un piso de base (caen al terreno mas abajo).
-			vector d = e.GetPosition() - bpos;
-			d[1] = 0;
-			if (d.Length() > maxHoriz)
-				continue;
-			GetGame().ObjectDelete(e);
-			removed++;
-		}
-		return removed;
+		return ExorContainerOps.LimpiarDropsCerca(this, ExorGetStoragePath(), scanRadius, maxHoriz);
 	}
 
 	// ------------------------- reglas de guardado (Fase 3) -------------------------

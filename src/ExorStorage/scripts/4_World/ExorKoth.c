@@ -92,6 +92,10 @@ class ExorKothRun
 		for (i = 0; i < c.coordenadas.Count(); i++)
 		{
 			ExorCfgKothCoord co = c.coordenadas.Get(i);
+			// COMPATIBILIDAD DE MAPA: coordenada de otro mapa que cae fuera de este terreno.
+			// Spawnear el evento ahi dejaria la caja y el humo en el vacio. Ver ExorMapBounds.
+			if (!ExorMapBounds.Valida("koth.json", c.color, co.x, co.z, 30))
+				continue;
 			vector p = Vector(co.x, co.y, co.z);
 			if (p[1] <= 0)
 				p[1] = GetGame().SurfaceY(p[0], p[2]);
@@ -619,7 +623,9 @@ class ExorKoth
 			Get().m_Runs.Insert(run);
 			run.Start();
 		}
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().TickTimed, 1000, true);
+		// El latido de 1 Hz lo da ExorTick1Hz (uno solo para party/KOTH/cofre): asi la lista
+		// de jugadores y la hora local se calculan una vez y no tres.
+		ExorTick1Hz.Start();
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().CleanupOrphans, 15000, false);
 		Print(string.Format("%1 KOTH iniciado (%2 koth configurados)", ExorStorageConstants.LOG, cfg.colores.Count()));
 	}

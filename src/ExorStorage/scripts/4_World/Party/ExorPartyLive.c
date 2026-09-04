@@ -87,7 +87,9 @@ class ExorPartyLive
 		// burbuja (ver ExorNameplates + nid). Este sync solo alimenta a los LEJANOS (HUD/
 		// distancia), donde 1 Hz sobra. Bajado de 4 Hz (250 ms) a 1 Hz: a 60 jugadores el push
 		// era el mayor emisor de red (O(jugadores*party)) y de CPU (serializacion) del server.
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().TickTimed, 1000, true);
+		// El latido de 1 Hz lo da ExorTick1Hz (uno solo para party/KOTH/cofre): asi la lista
+		// de jugadores y la hora local se calculan una vez y no tres.
+		ExorTick1Hz.Start();
 	}
 
 	// Envoltorio cronometrado: mide cuanto tarda ESTE subsistema por tick y solo loguea
@@ -125,6 +127,36 @@ class ExorPartyLive
 		{
 			ExorGroup g = groups.Get(gi);
 			PushGroup(g, idx);
+		}
+	}
+
+	// PURGA: el cache "ultimo payload enviado" se indexa por id de grupo y NO se limpiaba al
+	// disolverse un grupo. Cada entrada es el JSON completo del roster (varios KB), asi que
+	// los clanes borrados se quedaban ocupando memoria hasta el reinicio. Se tira todo lo que
+	// ya no corresponde a un grupo vivo. La llama ExorHousekeeping.
+	void PurgarViejos()
+	{
+		if (!m_LastLivePayload)
+			return;
+		array<ref ExorGroup> vivos = ExorGroupManager.Get().m_Groups;
+		set<string> idsVivos = new set<string>();
+		int i;
+		for (i = 0; i < vivos.Count(); i++)
+		{
+			if (vivos.Get(i))
+				idsVivos.Insert(vivos.Get(i).id);
+		}
+		array<string> muertos = new array<string>;
+		foreach (string gid, string payload : m_LastLivePayload)
+		{
+			if (idsVivos.Find(gid) < 0)
+				muertos.Insert(gid);
+		}
+		for (i = 0; i < muertos.Count(); i++)
+		{
+			m_LastLivePayload.Remove(muertos.Get(i));
+			if (m_LastLiveForceMs)
+				m_LastLiveForceMs.Remove(muertos.Get(i));
 		}
 	}
 

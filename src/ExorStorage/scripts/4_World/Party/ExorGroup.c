@@ -1,3 +1,17 @@
+// VERSION DEL ROSTER (global). La bumpea CUALQUIER cambio de composicion de
+// cualquier grupo: altas/bajas de miembros y altas/bajas de grupos. El indice
+// steamid->grupo de ExorGroupManager guarda con que version se construyo y se
+// reconstruye solo cuando no coincide.
+// Es el patron de "cache con sello de version": el que escribe no tiene que saber
+// quien cachea, y es imposible que un cache quede sirviendo datos viejos (a lo sumo
+// se reconstruye de mas, que es barato y raro).
+class ExorRosterVersion
+{
+	static int s_V = 1;
+	static void Bump() { s_V = s_V + 1; }
+	static int Get()   { return s_V; }
+}
+
 // ============================================================================
 // 3xor_Vanilla_Optimization - Party: modelo de datos del grupo (Fase B)
 // Un grupo = 1 lider (owner) + N miembros. Se persiste a groups/<id>.json.
@@ -109,6 +123,7 @@ class ExorGroup
 			mm = new ExorGroupMember();
 			mm.steamid = sid;
 			members.Insert(mm);
+			ExorRosterVersion.Bump();	// entro alguien -> el indice steamid->grupo caduca
 		}
 		mm.name = nm;
 		mm.last_seen_day = day;
@@ -121,7 +136,10 @@ class ExorGroup
 		for (i = members.Count() - 1; i >= 0; i--)
 		{
 			if (members.Get(i).steamid == sid)
+			{
 				members.Remove(i);
+				ExorRosterVersion.Bump();	// salio alguien -> el indice caduca
+			}
 		}
 	}
 

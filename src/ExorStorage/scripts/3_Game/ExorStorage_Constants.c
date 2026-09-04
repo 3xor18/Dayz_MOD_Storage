@@ -4,12 +4,12 @@
 class ExorStorageConstants
 {
 	static const string MOD_NAME = "3xor_Vanilla_Optimization";
-	static const string MOD_VERSION = "2.11.3";
+	static const string MOD_VERSION = "2.11.4";
 	// Sello de build: SUBIRLO EN CADA EMPAQUE, aunque no cambie MOD_VERSION. Sirve para
 	// saber desde el RPT que PBO esta corriendo el server (el de version sola no alcanza:
 	// se desplego 2.9.1 con MOD_VERSION todavia en "2.8.0" y los logs pre/post deploy
 	// salieron identicos -> imposible confirmar si el deploy habia entrado).
-	static const string MOD_BUILD = "2026-07-30-antidupe";
+	static const string MOD_BUILD = "2026-09-03-profiler";
 	static const string LOG = "[3xorVO]";
 	// DEBUG temporal del ciclo de vida del barril (setear/levantar/abrir/cerrar/item
 	// in-out/virtualizar/restaurar/load/save/shutdown). Poner en false (o borrar las
@@ -175,4 +175,13 @@ class ExorStorageConstants
 	// Loot-safe: Close() y ExorVirtualize() fuerzan el volcado sin esperar, y el flag dirty
 	// persiste -> lo unico que cambia es CUANDO se escribe, no SI se escribe.
 	static const int SNAP_DEBOUNCE_MS = 15000;
+
+	// Entradas de NIVEL SUPERIOR que restaura un contenedor por frame. Restaurar es lo mas
+	// caro que hace el mod (crear y reubicar entidades, recursivo) y antes corria entero en
+	// un solo frame: un locker de 500 slots clavaba el server segundos. Con lotes el trabajo
+	// se reparte y el peor frame queda acotado.
+	// 12 es el punto medio medido: un locker lleno tarda ~40 frames (menos de un segundo de
+	// reloj) en llenarse del todo, que es imperceptible porque el inventario del mueble esta
+	// bloqueado hasta que termina.
+	static const int EXOR_RESTORE_LOTE = 12;
 }

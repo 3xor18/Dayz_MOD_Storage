@@ -57,32 +57,55 @@ class ExorVO_Manager
 	}
 
 	// ------------------------- registro -------------------------
+	// SETS PARA EL ALTA (el recorrido sigue usando los arrays).
+	// El alta hacia un Find() lineal antes de insertar, y la llama CADA entidad al crearse:
+	// en el arranque, con N contenedores, eso es O(N^2). Con 700 barriles mas cientos de
+	// muebles son millones de comparaciones metidas justo en la carga del mundo, que es el
+	// momento mas cargado del server.
+	// Los arrays se conservan porque el tick necesita RECORRER en orden y con cursor; el set
+	// paralelo es solo el indice de pertenencia, que es lo unico que hacia el Find.
+	static ref set<Exor_Barrel_Base> s_BarrelSet;
+	static ref set<Exor_OpenableStorage> s_OpenableSet;
+	static ref set<Exor_BodyBag> s_BagSet;
+
 	static void RegisterBarrel(Exor_Barrel_Base barrel)
 	{
-		if (Get().m_Barrels.Find(barrel) == -1)
-		{
-			Get().m_Barrels.Insert(barrel);
-		}
+		if (!barrel)
+			return;
+		if (!s_BarrelSet)
+			s_BarrelSet = new set<Exor_Barrel_Base>();
+		if (s_BarrelSet.Find(barrel) >= 0)
+			return;
+		s_BarrelSet.Insert(barrel);
+		Get().m_Barrels.Insert(barrel);
 	}
 
 	static void UnregisterBarrel(Exor_Barrel_Base barrel)
 	{
+		if (s_BarrelSet)
+			s_BarrelSet.RemoveItem(barrel);
 		int idx = Get().m_Barrels.Find(barrel);
 		if (idx != -1)
-		{
 			Get().m_Barrels.Remove(idx);
-		}
 	}
 
 	// --- muebles abribles (nevera, etc.): mismo trato que los barriles ---
 	static void RegisterOpenable(Exor_OpenableStorage f)
 	{
-		if (Get().m_Openables.Find(f) == -1)
-			Get().m_Openables.Insert(f);
+		if (!f)
+			return;
+		if (!s_OpenableSet)
+			s_OpenableSet = new set<Exor_OpenableStorage>();
+		if (s_OpenableSet.Find(f) >= 0)
+			return;
+		s_OpenableSet.Insert(f);
+		Get().m_Openables.Insert(f);
 	}
 
 	static void UnregisterOpenable(Exor_OpenableStorage f)
 	{
+		if (s_OpenableSet)
+			s_OpenableSet.RemoveItem(f);
 		int idx = Get().m_Openables.Find(f);
 		if (idx != -1)
 			Get().m_Openables.Remove(idx);
@@ -147,12 +170,20 @@ class ExorVO_Manager
 
 	static void RegisterBodyBag(Exor_BodyBag bag)
 	{
-		if (Get().m_BodyBags.Find(bag) == -1)
-			Get().m_BodyBags.Insert(bag);
+		if (!bag)
+			return;
+		if (!s_BagSet)
+			s_BagSet = new set<Exor_BodyBag>();
+		if (s_BagSet.Find(bag) >= 0)
+			return;
+		s_BagSet.Insert(bag);
+		Get().m_BodyBags.Insert(bag);
 	}
 
 	static void UnregisterBodyBag(Exor_BodyBag bag)
 	{
+		if (s_BagSet)
+			s_BagSet.RemoveItem(bag);
 		int idx = Get().m_BodyBags.Find(bag);
 		if (idx != -1)
 			Get().m_BodyBags.Remove(idx);
@@ -211,6 +242,9 @@ class ExorVO_Manager
 			}
 		}
 		Print(string.Format("%1 VirtualizeAll (apagado): %2 contenedores virtualizados a disco", ExorStorageConstants.LOG, virt));
+		// Cierre llegado hasta el final: todos los contenedores quedaron con el cargo vacio,
+		// asi que el proximo arranque no tiene derrame de "invalid location" que barrer.
+		ExorApagadoLimpio.Cerrar();
 	}
 
 	// ------------------------- tick RAPIDO (5s): barriles + bodybags -------------------------
@@ -226,13 +260,17 @@ class ExorVO_Manager
 		array<Man> players = new array<Man>;
 		GetGame().GetPlayers(players);
 		s_PopCount = players.Count();
+		// Posiciones de los VIVOS, calculadas UNA vez para todo el tick. Las consumen los
+		// chequeos de proximidad de barriles, muebles, bolsas y vehiculos. Ver ExorAliveCache.
+		array<vector> alivePos = ExorAliveCache.Rebuild(players);
 
 		// --- PRESUPUESTO COMPARTIDO Y ADAPTATIVO ---
 		// Un solo pool para barriles + muebles (antes tenian uno cada uno = el doble de
 		// trabajo maximo por tick). El factor lo mueve el peor frame observado: si el server
 		// sufre, el cupo se corta a la mitad; si esta holgado, se devuelve de a poco.
 		AdaptBudgetFactor();
-		int budget = ScaleBudget(ExorStorageConstants.MAX_VIRT_PER_TICK);
+		int budget = BudgetVirtualizar();
+		int pendientes = 0;		// contenedores con contenido real esperando virtualizar (para el proximo tick)
 		int reconcileBudget = ScaleBudget(ExorStorageConstants.MAX_RECONCILE_PER_TICK);
 		int snapBudget = ScaleBudget(ExorStorageConstants.MAX_SNAPSHOT_PER_TICK);
 
@@ -241,7 +279,20 @@ class ExorVO_Manager
 		// instantaneo, sin restaurar) y no metemos ops de virtualizar/restaurar en el pico.
 		// El snapshot (crash-safety) y el reconcile siguen; abrir/restaurar bajo demanda anda
 		// igual; nada desaparece. Se calcula 1 vez por tick, no por barril.
-		bool pauseVirt = cfg.storage.pausar_virt_en_raid && ExorMuebleRules.IsLootFreeNow();
+		// PAUSA DE VIRTUALIZACION EN RAID: sigue siendo configurable, pero ahora tiene un
+		// LIMITE. La idea original era ahorrarse el costo de virtualizar en el pico; el efecto
+		// real era peor: con la pausa puesta, cada contenedor que alguien abre se queda REAL
+		// con sus cientos de items hasta que termina la ventana, y con 40 lockers por base eso
+		// son decenas de miles de entidades vivas que el motor simula y replica a todos los
+		// clientes cercanos. El costo de virtualizar es un pico acotado; el de no hacerlo
+		// crece sin techo. Por eso la pausa se levanta sola cuando la cola pasa el umbral.
+		bool pauseVirt = false;
+		if (cfg.storage.pausar_virt_en_raid && ExorMuebleRules.IsLootFreeNow())
+		{
+			pauseVirt = m_PendientesPrev < EXOR_PAUSA_MAX_PENDIENTES;
+			if (!pauseVirt && m_PendientesPrev > 0)
+				Print(string.Format("%1 RAID: %2 contenedores esperando virtualizar -> se levanta la pausa (acumular entidades reales lagea mas que virtualizar)", ExorStorageConstants.LOG, m_PendientesPrev));
+		}
 
 		// ANTI-DUPE: faltando pocos minutos para un reinicio PROGRAMADO, cerrar y virtualizar
 		// todo a la fuerza. Asi el server se apaga con los cargos vacios y al cargar no se
@@ -348,6 +399,9 @@ class ExorVO_Manager
 			// allowVirtualize=budget>0 y allowSnapshot=snapBudget>0: si se acabo el cupo de
 			// este tick, el barril se auto-cierra igual pero difiere virtualizar/snapshot al
 			// proximo tick -> sin pico de CPU (virtualizar) ni de I/O a disco (snapshot).
+			// cola: contenido real sin virtualizar (realimenta el cupo del proximo tick)
+			if (!barrel.ExorIsVirtualized() && barrel.ExorCargoCount() > 0)
+				pendientes++;
 			bool didSnap;
 			if (barrel.ExorTick(now, cfg.storage, budget > 0 && !pauseVirt, snapBudget > 0, players, didSnap))
 			{
@@ -408,6 +462,8 @@ class ExorVO_Manager
 				// verdad (era el nuevo cuello: 47ms por 1-2 ops sobre 92 muebles).
 				if (fur.ExorIsIdle())
 					continue;
+				if (!fur.ExorIsVirtualized() && fur.ExorCargoCount() > 0)
+					pendientes++;
 				if (fur.ExorNeedsReconcile())
 				{
 					if (reconcileBudget <= 0)
@@ -461,14 +517,6 @@ class ExorVO_Manager
 		// cada una = 656ms de pico. Ver MAX_BAGS_PER_TICK.
 		// Las posiciones de los players VIVOS se calculan UNA vez por tick y se pasan ya
 		// resueltas: antes cada bolsa hacia su propio PlayerBase.Cast + IsAlive por cada player.
-		array<vector> alivePos = new array<vector>;
-		for (i = 0; i < players.Count(); i++)
-		{
-			PlayerBase pb = PlayerBase.Cast(players.Get(i));
-			if (pb && pb.IsAlive())
-				alivePos.Insert(pb.GetPosition());
-		}
-
 		int bagCount = m_BodyBags.Count();
 		if (bagCount > 0)
 		{
@@ -503,6 +551,10 @@ class ExorVO_Manager
 		// Sin esto solo se ve el FPS global (duele, pero no donde). Con esto, cuando el tick
 		// se pasa del umbral queda en el RPT que bloque lo causo y con cuanta carga.
 		// grep "3xorVO TICK-LENTO" <RPT>
+		// Realimentacion del controlador de cupo: lo medido en ESTE tick dimensiona el del
+		// proximo (ver BudgetVirtualizar).
+		m_PendientesPrev = pendientes;
+
 		int tTotal = GetGame().GetTime() - tStart;
 		if (tTotal >= ExorStorageConstants.TICK_WARN_MS)
 		{
@@ -550,6 +602,10 @@ class ExorVO_Manager
 		s_LastRestoreMs = now;
 		return true;
 	}
+	// A partir de cuantos contenedores en cola se ignora la pausa de raid. 25 contenedores
+	// reales es del orden de 10.000 entidades: mucho antes de eso hay que estar drenando.
+	static const int EXOR_PAUSA_MAX_PENDIENTES = 25;
+
 	int m_FurCursor = 0;	// cursor rotativo de muebles (anti-starvation sin cupo dedicado)
 	int m_BagCursor = 0;	// cursor rotativo de bolsas de cadaver (el pase caro va con cupo)
 
@@ -587,9 +643,39 @@ class ExorVO_Manager
 		return v;
 	}
 
+	// ------------------------- presupuesto que sigue a la COLA -------------------------
+	// Contenedores que quedaron con contenido REAL esperando virtualizarse, medido en el tick
+	// ANTERIOR. Es el termino de realimentacion del controlador: el cupo base esta pensado
+	// para el regimen normal (unos pocos contenedores en uso), pero en un raid se abren
+	// decenas a la vez y con un cupo fijo la cola no se drena nunca -> las entidades reales se
+	// acumulan y ESO es lo que lagea, no el costo de virtualizar.
+	//
+	// La regla: se apunta a vaciar la cola en EXOR_DRENAJE_TICKS ticks. El cupo sube solo
+	// cuando hay atraso y vuelve al piso cuando no lo hay, siempre acotado por el techo duro
+	// (para que un pico no se convierta en un pico peor) y siempre multiplicado despues por el
+	// factor adaptativo, que sigue siendo el que manda si el server esta sufriendo.
+	int m_PendientesPrev;
+	static const int EXOR_DRENAJE_TICKS = 6;		// ~30 s a 5 s por tick
+	static const int EXOR_VIRT_TECHO_DURO = 90;		// tope absoluto de cupo por tick
+
+	int BudgetVirtualizar()
+	{
+		int base_ = ExorStorageConstants.MAX_VIRT_PER_TICK;
+		int necesario = m_PendientesPrev / EXOR_DRENAJE_TICKS;
+		if (necesario > base_)
+			base_ = necesario;
+		if (base_ > EXOR_VIRT_TECHO_DURO)
+			base_ = EXOR_VIRT_TECHO_DURO;
+		return ScaleBudget(base_);
+	}
+
 	// ------------------------- tick lento (30s): vehiculos -------------------------
 	void Tick()
 	{
+		// Mantenimiento: purga del estado por jugador que crecia sin techo (chat, spawn,
+		// anti-farmeo, party). Se auto-throttlea a 1 pasada cada 10 min. Ver ExorHousekeeping.
+		ExorHousekeeping.Tick(GetGame().GetTime());
+
 		ExorConfig cfg = GetExorConfig();
 		ExorCfgVehiculos veh = cfg.vehiculos;
 		int now = GetGame().GetTime();
@@ -797,13 +883,18 @@ class ExorVO_Manager
 	}
 
 	// Version que reusa una lista ya obtenida (para no llamar GetPlayers por cada entidad).
+	// Cualquier jugador (vivo o no) dentro del radio. Distancia AL CUADRADO: comparar
+	// a^2 < r^2 es identico a a < r y ahorra una raiz por jugador por entidad por tick.
 	static bool IsPlayerNearList(array<Man> players, vector pos, float radius)
 	{
+		if (!players)
+			return false;
+		float r2 = radius * radius;
 		int i;
 		for (i = 0; i < players.Count(); i++)
 		{
 			Man p = players.Get(i);
-			if (p && vector.Distance(p.GetPosition(), pos) < radius)
+			if (p && ExorMath.Dist3DSq(p.GetPosition(), pos) < r2)
 				return true;
 		}
 		return false;
@@ -859,22 +950,20 @@ class ExorVO_Manager
 	}
 
 	// Como IsPlayerNear pero solo cuenta players VIVOS (un cadaver tambien es un Man).
+	// Version sin lista: para llamadores fuera del tick del manager. Refresca el cache de
+	// posiciones si esta viejo (1 s de tolerancia) y consulta.
 	static bool IsAlivePlayerNear(vector pos, float radius)
 	{
-		array<Man> players = new array<Man>;
-		GetGame().GetPlayers(players);
-		return IsAlivePlayerNearList(players, pos, radius);
+		ExorAliveCache.EnsureFresh(1000);
+		return ExorAliveCache.AnyNear(pos, radius);
 	}
 
+	// Usa el cache de posiciones de VIVOS que el tick llena una sola vez (ExorAliveCache):
+	// antes esto hacia PlayerBase.Cast + IsAlive() + una raiz cuadrada POR JUGADOR, en cada
+	// llamada, y se llama por contenedor abierto y por vehiculo en cada tick.
+	// El parametro 'players' se conserva por compatibilidad de firma pero ya no se recorre.
 	static bool IsAlivePlayerNearList(array<Man> players, vector pos, float radius)
 	{
-		int i;
-		for (i = 0; i < players.Count(); i++)
-		{
-			PlayerBase p = PlayerBase.Cast(players.Get(i));
-			if (p && p.IsAlive() && vector.Distance(p.GetPosition(), pos) < radius)
-				return true;
-		}
-		return false;
+		return ExorAliveCache.AnyNear(pos, radius);
 	}
 }

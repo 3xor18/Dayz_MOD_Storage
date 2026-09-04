@@ -94,6 +94,41 @@ class ExorKillFarm
 		s_Dirty = false;
 	}
 
+	// PURGA EN CALIENTE. El ledger se podaba SOLO al cargarlo del disco, asi que durante la
+	// sesion crecia sin techo: la clave es "asesino|victima", o sea O(jugadores^2) en el peor
+	// caso, y cada entrada guarda un array de minutos que tampoco se recortaba. Con 70
+	// jugadores y varias horas de PvP eso es miles de arrays vivos por nada: los kills fuera
+	// de la ventana de farmeo ya no los mira nadie. La llama ExorHousekeeping.
+	static void PurgarViejos()
+	{
+		if (!GetGame() || !GetGame().IsServer() || !s_Pairs)
+			return;
+		int win = GetExorConfig().party.proteccion.farmeo_ventana_minutos;
+		if (win <= 0)
+			return;
+		int ahora = ExorTimeUtil.NowMinutes();
+		array<string> vacias = new array<string>;
+		foreach (string key, array<int> ts : s_Pairs)
+		{
+			if (!ts)
+			{
+				vacias.Insert(key);
+				continue;
+			}
+			int z;
+			for (z = ts.Count() - 1; z >= 0; z--)
+			{
+				if (ahora - ts.Get(z) > win)
+					ts.Remove(z);
+			}
+			if (ts.Count() == 0)
+				vacias.Insert(key);
+		}
+		int i;
+		for (i = 0; i < vacias.Count(); i++)
+			s_Pairs.Remove(vacias.Get(i));
+	}
+
 	static void Save()
 	{
 		if (!GetGame() || !GetGame().IsServer() || !s_Pairs)

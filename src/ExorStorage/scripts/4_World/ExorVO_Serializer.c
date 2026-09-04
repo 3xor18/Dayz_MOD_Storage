@@ -17,6 +17,17 @@ class ExorVO_ItemData
 	int cargo_row = -1;
 	int cargo_col = -1;
 	bool cargo_flip = false;
+	// MUNICION REAL (que BALA, no solo cuantas). 'ammoCount' arriba solo guarda la CANTIDAD, y
+	// restaurarla con ServerSetAmmoCount rellena el cargador con la bala POR DEFECTO del
+	// classname -> las perforantes/trazadoras volvian convertidas en balas normales. Ademas
+	// las armas de cargador INTERNO (escopetas, Mosin) no guardan su municion en ningun
+	// Magazine: vive dentro del arma, asi que volvian VACIAS.
+	// Formato compacto, una entrada por tramo (ver ExorAmmoEnc):
+	//   "M|<cantidad>|<daño x10000>|<classname>"  cargador/pila: tramo de balas iguales, en orden
+	//   "I|<boca>|<daño x10000>|<classname>"      una bala del cargador INTERNO del arma
+	//   "C|<boca>|<daño x10000>|<classname>"      la bala de la RECAMARA
+	// Vacio en la inmensa mayoria de los items -> no engorda el JSON.
+	ref TStringArray ammo;
 	ref array<ref ExorVO_ItemData> attachments;
 	ref array<ref ExorVO_ItemData> cargo;
 
@@ -24,6 +35,19 @@ class ExorVO_ItemData
 	{
 		attachments = new array<ref ExorVO_ItemData>;
 		cargo = new array<ref ExorVO_ItemData>;
+		// 'ammo' NO se crea aca a proposito: queda null salvo que el item de verdad tenga
+		// municion que guardar (un cargador o un arma). Es la inmensa mayoria de los items,
+		// y un array vacio igual se serializa ("ammo":[]) -> con 500 items por locker eran
+		// varios KB por archivo, en archivos que se reescriben todo el tiempo. Ver AmmoList().
+	}
+
+	// Devuelve la lista creandola la primera vez (lazy). Solo la llama la captura cuando
+	// realmente encontro cartuchos.
+	TStringArray AmmoList()
+	{
+		if (!ammo)
+			ammo = new TStringArray;
+		return ammo;
 	}
 }
 
@@ -33,6 +57,18 @@ class ExorVO_ContainerFile
 	int version = 1;
 	string id;
 	string owner_type;
+	// Momento en que se escribio este archivo, en minutos absolutos de reloj real
+	// (ExorTimeUtil.NowMinutes). 0 = archivo viejo, sin sello.
+	// Lo usa la NEVERA para envejecer la comida por el tiempo que estuvo fuera del mundo:
+	// virtualizado un item no existe, asi que el motor no le puede correr la pudricion.
+	int vmin;
+	// 1 = el contenedor tenia ENERGIA cuando se virtualizo (nevera con bateria) -> su
+	// contenido NO envejece mientras le dure esa carga. 0 = sin energia.
+	int vpow;
+	// MINUTOS de carga que le quedaban a la bateria al guardar. Con esto el envejecimiento
+	// se resuelve SIN TICKEAR: al restaurar se sabe cuanto del tiempo transcurrido estuvo
+	// realmente refrigerado (los primeros vbat minutos) y cuanto no (el resto).
+	int vbat;
 	ref array<ref ExorVO_ItemData> items;
 	ref array<ref ExorVO_ItemData> att;	// attachments virtualizados (ej armas en slots del mueble)
 
@@ -41,6 +77,18 @@ class ExorVO_ContainerFile
 		items = new array<ref ExorVO_ItemData>;
 		att = new array<ref ExorVO_ItemData>;
 	}
+}
+
+// Cabecera del archivo de contenido en formato JSON-Lines: los metadatos del contenedor,
+// sin los items (que van uno por linea). Ver ExorContainerOps.GuardarJL.
+class ExorVO_ContainerHead
+{
+	int version = 1;
+	string id;
+	string owner_type;
+	int vmin;
+	int vpow;
+	int vbat;
 }
 
 class ExorVO_Serializer
@@ -74,6 +122,9 @@ class ExorVO_Serializer
 		{
 			data.ammoCount = mag.GetAmmoCount();
 		}
+
+		// tipo REAL de cada bala (cargador/pila) + recamara y cargador interno del arma
+		CaptureAmmo(e, data);
 
 		Edible_Base ed = Edible_Base.Cast(e);
 		if (ed && ed.GetFoodStage())
@@ -124,6 +175,215 @@ class ExorVO_Serializer
 				}
 			}
 		}
+	}
+
+	// ------------------------- MUNICION REAL (tipo de bala) -------------------------
+	// PROBLEMA REPORTADO: un arma guardada en un locker con balas PERFORANTES volvia con
+	// balas normales, y las escopetas / Mosin volvian VACIAS.
+	// Dos causas distintas:
+	//   1) CARGADORES: se guardaba solo GetAmmoCount() y se restauraba con
+	//      ServerSetAmmoCount(n), que rellena el cargador con la bala POR DEFECTO del
+	//      classname. En DayZ cada cartucho de un Magazine tiene su PROPIO tipo y daño
+	//      (GetCartridgeAtIndex) -> hay que guardarlos uno por uno.
+	//   2) ARMAS DE CARGADOR INTERNO (escopeta, Mosin, Blaze...): su municion NO vive en
+	//      ningun Magazine, vive DENTRO del arma (cargador interno + recamara). Como el
+	//      serializador solo miraba attachments y cargo, esa municion no se guardaba nunca.
+	// Se guarda con RLE (un tramo por corrida de balas iguales): un cargador de 30 tiros
+	// del mismo tipo son 1 sola entrada, no 30.
+
+	// codifica una entrada. dmg va como entero (x10000) para no depender de como
+	// formatea floats el compilador ni perder precision en el JSON.
+	static string ExorAmmoEnc(string kind, int a, float dmg, string type)
+	{
+		int d = (int)Math.Round(dmg * 10000);
+		if (d < 0)
+			d = 0;
+		return string.Format("%1|%2|%3|%4", kind, a, d, type);
+	}
+
+	// decodifica una entrada. false = entrada ilegible -> se ignora (nunca revienta nada).
+	static bool ExorAmmoDec(string s, out string kind, out int a, out float dmg, out string type)
+	{
+		array<string> p = new array<string>;
+		s.Split("|", p);
+		if (p.Count() != 4)
+			return false;
+		kind = p.Get(0);
+		a = p.Get(1).ToInt();
+		dmg = p.Get(2).ToInt() / 10000.0;
+		type = p.Get(3);
+		if (type == "")
+			return false;
+		return true;
+	}
+
+	static void CaptureAmmo(EntityAI e, ExorVO_ItemData data)
+	{
+		int i;
+		float d;
+		string t;
+
+		// --- CARGADOR ---
+		// Las PILAS SUELTAS de balas (Ammunition_Base) quedan afuera A PROPOSITO: su classname
+		// YA dice que bala es ("Ammo_762x54Tracer" son trazadoras y punto), asi que el
+		// ServerSetAmmoCount de siempre las restaura bien. Recorrerlas cartucho por cartucho
+		// seria el grueso del costo (un barril con 500 items y pilas de 100 balas = decenas de
+		// miles de llamadas por snapshot) sin ganar nada. El problema son los CARGADORES, que
+		// aceptan mezcla y cuyo classname no dice nada de la municion.
+		Magazine mag = Magazine.Cast(e);
+		if (mag && e.IsInherited(Ammunition_Base))
+			return;
+		if (mag)
+		{
+			int n = mag.GetAmmoCount();
+			string curT = "";
+			float curD = 0;
+			int run = 0;
+			for (i = 0; i < n; i++)
+			{
+				if (!mag.GetCartridgeAtIndex(i, d, t) || t == "")
+					continue;
+				if (run > 0 && t == curT && Math.AbsFloat(d - curD) < 0.0001)
+				{
+					run++;
+					continue;
+				}
+				if (run > 0)
+					data.AmmoList().Insert(ExorAmmoEnc("M", run, curD, curT));
+				curT = t;
+				curD = d;
+				run = 1;
+			}
+			if (run > 0)
+				data.AmmoList().Insert(ExorAmmoEnc("M", run, curD, curT));
+			return;		// un cargador no es un arma: no hay recamara que mirar
+		}
+
+		// --- ARMA: recamara + cargador interno, por boca ---
+		Weapon_Base w = Weapon_Base.Cast(e);
+		if (!w)
+			return;
+		int muzzles = w.GetMuzzleCount();
+		int m;
+		int c;
+		for (m = 0; m < muzzles; m++)
+		{
+			if (!w.IsChamberEmpty(m) && w.GetCartridgeInfo(m, d, t) && t != "")
+				data.AmmoList().Insert(ExorAmmoEnc("C", m, d, t));
+			int ic = w.GetInternalMagazineCartridgeCount(m);
+			for (c = 0; c < ic; c++)
+			{
+				if (w.GetInternalMagazineCartridgeInfo(m, c, d, t) && t != "")
+					data.AmmoList().Insert(ExorAmmoEnc("I", m, d, t));
+			}
+		}
+	}
+
+	// Restaura la municion guardada. Devuelve true si escribio cartuchos en un CARGADOR
+	// (asi el llamador sabe que NO tiene que usar el ServerSetAmmoCount legacy y pisarlos).
+	static bool ApplyAmmo(EntityAI e, ExorVO_ItemData d)
+	{
+		if (!d || !d.ammo || d.ammo.Count() == 0)
+			return false;
+
+		string kind;
+		int a;
+		float dmg;
+		string type;
+		int i;
+		int k;
+
+		// --- CARGADOR / PILA ---
+		Magazine mag = Magazine.Cast(e);
+		if (mag)
+		{
+			// contar primero: si el JSON es viejo (sin tramos "M") no se toca nada y el
+			// llamador sigue con el camino legacy.
+			bool hayM = false;
+			for (i = 0; i < d.ammo.Count(); i++)
+			{
+				if (ExorAmmoDec(d.ammo.Get(i), kind, a, dmg, type) && kind == "M")
+				{
+					hayM = true;
+					break;
+				}
+			}
+			if (!hayM)
+				return false;
+
+			mag.ServerSetAmmoCount(0);	// vaciar lo que traiga de fabrica
+			for (i = 0; i < d.ammo.Count(); i++)
+			{
+				if (!ExorAmmoDec(d.ammo.Get(i), kind, a, dmg, type) || kind != "M")
+					continue;
+				if (a < 0)
+					continue;
+				for (k = 0; k < a; k++)
+				{
+					if (!mag.ServerStoreCartridge(dmg, type))
+						break;	// lleno o tipo que no calza -> cortar ese tramo, no insistir
+				}
+			}
+			return true;
+		}
+
+		// --- ARMA: vaciar lo de fabrica y reponer lo guardado ---
+		Weapon_Base w = Weapon_Base.Cast(e);
+		if (!w)
+			return false;
+
+		int muzzles = w.GetMuzzleCount();
+		int m;
+		float fd;
+		string ft;
+		// Un arma recien creada puede nacer con municion (varias armas -sobre todo de mods-
+		// traen la recamara/cargador interno cargados por defecto). Sin vaciar, lo guardado
+		// se SUMARIA a lo de fabrica = municion duplicada.
+		int guard;
+		for (m = 0; m < muzzles; m++)
+		{
+			guard = 0;
+			while (w.GetInternalMagazineCartridgeCount(m) > 0 && guard < 100)
+			{
+				if (!w.PopCartridgeFromInternalMagazine(m, fd, ft))
+					break;
+				guard++;
+			}
+			if (!w.IsChamberEmpty(m))
+				w.PopCartridgeFromChamber(m, fd, ft);
+		}
+
+		bool toco = false;
+		// PRIMERO el cargador interno y DESPUES la recamara: es el orden con el que llena
+		// vanilla (Weapon_Base.FillInnerMagazine) y el unico que deja el arma consistente.
+		for (i = 0; i < d.ammo.Count(); i++)
+		{
+			if (!ExorAmmoDec(d.ammo.Get(i), kind, a, dmg, type) || kind != "I")
+				continue;
+			if (a < 0 || a >= muzzles)
+				continue;
+			if (w.PushCartridgeToInternalMagazine(a, dmg, type))
+				toco = true;
+		}
+		for (i = 0; i < d.ammo.Count(); i++)
+		{
+			if (!ExorAmmoDec(d.ammo.Get(i), kind, a, dmg, type) || kind != "C")
+				continue;
+			if (a < 0 || a >= muzzles)
+				continue;
+			if (w.IsChamberFull(a))
+				continue;
+			if (w.PushCartridgeToChamber(a, dmg, type))
+				toco = true;
+		}
+		if (toco)
+		{
+			// La maquina de estados del arma tiene que enterarse de que ahora hay bala
+			// (si no, el arma se ve/comporta como descargada hasta que la manipulen).
+			w.RandomizeFSMState();
+			w.Synchronize();
+		}
+		return false;	// no es un cargador: el ammoCount legacy no aplica
 	}
 
 	// ------------------------- RESTAURACION -------------------------
@@ -386,7 +646,9 @@ class ExorVO_Serializer
 					if (nm)
 					{
 						nm.SetHealth01("", "", data.health);
-						if (data.ammoCount >= 0)
+						// mismo criterio que ApplyScalarsSinVida: el detalle real manda; el
+						// ServerSetAmmoCount solo entra si el JSON es viejo y no lo trae.
+						if (!ApplyAmmo(nm, data) && data.ammoCount >= 0)
 							nm.ServerSetAmmoCount(data.ammoCount);
 						// 'e' (el cargador suelto que se habia armado en el piso) se descarta: el
 						// bueno es 'nm', ya adentro del arma. Se RETORNA aca: seguir de largo
@@ -514,25 +776,33 @@ class ExorVO_Serializer
 	{
 		int i;
 		for (i = 0; i < items.Count(); i++)
+			RestoreItemTop(items.Get(i), container, groundPos);
+	}
+
+	// UNA entrada de nivel superior. Se extrajo del bucle de arriba para que el contenedor
+	// pueda restaurar POR LOTES repartidos en varios frames (ver Exor_OpenableStorage.
+	// ExorRestorePump) sin duplicar la logica. La entrada se restaura ENTERA: un bolso con
+	// su contenido es atomico, que es lo que evita dejar arboles a medias.
+	static void RestoreItemTop(ExorVO_ItemData d, EntityAI container, vector groundPos)
+	{
+		if (!d || !container)
+			return;
+
+		// item REALMENTE SUELTO (sin cargo NI attachments) -> directo a su casilla
+		if (d.attachments.Count() == 0 && d.cargo.Count() == 0 && d.cargo_row >= 0 && d.cargo_col >= 0 && container.GetInventory())
 		{
-			ExorVO_ItemData d = items.Get(i);
-
-			// item REALMENTE SUELTO (sin cargo NI attachments) -> directo a su casilla
-			if (d.attachments.Count() == 0 && d.cargo.Count() == 0 && d.cargo_row >= 0 && d.cargo_col >= 0 && container.GetInventory())
+			EntityAI ex = container.GetInventory().CreateEntityInCargoEx(d.type, d.cargo_idx, d.cargo_row, d.cargo_col, d.cargo_flip);
+			if (ex)
 			{
-				EntityAI ex = container.GetInventory().CreateEntityInCargoEx(d.type, d.cargo_idx, d.cargo_row, d.cargo_col, d.cargo_flip);
-				if (ex)
-				{
-					ApplyScalars(ex, d);
-					continue;
-				}
-				// fallo (casilla ocupada/invalida) -> al camino de abajo
+				ApplyScalars(ex, d);
+				return;
 			}
-
-			// mochila/arma (o sin posicion / fallo): armar SUELTO y lleno, y moverlo a su
-			// casilla exacta (RestoreItem hace el TakeEntityToCargoEx adentro).
-			RestoreItem(d, container, groundPos, container);
+			// fallo (casilla ocupada/invalida) -> al camino de abajo
 		}
+
+		// mochila/arma (o sin posicion / fallo): armar SUELTO y lleno, y moverlo a su
+		// casilla exacta (RestoreItem hace el TakeEntityToCargoEx adentro).
+		RestoreItem(d, container, groundPos, container);
 	}
 
 	// aplica los datos escalares (vida, cantidad, balas, etapa de comida) a un item ya creado.
@@ -552,8 +822,12 @@ class ExorVO_Serializer
 		ItemBase ib = ItemBase.Cast(e);
 		if (ib && d.quantity >= 0)
 			ib.SetQuantity(d.quantity);
+		// MUNICION: primero el detalle real (que bala en cada posicion, recamara y cargador
+		// interno del arma). Si devuelve true ya escribio los cartuchos del cargador -> NO
+		// pisarlos con el ServerSetAmmoCount legacy, que los convertiria en balas normales.
+		bool ammoExacta = ApplyAmmo(e, d);
 		Magazine mag = Magazine.Cast(e);
-		if (mag && d.ammoCount >= 0)
+		if (mag && !ammoExacta && d.ammoCount >= 0)
 			mag.ServerSetAmmoCount(d.ammoCount);
 		if (d.foodStage > 0)
 		{

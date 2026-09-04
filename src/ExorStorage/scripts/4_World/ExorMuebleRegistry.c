@@ -84,6 +84,33 @@ class ExorMuebleRegistry
 		return FileExist(PathFor(id));
 	}
 
+	// Dos registros describen lo MISMO? (tolerancia en floats: la posicion de una entidad
+	// recreada por el motor puede diferir en milimetros y eso no es un cambio real)
+	static const float EXOR_REG_EPS = 0.01;
+
+	static bool MismoRegistro(ExorMuebleRegFile a, ExorMuebleRegFile b)
+	{
+		if (!a || !b)
+			return false;
+		if (a.type != b.type)
+			return false;
+		if (Math.AbsFloat(a.x - b.x) > EXOR_REG_EPS)
+			return false;
+		if (Math.AbsFloat(a.y - b.y) > EXOR_REG_EPS)
+			return false;
+		if (Math.AbsFloat(a.z - b.z) > EXOR_REG_EPS)
+			return false;
+		if (Math.AbsFloat(a.yaw - b.yaw) > EXOR_REG_EPS)
+			return false;
+		if (Math.AbsFloat(a.pitch - b.pitch) > EXOR_REG_EPS)
+			return false;
+		if (Math.AbsFloat(a.roll - b.roll) > EXOR_REG_EPS)
+			return false;
+		if (Math.AbsFloat(a.health - b.health) > EXOR_REG_EPS)
+			return false;
+		return true;
+	}
+
 	static void RegisterEntity(string id, EntityAI e)
 	{
 		if (!GetGame().IsServer() || !e || id == "")
@@ -93,12 +120,20 @@ class ExorMuebleRegistry
 		// re-registran al cargar) lo volveria a 0 y nunca detectariamos al mueble problematico,
 		// que es justo el que se recrea una y otra vez ENTRE reinicios.
 		int healsPrevios = 0;
+		bool packedPrevio = false;
+		string ownerPrevio = "";
+		string packedAtPrevio = "";
+		ExorMuebleRegFile viejo = null;
 		string path = PathFor(id);
 		if (FileExist(path))
 		{
-			ExorMuebleRegFile viejo = new ExorMuebleRegFile();
+			viejo = new ExorMuebleRegFile();
 			JsonFileLoader<ExorMuebleRegFile>.JsonLoadFile(path, viejo);
 			healsPrevios = viejo.heals;
+			if (viejo.packed == 1)
+				packedPrevio = true;
+			ownerPrevio = viejo.owner;
+			packedAtPrevio = viejo.packed_at;
 		}
 
 		ExorMuebleRegFile f = new ExorMuebleRegFile();
@@ -110,6 +145,24 @@ class ExorMuebleRegistry
 		f.x = pos[0];  f.y = pos[1];  f.z = pos[2];
 		f.yaw = ori[0];  f.pitch = ori[1];  f.roll = ori[2];
 		f.health = e.GetHealth01("", "");
+
+		// ESCRIBIR SOLO SI CAMBIO ALGO.
+		// Register() lo llama el AfterStoreLoad de CADA mueble, o sea en cada arranque, y antes
+		// hacia lectura + ESCRITURA del JSON siempre. Con 40 lockers por base son miles de
+		// escrituras sincronas metidas justo en el momento mas cargado del server (la carga de
+		// la persistencia). En un arranque normal NADA cambio -mismo tipo, misma posicion, misma
+		// vida-, asi que lo correcto es no tocar el disco.
+		if (viejo && !packedPrevio && MismoRegistro(viejo, f))
+		{
+			ActualizarCache(viejo);
+			return;
+		}
+		// re-registrar un mueble VIVO limpia el comprobante de empaque (volvio al mundo)
+		if (packedPrevio)
+		{
+			f.owner = "";
+			f.packed_at = "";
+		}
 		EnsureDir();
 		JsonFileLoader<ExorMuebleRegFile>.JsonSaveFile(PathFor(id), f);
 		// El cache se ACTUALIZA, no se tira. Tirarlo aca lo volvia inutil justo cuando hace
@@ -120,22 +173,42 @@ class ExorMuebleRegistry
 		ActualizarCache(f);
 	}
 
-	// mete o pisa la entrada del cache (sin releer el directorio)
-	static void ActualizarCache(ExorMuebleRegFile f)
+	// INDICE id -> posicion en s_Cache. Sin el, ActualizarCache era una busqueda lineal y se
+	// llama una vez por mueble en el arranque -> O(muebles^2). Con miles de muebles eso son
+	// millones de comparaciones de string por arranque, y no compraban nada.
+	static ref map<string, int> s_CacheIdx;
+
+	static void ReindexarCache()
 	{
-		if (!s_Cache || !f)
+		if (!s_CacheIdx)
+			s_CacheIdx = new map<string, int>;
+		s_CacheIdx.Clear();
+		if (!s_Cache)
 			return;
 		int i;
 		for (i = 0; i < s_Cache.Count(); i++)
 		{
 			ExorMuebleRegFile c = s_Cache.Get(i);
-			if (c && c.id == f.id)
-			{
-				s_Cache.Set(i, f);
-				return;
-			}
+			if (c && c.id != "")
+				s_CacheIdx.Set(c.id, i);
+		}
+	}
+
+	// mete o pisa la entrada del cache (sin releer el directorio)
+	static void ActualizarCache(ExorMuebleRegFile f)
+	{
+		if (!s_Cache || !f || f.id == "")
+			return;
+		if (!s_CacheIdx)
+			ReindexarCache();
+		int idx;
+		if (s_CacheIdx.Find(f.id, idx) && idx >= 0 && idx < s_Cache.Count())
+		{
+			s_Cache.Set(idx, f);
+			return;
 		}
 		s_Cache.Insert(f);
+		s_CacheIdx.Set(f.id, s_Cache.Count() - 1);
 	}
 
 	// saca la entrada del cache (sin releer el directorio)
@@ -150,6 +223,7 @@ class ExorMuebleRegistry
 			if (c && c.id == id)
 				s_Cache.Remove(i);
 		}
+		ReindexarCache();	// Remove corre los indices siguientes -> hay que rehacer el mapa
 	}
 
 	// El id tiene contenido virtualizado guardado en disco? Es LA pregunta antes de dar de baja
@@ -205,6 +279,7 @@ class ExorMuebleRegistry
 			more = FindNextFile(h, fileName, attr);
 		}
 		CloseFindFile(h);
+		ReindexarCache();
 		return s_Cache;
 	}
 
@@ -219,6 +294,12 @@ class ExorMuebleRegistry
 		if (tipo == "")
 			return "";
 		array<ref ExorMuebleRegFile> regs = LeerRegistro();
+		// ORDEN DE LOS FILTROS: primero los que descartan sin tocar nada (tipo, empaque,
+		// distancia AL CUADRADO) y recien al final ExorIdVivo, que es el unico caro (recorre
+		// todos los muebles y barriles vivos). Al reves -como estaba- esto era O(registros x
+		// entidades vivas) por cada mueble que cargaba sin id: con miles de muebles, millones
+		// de comparaciones de string en el arranque.
+		float dupeSq = EXOR_DUPE_M * EXOR_DUPE_M;
 		int i;
 		for (i = 0; i < regs.Count(); i++)
 		{
@@ -227,7 +308,7 @@ class ExorMuebleRegistry
 				continue;
 			if (f.packed == 1)
 				continue;	// comprobante de empaque: no es un huerfano, no se adopta
-			if (vector.Distance(Vector(f.x, f.y, f.z), pos) > EXOR_DUPE_M)
+			if (ExorMath.Dist3DSq(Vector(f.x, f.y, f.z), pos) > dupeSq)
 				continue;
 			// tiene que estar HUERFANO: si hay un mueble vivo con ese id, el registro es de otro
 			// y adoptarlo dejaria a dos muebles compartiendo id (= comparten contenido = dupe).
@@ -430,7 +511,7 @@ class ExorMuebleRegistry
 						dupF.Insert(f);
 						dupVivo.Insert(vivoEncima);
 					}
-					else if (healed >= EXOR_HEAL_MAX_POR_PASE)
+					else if (healed >= ExorHealMaxPorPase())
 					{
 						// TOPE POR PASE. Recrear una entidad con fisica es LO CARO de todo esto.
 						// Si faltan muchas a la vez (tipico despues de una cuarentena de
@@ -478,7 +559,7 @@ class ExorMuebleRegistry
 		if (healed > 0)
 			Print(string.Format("%1 SELF-HEAL: %2 mueble(s)/barril(es) recreados (despawneados por el motor)", ExorStorageConstants.LOG, healed));
 		if (pendientes > 0)
-			Print(string.Format("%1 SELF-HEAL: %2 quedaron PENDIENTES por el tope de %3 por pase -> vuelven en el proximo pase (30 min). Nada se pierde.", ExorStorageConstants.LOG, pendientes, EXOR_HEAL_MAX_POR_PASE));
+			Print(string.Format("%1 SELF-HEAL: %2 quedaron PENDIENTES por el tope de %3 por pase -> vuelven en el proximo pase (30 min). Nada se pierde.", ExorStorageConstants.LOG, pendientes, ExorHealMaxPorPase()));
 		if (resueltos > 0)
 			Print(string.Format("%1 SELF-HEAL: %2 registro(s) duplicados resueltos -> dejan de repetirse en cada pase", ExorStorageConstants.LOG, resueltos));
 		if (saltados > 0 || fallidos > 0)
@@ -494,6 +575,19 @@ class ExorMuebleRegistry
 	// fisica es lo caro; el resto del scan es casi gratis. Los que no entran vuelven en el
 	// proximo pase (30 min). Acota el pico cuando falta media base de golpe.
 	static const int EXOR_HEAL_MAX_POR_PASE = 8;
+
+	// Tope de un arranque en CARGA SEGURA: ahi los contenedores de un tipo entero quedaron sin
+	// deserializar A PROPOSITO (ver ExorBootRepair) y hay que devolverlos YA, no de a 8 cada
+	// 30 min (60 muebles tardarian casi 4 horas en volver). Es un arranque excepcional y sin
+	// gente adentro todavia, asi que el pico de recreacion no molesta a nadie.
+	static const int EXOR_HEAL_MAX_CARGA_SEGURA = 100;
+
+	static int ExorHealMaxPorPase()
+	{
+		if (ExorBootRepair.HuboCargaSegura())
+			return EXOR_HEAL_MAX_CARGA_SEGURA;
+		return EXOR_HEAL_MAX_POR_PASE;
+	}
 
 	// Suma una reparacion al registro del mueble y, si ya lleva varias, AVISA AL CLAN dueño del
 	// territorio por el chat del mod. El self-heal lo devuelve siempre, asi que el player no

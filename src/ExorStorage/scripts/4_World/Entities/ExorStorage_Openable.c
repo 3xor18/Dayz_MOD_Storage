@@ -34,6 +34,7 @@ class Exor_OpenableStorage : Container_Base
 	protected bool m_ExorLoadDone;		// ya se reconcilio JSON vs persistencia tras cargar
 	protected bool m_ExorRestoring;		// recreando items DESDE el JSON (no marcar dirty)
 	protected bool m_ExorFloorCleaned;	// ya se limpio el piso (drops de DayZ) tras el arranque
+	protected int  m_ExorSnapFirma;		// firma del contenido del ULTIMO volcado (ver ExorWriteSnapshot)
 	// el ultimo restore dejo items afuera -> re-capturar achicaria el JSON (ver ExorVirtualize)
 	protected bool m_ExorRestoreParcial;
 
@@ -67,7 +68,19 @@ class Exor_OpenableStorage : Container_Base
 			m_ExorUnlockedBy.Clear();
 		if (key != "" && setterSteamId != "")
 			m_ExorUnlockedBy.Insert(setterSteamId);
-		// la clave se PERSISTE por el stream (OnStoreSave, formato v2.10.0), no por JSON aparte.
+		ExorGuardarLockState();	// la clave vive en un JSON lateral, NO en el stream del engine
+	}
+
+	// Vuelca la clave a su JSON lateral (ExorLockStore). Se escribe solo cuando la clave
+	// CAMBIA -que es rarisimo-, no en cada guardado de persistencia.
+	void ExorGuardarLockState()
+	{
+		if (!GetGame().IsServer())
+			return;
+		ExorLockState st = new ExorLockState();
+		st.clave = m_ExorLockKey;
+		st.setter = m_ExorKeySetterSid;
+		ExorLockStore.Guardar(ExorGetPid(), st);
 	}
 
 	string ExorGetKeySetterSid() { return m_ExorKeySetterSid; }
@@ -84,12 +97,17 @@ class Exor_OpenableStorage : Container_Base
 		return m_ExorLockKey != "" && m_ExorLockKey == key;
 	}
 
+	// Quienes ya ingresaron la clave. Es estado DE SESION a proposito: al reiniciar, el
+	// miembro la vuelve a poner una vez y listo. Antes se persistia en el stream del engine
+	// con un contador delante, y un contador leido de un stream corrido hacia que el server
+	// se comiera 21 GB de RAM insertando strings basura hasta que el hosting lo mataba.
+	// Ningun dato de largo variable vuelve a ese stream.
 	void ExorMarkUnlocked(string steamId)
 	{
 		if (!m_ExorUnlockedBy)
 			m_ExorUnlockedBy = new TStringArray;
 		if (steamId != "" && m_ExorUnlockedBy.Find(steamId) == -1)
-			m_ExorUnlockedBy.Insert(steamId);	// se persiste por el stream (OnStoreSave)
+			m_ExorUnlockedBy.Insert(steamId);
 	}
 
 	bool ExorIsUnlockedBy(string steamId)
@@ -187,7 +205,18 @@ class Exor_OpenableStorage : Container_Base
 	{
 		if (GetGame().IsServer())
 		{
+			// cortar un restore por lotes en curso: sin esto quedaria un CallLater apuntando
+			// a una entidad que ya no existe
+			if (m_ExorJobFile)
+			{
+				m_ExorJobFile = null;
+				GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(ExorRestorePump);
+			}
 			ExorVO_Manager.UnregisterOpenable(this);
+			// el JSON lateral de la clave muere con el mueble (si no, queda basura por cada
+			// mueble que alguna vez tuvo clave)
+			if (!ExorVO_Manager.s_ShuttingDown && m_ExorPid > 0 && m_ExorLockKey != "")
+				ExorLockStore.Borrar(m_ExorPid);
 			// DIAGNOSTICO (paso 1): loguear TODA baja de un mueble en sesion viva -> tipo + pos +
 			// estado. Un empaque deliberado ademas deja "Mueble empaquetado"; un DESPAWN del motor
 			// (bug de pared/invalid-location/CE) deja SOLO esta linea, sin "empaquetado" -> asi se
@@ -207,117 +236,63 @@ class Exor_OpenableStorage : Container_Base
 		super.EEDelete(parent);
 	}
 
-	// PERSISTENCIA — formato FIJO: [id][clave][setter][count][sids...]. ⚠️ NO CAMBIAR este orden
-	// ni AGREGAR/QUITAR campos: la data guardada por una version distinta se lee con ESTE mismo
-	// codigo, y leer de MAS (campo que el save no tiene) O de MENOS (dejar bytes sin consumir)
-	// dispara "Scripted variables corrupted" -> el motor NO carga el mueble. Paso el 21-jul:
-	// v2.10.0 agrego los campos de clave (rompio la migracion desde v2.9.1 = 76 muebles); v2.10.1
-	// los saco (rompio la carga de la data v2.10.0 = server del amigo no arrancaba). Para agregar
-	// datos NUEVOS a futuro usar un JSON aparte keyed por el id, NUNCA tocar este stream.
+	// ========================= PERSISTENCIA =========================
+	// El stream del engine lleva SOLO DOS ENTEROS: el magico y el id numerico.
+	// Nada de strings: un ctx.Read(string) sobre un stream corrido tira una Virtual Machine
+	// Exception que MATA el arranque del server, y no se puede atrapar desde script (la tira
+	// el engine adentro del Read). Leer un int de un stream corrido devuelve basura, pero
+	// nunca lanza. Ver ExorPid.
+	//
+	// La clave del locker y quien la ingreso viven en un JSON lateral indexado por el id
+	// (ExorLockStore). Agregarles campos a futuro es gratis: no tocan el stream. Cuando SI
+	// estaban en el stream, agregarlos rompio la migracion (v2.10.0) y sacarlos rompio la
+	// carga de lo ya guardado (v2.10.1). Ese problema deja de existir.
 	override void OnStoreSave(ParamsWriteContext ctx)
 	{
 		super.OnStoreSave(ctx);
-		ctx.Write(m_ExorID);
-		ctx.Write(m_ExorLockKey);
-		ctx.Write(m_ExorKeySetterSid);
-		int uc = 0;
-		if (m_ExorUnlockedBy)
-			uc = m_ExorUnlockedBy.Count();
-		ctx.Write(uc);
-		int u;
-		for (u = 0; u < uc; u++)
-			ctx.Write(m_ExorUnlockedBy.Get(u));
+		ctx.Write(ExorPid.EXOR_MAGIC);
+		ctx.Write(ExorGetPid());
 	}
 
-	// TOPE DURO de la lista de "abierto por" que se lee del stream. NO es un limite de diseño
-	// (un clan nunca tiene 64 miembros con la clave): es un cortafuegos contra un contador
-	// LEIDO PODRIDO. Ver el comentario de OnStoreLoad.
-	static const int EXOR_MAX_UNLOCKED = 64;
-
-	// Un string leido del stream tiene pinta de dato nuestro y no de basura?
-	// Con el stream desalineado, ctx.Read() no falla: devuelve true con bytes cualquiera.
-	// Validar lo que YA leimos es gratis y es la unica forma de frenar antes de la lectura
-	// siguiente, que es la que revienta el motor.
-	// alfabeto permitido. Se compara por IndexOf y no por rangos ("a" <= ch) a proposito:
-	// la comparacion de strings por orden en EnforceScript no esta pensada para esto.
-	static const string EXOR_CHARSET_OK = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
-
-	static bool ExorStreamPlausible(string s, int maxLen)
-	{
-		if (s.Length() > maxLen)
-			return false;
-		int i;
-		for (i = 0; i < s.Length(); i++)
-		{
-			// nuestros ids/claves/steamids son alfanumericos + '_' ; cualquier otra cosa
-			// (control chars, binario) significa que estamos leyendo bytes de otro lado
-			if (EXOR_CHARSET_OK.IndexOf(s.Substring(i, 1)) < 0)
-				return false;
-		}
-		return true;
-	}
-
+	// CARGA SEGURA (arranque anterior roto): si el arranque previo dejo rastro de que ESTA
+	// clase no se puede deserializar, no se toca el stream. Ver ExorBootRepair.SaltearTipo.
 	override bool OnStoreLoad(ParamsReadContext ctx, int version)
 	{
+		if (GetGame().IsServer() && ExorBootRepair.SaltearTipo(GetType()))
+		{
+			Print(string.Format("%1 CARGA-SEGURA: '%2' no se deserializa en este arranque -> lo recrea el self-heal con su contenido del JSON", ExorStorageConstants.LOG, GetType()));
+			return false;
+		}
 		if (!super.OnStoreLoad(ctx, version))
 			return false;
-		string id;
-		if (!ctx.Read(id))
-			return false;
 
-		// ---------------------------------------------------------------------------
-		// CORTAFUEGOS DE STREAM DESALINEADO (produccion 22 y 23-jul)
-		// ---------------------------------------------------------------------------
-		// Sintoma: "!!! String CORRUPTED - FIX OnStoreLoad()" en la linea del ctx.Read(key)
-		// de abajo, y detras "Corrupted stream after Exor_Fridge" -> se cae la carga de TODO
-		// lo que venia despues en ese dynamic_*.bin. Ademas ese arranque se fue a 21 GB de RAM
-		// (lo normal son 4) y lo mato el hosting a los 9 minutos.
-		// El 21 GB sale del bloque de abajo: si el contador 'uc' se lee de un stream corrido,
-		// no vale 0-3 sino un entero cualquiera (cientos de millones) y el for se pone a leer
-		// e insertar strings hasta comerse la RAM del host.
-		// Dos frenos, en orden:
-		//   1) el id ya leido tiene que TENER PINTA de id nuestro (NNN_NNN_NNN). Si no, el
-		//      stream ya venia corrido -> se corta ACA, antes del Read que revienta el motor.
-		//   2) el contador se acota a EXOR_MAX_UNLOCKED pase lo que pase.
-		// Cortar devuelve false: el motor descarta ESTE mueble (no el archivo entero) y el
-		// self-heal lo recrea con su contenido, que vive en el JSON y no en este stream.
-		if (!ExorStreamPlausible(id, 40))
+		int magic;
+		if (!ctx.Read(magic))
+			return false;
+		if (magic != ExorPid.EXOR_MAGIC)
 		{
-			Print(string.Format("%1 GUARD: stream de mueble DESALINEADO (id ilegible) -> mueble descartado, se recrea del registro (no se toca el archivo de persistencia)", ExorStorageConstants.LOG));
+			// El stream venia corrido. Antes esto era una loteria: se leia un string y el
+			// engine reventaba. Ahora se corta limpio -> el motor descarta ESTE mueble (no el
+			// archivo entero) y el self-heal lo recrea con su contenido, que vive en el JSON.
+			Print(string.Format("%1 GUARD: stream de mueble DESALINEADO (magico %2) -> mueble descartado, se recrea del registro", ExorStorageConstants.LOG, magic));
 			return false;
 		}
-		m_ExorID = id;
 
-		// campos de clave (formato v2.10.0). La data del server ya los tiene -> se leen SIEMPRE.
-		string key;
-		if (ctx.Read(key))
+		int pid;
+		if (!ctx.Read(pid))
+			return false;
+		if (!ExorPid.Plausible(pid))
 		{
-			// OJO: la clave NO se valida por charset ni por largo. La escribe el JUGADOR en el
-			// modal, asi que puede tener espacios, tildes o simbolos y ser tan larga como quiera:
-			// rechazarla le sacaria el candado a un locker legitimo en el proximo reinicio.
-			// El freno contra el stream corrido es el del 'id' de arriba (formato conocido,
-			// int_int_int) y el tope del contador de abajo, que es lo que protege la RAM.
-			m_ExorLockKey = key;
-			string setter;
-			if (ctx.Read(setter))
-				m_ExorKeySetterSid = setter;
-			int uc;
-			if (ctx.Read(uc))
-			{
-				if (uc < 0 || uc > EXOR_MAX_UNLOCKED)
-				{
-					Print(string.Format("%1 GUARD: contador de 'abierto por' absurdo (%2) en el mueble '%3' -> ignorado (esto es lo que se comia la RAM del server)", ExorStorageConstants.LOG, uc, m_ExorID));
-					return true;
-				}
-				int u;
-				for (u = 0; u < uc; u++)
-				{
-					string usid;
-					if (ctx.Read(usid) && usid != "")
-						m_ExorUnlockedBy.Insert(usid);
-				}
-			}
+			Print(string.Format("%1 GUARD: id de mueble ilegible (%2) -> mueble descartado, se recrea del registro", ExorStorageConstants.LOG, pid));
+			return false;
 		}
+		m_ExorPid = pid;
+		m_ExorID = pid.ToString();
+
+		// clave y lista de "ya la ingreso": del JSON lateral, no del stream
+		ExorLockState st = ExorLockStore.Cargar(pid);
+		m_ExorLockKey = st.clave;
+		m_ExorKeySetterSid = st.setter;
 		return true;
 	}
 
@@ -404,6 +379,10 @@ class Exor_OpenableStorage : Container_Base
 
 	override void Close()
 	{
+		// Cerrar a mitad de un restore por lotes dejaria el resto de los items sin ubicar
+		// (el inventario queda bloqueado un instante despues). Se termina primero.
+		if (GetGame().IsServer() && m_ExorJobFile)
+			ExorRestoreDrain();
 		m_IsOpened = false;
 		SetSynchDirty();
 		if (GetInventory())
@@ -662,15 +641,32 @@ class Exor_OpenableStorage : Container_Base
 	// slots -> antes eran 24 ToLower() + hasta 96 barridos de substring por validacion, y la
 	// UI lo repite mientras arrastras. Con un solo Contains("lock") alcanza: los otros tres
 	// terminan todos en "lock", asi que eran redundantes.
+	// Cache classname -> "es un candado?". El motor llama esto por CADA slot candidato cada
+	// vez que arrastras algo, y los lockers tienen decenas de slots: eran decenas de ToLower()
+	// (que ALOCA un string nuevo) + su barrido de substring por validacion, repetidos mientras
+	// el jugador mueve el mouse. El classname de un item nunca cambia, asi que la respuesta se
+	// calcula una vez por tipo en toda la vida del server y despues es un lookup de hash.
+	static ref map<string, bool> s_EsCandado;
+
+	static bool ExorEsCandado(string type)
+	{
+		if (!s_EsCandado)
+			s_EsCandado = new map<string, bool>;
+		bool r;
+		if (s_EsCandado.Find(type, r))
+			return r;
+		string t = type;
+		t.ToLower();
+		r = t.Contains("lock");	// cubre codelock / combinationlock / padlock / *lock
+		s_EsCandado.Set(type, r);
+		return r;
+	}
+
+	// No lockeable: bloquea CodeLock / candados de cualquier mod.
 	override bool CanReceiveAttachment(EntityAI attachment, int slotId)
 	{
-		if (attachment)
-		{
-			string type = attachment.GetType();
-			type.ToLower();
-			if (type.Contains("lock"))	// cubre codelock / combinationlock / padlock / *lock
-				return false;
-		}
+		if (attachment && ExorEsCandado(attachment.GetType()))
+			return false;
 		return super.CanReceiveAttachment(attachment, slotId);
 	}
 
@@ -717,38 +713,53 @@ class Exor_OpenableStorage : Container_Base
 	}
 
 	// ======================= VIRTUALIZACION (portado del barril) =======================
+	// Id NUMERICO persistente. Es la unica identidad del contenedor: el string que usan las
+	// rutas de archivo y el registro es su representacion decimal. Un solo identificador en
+	// vez de dos evita que se desincronicen.
+	protected int m_ExorPid;
+
+	int ExorGetPid()
+	{
+		if (m_ExorPid <= 0)
+		{
+			m_ExorPid = ExorPid.Nuevo();
+			m_ExorID = m_ExorPid.ToString();
+		}
+		return m_ExorPid;
+	}
+
 	string ExorGetID()
 	{
 		if (m_ExorID == "")
-			m_ExorID = ExorVO_Serializer.GenerateId();
+			m_ExorID = ExorGetPid().ToString();
 		return m_ExorID;
 	}
 
+	// ruta del JSON con el contenido de este contenedor. Ver ExorContainerOps.
 	string ExorGetStoragePath()
 	{
-		return string.Format("%1\\%2.json", ExorStorageConstants.STORAGE_DIR, ExorGetID());
+		return ExorContainerOps.StoragePath(ExorGetID());
 	}
 
 	// re-liga un id conocido (lo usa el SELF-HEAL al recrear un mueble despawneado, para que
 	// recupere su contenido virtualizado del JSON que quedo en disco con ese id).
+	// Re-liga el id al recrear el mueble desde el registro (self-heal): con el id viejo
+	// vuelve a encontrar su JSON de contenido. Mantiene pid y string en sincronia.
 	void ExorSetIDForHeal(string id)
 	{
-		if (id != "")
-			m_ExorID = id;
+		if (id == "")
+			return;
+		m_ExorID = id;
+		m_ExorPid = id.ToInt();
 	}
 
 	bool ExorIsVirtualized() { return m_ExorVirt; }
 	bool ExorHasContent()    { return FileExist(ExorGetStoragePath()); }
 
+	// cantidad de items REALES en el cargo (no cuenta lo virtualizado). Ver ExorContainerOps.
 	int ExorCargoCount()
 	{
-		GameInventory inv = GetInventory();
-		if (!inv)
-			return 0;
-		CargoBase cargo = inv.GetCargo();
-		if (!cargo)
-			return 0;
-		return cargo.GetItemCount();
+		return ExorContainerOps.CargoCount(this);
 	}
 
 	// el manager pregunta esto para repartir el reconcile de arranque (scan caro)
@@ -771,7 +782,10 @@ class Exor_OpenableStorage : Container_Base
 	}
 
 	// Vuelca el cargo ACTUAL al JSON (los items SIGUEN en el mundo). Guardado "en vivo".
-	void ExorWriteSnapshot()
+	// 'forzar' = escribir si o si, aunque el contenido no haya cambiado. Lo usa el camino de
+	// VIRTUALIZAR, que ademas de guardar necesita refrescar el sello de tiempo del archivo
+	// (de ahi sale, por ejemplo, cuanto envejece la comida de la nevera).
+	void ExorWriteSnapshot(bool forzar = false)
 	{
 		GameInventory inv = GetInventory();
 		if (!inv)
@@ -780,26 +794,21 @@ class Exor_OpenableStorage : Container_Base
 		if (!cargo)
 			return;
 
-		ExorVO_ContainerFile f = new ExorVO_ContainerFile();
-		f.id = ExorGetID();
-		f.owner_type = GetType();
-		int i;
-		for (i = 0; i < cargo.GetItemCount(); i++)
+		// armado del DTO: compartido con el barril (ver ExorContainerOps.ArmarSnapshot).
+		// Los muebles que guardan cosas en SLOTS (mueble de armas, locker) piden tambien
+		// los attachments; el resto solo el cargo.
+		// FIRMA PRIMERO, DTO DESPUES. Armar el DTO de un contenedor lleno son ~1500 objetos
+		// (un ExorVO_ItemData con sus dos arrays por item, recursivo); en el caso comun -nada
+		// cambio- se tiraban enteros. Firmar el inventario VIVO no aloca nada.
+		int firma = ExorContainerOps.FirmaViva(this, ExorVirtualizeAttachments());
+		if (!forzar && firma == m_ExorSnapFirma && m_ExorSnapFirma != 0 && FileExist(ExorGetStoragePath()))
 		{
-			EntityAI it = cargo.GetItem(i);
-			if (it)
-				f.items.Insert(ExorVO_Serializer.CaptureItem(it));
+			m_ExorSnapDirty = false;
+			return;
 		}
-		// attachments (ej armas en los slots del mueble, ropa en el locker) si la subclase lo pide
-		if (ExorVirtualizeAttachments())
-		{
-			for (i = 0; i < inv.AttachmentCount(); i++)
-			{
-				EntityAI att = inv.GetAttachmentFromIndex(i);
-				if (att)
-					f.att.Insert(ExorVO_Serializer.CaptureItem(att));
-			}
-		}
+
+		ExorVO_ContainerFile f = ExorContainerOps.ArmarSnapshot(this, ExorGetID(), ExorVirtualizeAttachments());
+		ExorOnSnapshotWrite(f);	// metadata de la subclase (la nevera anota bateria y carga)
 		if (f.items.Count() == 0 && f.att.Count() == 0)
 		{
 			// BLINDAJE: este DeleteFile es el UNICO punto del mod que destruye loot de forma
@@ -817,8 +826,9 @@ class Exor_OpenableStorage : Container_Base
 		}
 		else
 		{
-			JsonFileLoader<ExorVO_ContainerFile>.JsonSaveFile(ExorGetStoragePath(), f);
+			ExorContainerOps.GuardarJL(ExorGetStoragePath(), f);
 		}
+		m_ExorSnapFirma = firma;
 		m_ExorSnapDirty = false;
 	}
 
@@ -872,8 +882,8 @@ class Exor_OpenableStorage : Container_Base
 		// EXCEPCION: si el ultimo restore quedo INCOMPLETO (algo no entro y quedo en el
 		// piso), re-capturar achicaria el JSON y ESO si perderia loot -> se conserva el
 		// archivo entero y se reintenta la proxima vez.
-		if (m_ExorSnapDirty && !m_ExorRestoreParcial)
-			ExorWriteSnapshot();
+		if (!m_ExorRestoreParcial)
+			ExorWriteSnapshot(true);	// FORZADO: el sello de tiempo del archivo tiene que ser el del momento en que el contenido sale del mundo
 
 		if (toDelete.Count() == 0)
 			return;
@@ -957,16 +967,26 @@ class Exor_OpenableStorage : Container_Base
 			return;
 		}
 
-		ExorVO_ContainerFile f = new ExorVO_ContainerFile();
-		JsonFileLoader<ExorVO_ContainerFile>.JsonLoadFile(path, f);
+		// lector JSON-Lines (tolera el formato viejo). Una linea rota pierde UN item,
+		// no el contenedor entero. Ver ExorContainerOps.LeerJL.
+		ExorVO_ContainerFile f = ExorContainerOps.LeerJL(path);
+		if (!f)
+		{
+			m_ExorVirt = false;
+			return;
+		}
 
 		// anti-dupe: SOLO en la 1ra apertura poco despues del arranque, limpiar lo que DayZ
 		// tiro al piso por "invalid location" al cargar (contenido anidado). Ventana de 5 min.
+		// Solo si el apagado anterior NO fue limpio: con un cierre en regla todos los
+		// contenedores quedaron vacios y no hay derrame que barrer (ver ExorApagadoLimpio).
+		// El barrido es un GetObjectsAtPosition de 15 m + parseo del JSON: 83 ms medidos en
+		// un solo contenedor, y antes lo pagaban TODOS en su primera apertura.
 		int floorCleanWindowMs = 300000;
 		if (!m_ExorFloorCleaned)
 		{
 			m_ExorFloorCleaned = true;
-			if (GetGame().GetTime() < floorCleanWindowMs)
+			if (GetGame().GetTime() < floorCleanWindowMs && !ExorApagadoLimpio.FueLimpio())
 				ExorCleanDroppedNearby();
 		}
 
@@ -977,15 +997,93 @@ class Exor_OpenableStorage : Container_Base
 		int podados = ExorVO_Serializer.Sanitize(f.att, "", true) + ExorVO_Serializer.Sanitize(f.items, "", false);
 		if (podados > 0)
 			Print(string.Format("%1 GUARD: mueble %2 -> %3 item(s) corruptos descartados antes de restaurar", ExorStorageConstants.LOG, ExorGetID(), podados));
+		// ------------------------------------------------------------------------------
+		//  RESTORE INCREMENTAL (por lotes, repartido en varios frames)
+		// ------------------------------------------------------------------------------
+		// ANTES: todo esto corria de una en UN SOLO frame. Un locker de 500 slots con mochilas
+		// adentro son miles de entidades creadas y reubicadas de golpe -> el server se clava
+		// segundos enteros. En horario de raid, donde se abren decenas de contenedores, era
+		// un hitch por apertura. RESTORE_SPACING_MS solo evitaba que arrancaran DOS restores
+		// en el mismo frame; no partia el trabajo de uno.
+		//
+		// AHORA: el trabajo se corta en lotes de EXOR_RESTORE_LOTE entradas de NIVEL SUPERIOR
+		// por frame. Cada entrada se sigue restaurando entera (un bolso con sus cosas es
+		// atomico, que es lo que hace falta para no dejar arboles a medias), pero entre lote
+		// y lote el server respira. El inventario del mueble sigue BLOQUEADO hasta que termina,
+		// asi que el jugador nunca ve un contenedor a medio llenar ni puede sacar de ahi.
+		//
+		// Patron: una maquina de estados chiquita con el progreso guardado en el propio mueble.
+		// Nada de recursion diferida ni de closures: el estado es explicito y se puede leer.
 		m_ExorRestoring = true;
 		ExorVO_Serializer.ResetFallosUbicacion();
-		// attachments PRIMERO (armas/ropa a sus slots), luego el cargo
-		if (f.att)
+		m_ExorJobFile = f;
+		m_ExorJobPos = hidden;
+		m_ExorJobIdxAtt = 0;
+		m_ExorJobIdxItem = 0;
+		ExorRestorePump();
+	}
+
+	// Estado del restore en curso (null = no hay ninguno). Ver ExorDoRestore.
+	protected ref ExorVO_ContainerFile m_ExorJobFile;
+	protected vector m_ExorJobPos;
+	protected int m_ExorJobIdxAtt;
+	protected int m_ExorJobIdxItem;
+
+	// Procesa UN lote y, si queda trabajo, se re-agenda para el proximo frame.
+	void ExorRestorePump()
+	{
+		if (!m_ExorJobFile)
+			return;
+		ExorVO_ContainerFile f = m_ExorJobFile;
+		int lote = ExorStorageConstants.EXOR_RESTORE_LOTE;
+		int hechos = 0;
+
+		// 1) attachments primero (armas/ropa a sus slots del mueble)
+		while (f.att && m_ExorJobIdxAtt < f.att.Count() && hechos < lote)
 		{
-			for (int a = 0; a < f.att.Count(); a++)
-				ExorVO_Serializer.RestoreItem(f.att.Get(a), this, hidden, this, true);
+			ExorVO_Serializer.RestoreItem(f.att.Get(m_ExorJobIdxAtt), this, m_ExorJobPos, this, true);
+			m_ExorJobIdxAtt++;
+			hechos++;
 		}
-		ExorVO_Serializer.RestoreItemsBigFirst(f.items, this, hidden);
+		// 2) despues el cargo
+		while (f.items && m_ExorJobIdxItem < f.items.Count() && hechos < lote)
+		{
+			ExorVO_Serializer.RestoreItemTop(f.items.Get(m_ExorJobIdxItem), this, m_ExorJobPos);
+			m_ExorJobIdxItem++;
+			hechos++;
+		}
+
+		bool quedaAtt = f.att && m_ExorJobIdxAtt < f.att.Count();
+		bool quedaItem = f.items && m_ExorJobIdxItem < f.items.Count();
+		if (quedaAtt || quedaItem)
+		{
+			// 1 ms = "el proximo frame". No se usa 0 porque el CallQueue de DayZ trata el 0
+			// como "ya mismo" y volveria a correr dentro de este mismo frame.
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorRestorePump, 1, false);
+			return;
+		}
+		ExorRestoreFin();
+	}
+
+	// Termina AHORA lo que quede del restore, sin repartir en frames. Se usa cuando algo no
+	// puede esperar: cerrar el mueble o darlo de baja a mitad de restore dejaria items sin
+	// ubicar (y con el inventario ya bloqueado, sueltos en el piso).
+	// El tope de vueltas es una red de seguridad contra un bug propio, no un limite de diseño.
+	void ExorRestoreDrain()
+	{
+		int guard = 0;
+		while (m_ExorJobFile && guard < 5000)
+		{
+			ExorRestorePump();
+			guard++;
+		}
+	}
+
+	// Cierre del restore: lo que antes venia despues del bucle sincronico.
+	void ExorRestoreFin()
+	{
+		ExorVO_ContainerFile f = m_ExorJobFile;
+		m_ExorJobFile = null;
 		m_ExorRestoring = false;
 		// Si algo no entro (quedo suelto en el piso), este mueble NO puede re-capturar su
 		// contenido al virtualizar: lo achicaria y ese item se perderia. Ver ExorVirtualize.
@@ -1006,6 +1104,10 @@ class Exor_OpenableStorage : Container_Base
 	// hook: la subclase ajusta los items recien recreados. Corre en SERVER tras el restore.
 	// 'f' trae los datos del JSON (incl. metadata que la subclase haya guardado).
 	void ExorOnItemsRestored(ExorVO_ContainerFile f) {}
+
+	// hook: la subclase agrega metadata propia al JSON justo antes de escribirlo (la nevera
+	// marca si tenia bateria). Corre en SERVER, con los items todavia reales.
+	void ExorOnSnapshotWrite(ExorVO_ContainerFile f) {}
 
 	// RECONCILIAR AL CARGAR: el JSON manda. Limpia el cargo stale del engine + los drops
 	// del piso, y deja el mueble virtualizado (se restaura del JSON al abrir).
@@ -1069,80 +1171,17 @@ class Exor_OpenableStorage : Container_Base
 		ExorCleanDroppedNearby();
 	}
 
-	// extrae los classnames del JSON leyendo el TEXTO crudo (busca cada "type": "X")
+	// Tipos que este contenedor guarda, leidos del texto crudo del JSON. Ver ExorContainerOps.
 	TStringArray ExorTypesFromJsonText(string path)
 	{
-		TStringArray result = new TStringArray;
-		// DEDUP CON MAP: antes era result.Find(val) por cada "type" del archivo, o sea una
-		// busqueda LINEAL sobre los tipos ya encontrados. Con un JSON de 128 KB (~10k lineas)
-		// y ~100 tipos unicos daba del orden de 10^6 comparaciones de string por llamada, y
-		// esta funcion se llama hasta 3 veces por contenedor. Con el map es O(n).
-		map<string, bool> seen = new map<string, bool>;
-		FileHandle fh = OpenFile(path, FileMode.READ);
-		if (fh == 0)
-			return result;
-		string line;
-		while (FGets(fh, line) >= 0)
-		{
-			int kp = line.IndexOf("\"type\"");
-			if (kp < 0)
-				continue;
-			string rest = line.Substring(kp + 6, line.Length() - (kp + 6));
-			int q1 = rest.IndexOf("\"");
-			if (q1 < 0)
-				continue;
-			string rest2 = rest.Substring(q1 + 1, rest.Length() - (q1 + 1));
-			int q2 = rest2.IndexOf("\"");
-			if (q2 < 0)
-				continue;
-			string val = rest2.Substring(0, q2);
-			if (val != "" && !seen.Contains(val))
-			{
-				seen.Set(val, true);
-				result.Insert(val);
-			}
-		}
-		CloseFile(fh);
-		return result;
+		return ExorContainerOps.TiposDelJson(path);
 	}
 
-	// borra items SUELTOS cerca (plano XZ) cuyo tipo esta en el JSON = drops de "invalid
-	// location". Conservador: solo items sin parent, del tipo guardado, cerca en horizontal.
+	// Borra los items SUELTOS cerca que son de un tipo que este contenedor guarda: son los
+	// drops de "invalid location" que DayZ tira al cargar el mundo. Ver ExorContainerOps.
 	int ExorCleanDroppedNearby(float scanRadius = 15.0, float maxHoriz = 10.0)
 	{
-		string path = ExorGetStoragePath();
-		if (!FileExist(path))
-			return 0;
-		TStringArray types = ExorTypesFromJsonText(path);
-		if (types.Count() == 0)
-			return 0;
-
-		vector bpos = GetPosition();
-		array<Object> nearby = new array<Object>;
-		array<CargoBase> proxy = new array<CargoBase>;
-		GetGame().GetObjectsAtPosition(bpos, scanRadius, nearby, proxy);
-
-		int removed = 0;
-		int i;
-		for (i = 0; i < nearby.Count(); i++)
-		{
-			EntityAI e = EntityAI.Cast(nearby.Get(i));
-			if (!e || e == this)
-				continue;
-			if (e.GetHierarchyParent())
-				continue;
-			if (!e.IsInherited(ItemBase))
-				continue;
-			if (types.Find(e.GetType()) < 0)
-				continue;
-			vector d = e.GetPosition() - bpos;
-			d[1] = 0;
-			if (d.Length() > maxHoriz)
-				continue;
-			GetGame().ObjectDelete(e);
-			removed++;
-		}
-		return removed;
+		return ExorContainerOps.LimpiarDropsCerca(this, ExorGetStoragePath(), scanRadius, maxHoriz);
 	}
 
 	// FAST-SKIP para el tick del manager: un mueble "idle" no necesita NINGUN trabajo este tick
@@ -1155,6 +1194,8 @@ class Exor_OpenableStorage : Container_Base
 	{
 		if (!m_ExorLoadDone || ExorNeedsReconcile())
 			return false;
+		if (m_ExorJobFile)
+			return false;			// restaurando por lotes
 		if (m_IsOpened)
 			return false;			// abierto: hay que chequear auto-cierre
 		if (m_ExorSnapDirty)
@@ -1171,6 +1212,14 @@ class Exor_OpenableStorage : Container_Base
 		didSnapshot = false;
 		if (!m_ExorLoadDone)	// espera su turno de reconcile
 			return false;
+		// restore por lotes en curso -> no auto-cerrar, no volcar y no virtualizar hasta que
+		// termine (dura decimas de segundo). Tocar el mueble a mitad de restore es justo lo
+		// que deja items sueltos.
+		if (m_ExorJobFile)
+		{
+			m_ExorLastInteractMs = now;	// que no cuente como inactivo mientras se llena
+			return false;
+		}
 
 		int cerrarMs = settings.auto_cerrar_segundos * 1000;
 		int virtMs = settings.virtualizar_segundos * 1000;

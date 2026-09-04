@@ -46,6 +46,44 @@ class ExorRPC
 	static const int CAR_ACCESS_GRANT  = 49247;	// S -> C: te doy acceso al baul de un auto (Param2 int netId low/high)
 	static const int CAR_MEMBER        = 49248;	// S -> C: sos miembro del clan dueño de este auto (Param2 netId low/high)
 
+	// ------------------------------------------------------------------------
+	//  DIRECCION DEL RPC  (control de autoridad)
+	// ------------------------------------------------------------------------
+	// Un RPC de SERVIDOR -> CLIENTE no tiene ningun motivo legitimo para ejecutarse EN el
+	// servidor. Si llega ahi es porque un cliente modificado se lo mando, y varios de esos
+	// handlers escriben estado GLOBAL del server. El peor: CONFIG_SYNC llama a
+	// ExorConfig.ApplyClientJson, que reescribe la config viva -incluido admin_steamids del
+	// candado de autos y permitir_construir_cerca del territorio-, o sea que un jugador
+	// cualquiera se hacia admin de todos los autos y desactivaba la proteccion de bases
+	// para TODO el server.
+	//
+	// Se resuelve con UN chequeo por direccion en el router, y no con un IsServer() en cada
+	// case: los guards repartidos dependen de que alguien se acuerde de ponerlos en el RPC
+	// numero 30, y ya se demostro que no pasa. Un unico punto de corte no se olvida.
+	static bool EsHaciaCliente(int rpc)
+	{
+		if (rpc == ROSTER_SYNC)       return true;
+		if (rpc == INVITE)            return true;
+		if (rpc == TERRITORY_SYNC)    return true;
+		if (rpc == FLAG_STATE)        return true;
+		if (rpc == MEMBER_SYNC)       return true;
+		if (rpc == MARKER_SYNC)       return true;
+		if (rpc == SPAWN_OPEN)        return true;
+		if (rpc == CONFIG_SYNC)       return true;
+		if (rpc == KILLFEED)          return true;
+		if (rpc == SCORE_DATA)        return true;
+		if (rpc == CHAT_MSG)          return true;
+		if (rpc == VIP_STATUS)        return true;
+		if (rpc == SERVERINFO_SYNC)   return true;
+		if (rpc == POP_COUNT)         return true;
+		if (rpc == KOTH_SYNC)         return true;
+		if (rpc == PARKING_OPEN)      return true;
+		if (rpc == LOCK_MODAL_OPEN)   return true;
+		if (rpc == CAR_ACCESS_GRANT)  return true;
+		if (rpc == CAR_MEMBER)        return true;
+		return false;
+	}
+
 	// Rango reservado del mod. Se usa para decidir si un RPC es NUESTRO y por lo tanto NO
 	// hay que pasarlo a super.OnRPC() (la cadena de los otros mods). Al agregar un RPC
 	// nuevo, mantenerlo DENTRO de este rango o ampliar el tope.

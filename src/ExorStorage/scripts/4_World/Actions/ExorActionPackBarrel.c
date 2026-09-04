@@ -52,6 +52,19 @@ class ExorActionPackBarrel : ActionContinuousBase
 		if (!barrel.ExorCanBePacked())
 			return;
 
+		// GATE DE MIEMBRO: des-setear un barril de una base ajena es sacarle el contenedor a
+		// otro clan. Misma regla que abrirlo (ver ExorMuebleRules.CanLootAtPos): solo miembros,
+		// con el horario de raid como excepcion. La validacion va en el SERVER al terminar.
+		PlayerBase quien = PlayerBase.Cast(action_data.m_Player);
+		string denyReason;
+		if (quien && !ExorMuebleRules.CanLootAtPos(quien, barrel.GetPosition(), denyReason))
+		{
+			if (denyReason == "")
+				denyReason = "Solo los miembros del clan pueden guardar este barril.";
+			ExorMuebleRules.SendRed(quien, denyReason);
+			return;
+		}
+
 		string packedType = barrel.ExorGetPackedType();
 		if (packedType == "")
 			return;

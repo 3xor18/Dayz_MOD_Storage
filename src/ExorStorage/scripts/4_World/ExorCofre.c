@@ -560,10 +560,25 @@ class ExorCofre
 		int n = 0;
 		if (cfg.lugares)
 			n = cfg.lugares.Count();
+		// COMPATIBILIDAD DE MAPA: una zona configurada para OTRO mapa cae fuera de este
+		// terreno y montaria la mesa, el humo y las bengalas en el vacio. Esas zonas no se
+		// crean (con aviso en el log); el resto del modulo funciona normal. Ver ExorMapBounds.
 		int i;
+		int saltadas = 0;
 		for (i = 0; i < n; i++)
+		{
+			ExorCfgCofreLugar lz = cfg.lugares.Get(i);
+			if (lz && lz.posicion && !ExorMapBounds.Valida("cofre.json", "zona " + i.ToString(), lz.posicion.x, lz.posicion.z, 20))
+			{
+				saltadas++;
+				continue;
+			}
 			self.m_Zones.Insert(new ExorCofreZone(i));
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(self.TickTimed, 1000, true);
+		}
+		n = n - saltadas;
+		// El latido de 1 Hz lo da ExorTick1Hz (uno solo para party/KOTH/cofre): asi la lista
+		// de jugadores y la hora local se calculan una vez y no tres.
+		ExorTick1Hz.Start();
 		// scan de la mesa cada minuto: despawnea cofres abiertos y vacios (barato para 50 players)
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(self.ScanTablesEmpty, 60000, true);
 		// limpiar los cofres/cajas del evento que quedaron persistidos de la sesion anterior
@@ -759,10 +774,12 @@ class ExorCofre
 		if (!cfg.activado)
 			return;
 
-		int minOfDay;
-		int weekday;
-		int dayKey;
-		ExorCofre.NowLocal(cfg.offset_horas, minOfDay, weekday, dayKey);
+		// hora local YA calculada por el latido compartido (ExorTick1Hz): antes cada
+		// subsistema de 1 Hz hacia su propia llamada al reloj del sistema y su propio
+		// calculo de dia de la semana, una vez por segundo cada uno.
+		int minOfDay = ExorTick1Hz.s_MinOfDay;
+		int weekday = ExorTick1Hz.s_Weekday;
+		int dayKey = ExorTick1Hz.s_DayKey;
 		string today = ExorCofre.DayName(weekday);
 
 		int i;

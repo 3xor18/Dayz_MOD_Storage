@@ -12,12 +12,97 @@ class ExorChatServer
 	static ref map<string, int> s_LastMs;
 	static ref map<string, string> s_LastText;
 
+	// PURGA. Estos dos mapas crecen con CADA jugador distinto que escribio alguna vez y no
+	// se limpiaban nunca: en un server con rotacion alta son miles de entradas vivas hasta
+	// el reinicio. Como la entrada solo sirve para el cooldown y el anti-repetido (segundos),
+	// todo lo mas viejo que 'ttlMs' es basura garantizada. La llama ExorHousekeeping.
+	static void PurgarViejos(int now, int ttlMs)
+	{
+		if (!s_LastMs)
+			return;
+		array<string> muertas = new array<string>;
+		foreach (string sid, int ms : s_LastMs)
+		{
+			if (now - ms > ttlMs)
+				muertas.Insert(sid);
+		}
+		int i;
+		for (i = 0; i < muertas.Count(); i++)
+		{
+			s_LastMs.Remove(muertas.Get(i));
+			if (s_LastText)
+				s_LastText.Remove(muertas.Get(i));
+		}
+	}
+
 	static void Ensure()
 	{
 		if (!s_LastMs)
 			s_LastMs = new map<string, int>;
 		if (!s_LastText)
 			s_LastText = new map<string, string>;
+	}
+
+	// ------------------------------------------------------------------------
+	//  COMANDOS DE ADMIN POR CHAT
+	// ------------------------------------------------------------------------
+	// Se eligio el chat como disparador porque ya existe, ya llega al server autenticado
+	// con la identidad del jugador, y no hace falta ninguna UI nueva. La autorizacion es la
+	// lista de admins del mod, la misma que usa el candado de autos.
+	static void Comando(PlayerBase quien, string linea)
+	{
+		if (!quien || !quien.GetIdentity())
+			return;
+		string sid = quien.GetIdentity().GetPlainId();
+		bool esAdmin = GetExorConfig().carlock.ExorEsAdmin(sid);
+		if (!esAdmin)
+		{
+			ExorCfgStorage st = GetExorConfig().storage;
+			if (st && st.bypass_lootear_steamids && st.bypass_lootear_steamids.Find(sid) >= 0)
+				esAdmin = true;
+		}
+		if (!esAdmin)
+		{
+			ExorMuebleRules.SendRed(quien, "Ese comando es solo para admins.");
+			Print(string.Format("%1 SEGURIDAD: %2 intento el comando '%3' sin ser admin", ExorStorageConstants.LOG, sid, linea));
+			return;
+		}
+
+		array<string> arg = new array<string>;
+		linea.Split(" ", arg);
+		string cmd = arg.Get(0);
+		cmd.ToLower();
+
+		if (cmd == "/perf")
+		{
+			int frames = 300;
+			if (arg.Count() > 1)
+				frames = arg.Get(1).ToInt();
+			ExorProfiler.Iniciar(frames, quien);
+			return;
+		}
+		if (cmd == "/entidades")
+		{
+			ExorMuebleRules.SendVerde(quien, ExorProfiler.ResumenEntidades());
+			return;
+		}
+		if (cmd == "/carga")
+		{
+			int cuantos = 20;
+			int items = 200;
+			if (arg.Count() > 1)
+				cuantos = arg.Get(1).ToInt();
+			if (arg.Count() > 2)
+				items = arg.Get(2).ToInt();
+			ExorLoadTest.Generar(quien, cuantos, items);
+			return;
+		}
+		if (cmd == "/limpiarcarga")
+		{
+			ExorLoadTest.Limpiar(quien);
+			return;
+		}
+		ExorMuebleRules.SendVerde(quien, "Comandos: /perf [frames] | /carga [cant] [items] | /limpiarcarga | /entidades");
 	}
 
 	static void Handle(PlayerBase sender, string text, int channel)
@@ -37,6 +122,18 @@ class ExorChatServer
 			return;
 		if (msgTxt.Length() > 120)
 			msgTxt = msgTxt.Substring(0, 120);
+
+		// ----------------- COMANDOS DE ADMIN -----------------
+		// Un mensaje que empieza con "/" no es chat: es un comando. Se resuelve ANTES del
+		// anti-spam (un admin midiendo no tiene por que esperar el cooldown) y NUNCA se
+		// reenvia a los demas jugadores.
+		// Solo para los steamids de admin del mod: un comando que perfila el server o crea
+		// 200 contenedores no puede quedar al alcance de cualquiera.
+		if (msgTxt.IndexOf("/") == 0)
+		{
+			ExorChatServer.Comando(sender, msgTxt);
+			return;
+		}
 
 		// ----------------- anti-spam -----------------
 		Ensure();

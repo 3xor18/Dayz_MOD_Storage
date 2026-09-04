@@ -65,74 +65,85 @@ class ExorVO_Ammo
 		return false;
 	}
 
-	// Consolida TODAS las pilas del mismo tipo del inventario del jugador
-	// en la menor cantidad de pilas posible (ej. 50+25+15 -> 90)
-	static void AutoStack(Magazine mag, PlayerBase player)
+	// ------------------------------------------------------------------------------
+	//  AUTO-STACK COALESCIDO (un solo pase por jugador, no uno por pila recogida)
+	// ------------------------------------------------------------------------------
+	// ANTES: cada pila de balas que entraba al inventario programaba SU PROPIO AutoStack a
+	// los 400 ms, y cada uno enumeraba el inventario ENTERO del jugador. Vaciar un locker
+	// son decenas de pilas en pocos segundos -> decenas de enumeraciones completas por
+	// jugador, todas mirando lo mismo. Con 70 jugadores looteando en un raid eso es puro
+	// trabajo repetido en el hilo principal.
+	//
+	// AHORA: la primera pila agenda el pase y las demas se suben al que ya esta agendado
+	// (patron de "trailing debounce"). Un solo pase consolida TODOS los tipos de una, con
+	// UNA sola enumeracion del inventario.
+	static void AutoStackAll(PlayerBase player)
 	{
-		if (!GetGame().IsServer())
+		if (!GetGame().IsServer() || !player)
 			return;
-		if (!mag || !player)
-			return;
-		if (!IsManagedAmmo(mag))
-			return;
-
-		ExorCfgMunicion settings = GetExorConfig().municion;
-		if (!settings.auto_stack)
-			return;
-		// Solo si la pila realmente quedo en el inventario del jugador
-		if (mag.GetHierarchyRootPlayer() != player)
-			return;
-		if (IsInHands(mag))
+		player.ExorSetStackPendiente(false);
+		if (!ExorHotFlags.AutoStackMunicion())
 			return;
 
-		string tipo = mag.GetType();
-		int maxA = mag.GetAmmoMax();
-		if (maxA <= 0)
-			return;
-
-		// Solo participan las pilas PARCIALES (0 < ammo < max). Las pilas LLENAS NO se
-		// tocan nunca: no se pueden fusionar y mutarlas solo genera manipulacion de
-		// inventario server-side inutil (= mas ventana de desync). Menos churn = menos
-		// riesgo de "balas fantasma hasta reloguear".
 		array<EntityAI> items = new array<EntityAI>;
 		player.GetInventory().EnumerateInventory(InventoryTraversalType.PREORDER, items);
 
-		array<Magazine> pilas = new array<Magazine>;
-		int total = 0;
+		// agrupar las pilas PARCIALES por tipo en una sola pasada
+		map<string, ref array<Magazine>> porTipo = new map<string, ref array<Magazine>>;
 		int i;
 		for (i = 0; i < items.Count(); i++)
 		{
-			Magazine other = Magazine.Cast(items.Get(i));
-			if (!other)
+			Magazine m = Magazine.Cast(items.Get(i));
+			if (!m || !IsManagedAmmo(m))
 				continue;
-			if (other.GetType() != tipo)
+			if (IsInHands(m))
 				continue;
-			if (IsInHands(other))
+			int maxA = m.GetAmmoMax();
+			int cnt = m.GetAmmoCount();
+			// Solo participan las pilas PARCIALES. Las LLENAS no se pueden fusionar y mutarlas
+			// solo genera manipulacion de inventario inutil (= mas ventana de desync).
+			if (maxA <= 0 || cnt <= 0 || cnt >= maxA)
 				continue;
-			int cnt = other.GetAmmoCount();
-			if (cnt <= 0 || cnt >= maxA)	// vacia o LLENA: no participa
-				continue;
-			pilas.Insert(other);
-			total = total + cnt;
+			array<Magazine> lista;
+			if (!porTipo.Find(m.GetType(), lista))
+			{
+				lista = new array<Magazine>;
+				porTipo.Set(m.GetType(), lista);
+			}
+			lista.Insert(m);
 		}
 
-		if (pilas.Count() < 2)
+		int t;
+		for (t = 0; t < porTipo.Count(); t++)
+			ConsolidarTipo(porTipo.GetKey(t), porTipo.GetElement(t), player);
+	}
+
+	// Consolida las pilas parciales de UN tipo en la menor cantidad posible (ej 50+25+15 -> 90).
+	static void ConsolidarTipo(string tipo, array<Magazine> pilas, PlayerBase player)
+	{
+		if (!pilas || pilas.Count() < 2)
+			return;
+		int maxA = pilas.Get(0).GetAmmoMax();
+		if (maxA <= 0)
 			return;
 
-		// Consolidar SOLO si de verdad REDUCE la cantidad de pilas. Si las parciales ya
-		// estan en el minimo posible (ej. 60+40 con max 80 = 2 pilas si o si), no se toca
-		// nada: evita mutar el inventario sin ganancia (y su desync asociado).
+		int total = 0;
+		int i;
+		for (i = 0; i < pilas.Count(); i++)
+			total = total + pilas.Get(i).GetAmmoCount();
+
+		// Consolidar SOLO si de verdad REDUCE la cantidad de pilas. Si las parciales ya estan
+		// en el minimo posible (ej 60+40 con max 80 = 2 pilas si o si), no se toca nada: evita
+		// mutar el inventario sin ganancia (y su desync asociado).
 		int minPiles = (total + maxA - 1) / maxA;
 		if (minPiles >= pilas.Count())
 			return;
-
 		int antes = pilas.Count();
 
-		// Contenedores padre afectados: hay que forzar su re-sincronizacion tras
-		// borrar/reescribir pilas. Sin esto, si el jugador tiene el contenedor ABIERTO
-		// (chaleco, mochila, o una TUMBA/barril que esta looteando), la vista del cliente
-		// queda stale y "las balas se desaparecen" hasta reloguear (el server siempre
-		// quedo correcto -> por eso reaparecen).
+		// Contenedores padre afectados: hay que forzar su re-sincronizacion tras borrar o
+		// reescribir pilas. Sin esto, si el jugador tiene el contenedor ABIERTO (chaleco,
+		// mochila, o una tumba/barril que esta looteando), la vista del cliente queda vieja y
+		// "las balas se desaparecen" hasta reloguear (el server siempre quedo correcto).
 		array<EntityAI> padres = new array<EntityAI>;
 		for (i = 0; i < pilas.Count(); i++)
 		{
@@ -153,12 +164,10 @@ class ExorVO_Ammo
 			if (poner > maxA)
 				poner = maxA;
 			pila.ServerSetAmmoCount(poner);
-			pila.SetSynchDirty();   // replicar el nuevo conteo al cliente
+			pila.SetSynchDirty();
 			total = total - poner;
 		}
 
-		// forzar que los contenedores padre (y el player) re-sincronicen su cargo
-		// (slots vaciados) hacia el cliente.
 		for (i = 0; i < padres.Count(); i++)
 		{
 			if (padres.Get(i))
@@ -169,10 +178,14 @@ class ExorVO_Ammo
 		Print(string.Format("%1 Auto-stack: %2 consolidado %3 -> %4 pilas", ExorStorageConstants.LOG, tipo, antes, minPiles));
 	}
 
-	// Diferido: el movimiento de inventario termina de forma asincronica
+	// Agenda UN pase por jugador. Las llamadas siguientes dentro de la ventana no agendan
+	// nada: se suben a la que ya esta pendiente.
 	static void AutoStackLater(Magazine mag, PlayerBase player)
 	{
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorVO_Ammo.AutoStack, 400, false, mag, player);
+		if (!player || player.ExorStackPendiente())
+			return;
+		player.ExorSetStackPendiente(true);
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorVO_Ammo.AutoStackAll, 400, false, player);
 	}
 }
 
@@ -191,10 +204,11 @@ modded class Ammunition_Base
 		super.OnInventoryEnter(player);
 		if (!GetGame().IsServer())
 			return;
+		// gate barato primero: bandera ya leida de la config (ver ExorHotFlags)
+		if (!ExorHotFlags.AutoStackMunicion())
+			return;
 		PlayerBase pb = PlayerBase.Cast(player);
 		if (pb)
-		{
 			ExorVO_Ammo.AutoStackLater(this, pb);
-		}
 	}
 }
