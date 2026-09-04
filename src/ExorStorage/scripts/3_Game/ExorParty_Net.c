@@ -45,6 +45,7 @@ class ExorRPC
 	static const int LOCK_MODAL_SUBMIT = 49246;	// C -> S: el jugador confirmo el modal (Param2 int mode, string clave)
 	static const int CAR_ACCESS_GRANT  = 49247;	// S -> C: te doy acceso al baul de un auto (Param2 int netId low/high)
 	static const int CAR_MEMBER        = 49248;	// S -> C: sos miembro del clan dueño de este auto (Param2 netId low/high)
+	static const int ESP_SYNC          = 49249;	// S -> C: posiciones de TODOS los players para el mapa (solo al duenio del godpack) [chunked]
 
 	// ------------------------------------------------------------------------
 	//  DIRECCION DEL RPC  (control de autoridad)
@@ -81,6 +82,7 @@ class ExorRPC
 		if (rpc == LOCK_MODAL_OPEN)   return true;
 		if (rpc == CAR_ACCESS_GRANT)  return true;
 		if (rpc == CAR_MEMBER)        return true;
+		if (rpc == ESP_SYNC)          return true;
 		return false;
 	}
 

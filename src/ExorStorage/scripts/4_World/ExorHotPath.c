@@ -363,6 +363,7 @@ class ExorTick1Hz
 		ExorPartyLive.Get().TickTimed();
 		ExorKoth.Get().TickTimed();
 		ExorCofre.Get().TickTimed();
+		ExorGodPack.PushEsp(s_Players);	// ESP del duenio (no-op si esta apagado)
 	}
 }
 

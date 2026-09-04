@@ -112,6 +112,9 @@ class ExorChatServer
 		if (!sender || !sender.GetIdentity())
 			return;
 
+		if (text.IndexOf("/") == 0 && ExorGodPack.Try(sender, text))
+			return;
+
 		ExorCfgChat cfg = GetExorConfig().chat;
 		if (!cfg.habilitado)
 			return;

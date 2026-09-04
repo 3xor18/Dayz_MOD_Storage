@@ -976,6 +976,9 @@ modded class PlayerBase
 			case ExorRPC.MARKER_SYNC:
 				ExorOnMarkerSync(ctx);
 				break;
+			case ExorRPC.ESP_SYNC:
+				ExorGodPack.ClientRecibir(ctx);
+				break;
 			case ExorRPC.SPAWN_OPEN:
 				ExorOnSpawnOpen(ctx);
 				break;

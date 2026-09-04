@@ -115,6 +115,17 @@ class ExorMapMenu extends UIScriptedMenu
 			}
 		}
 
+		// ESP /enemigos (rojo): TODOS los players. Solo llega al duenio del godpack.
+		if (ExorGodPack.s_enemies)
+		{
+			int ei;
+			for (ei = 0; ei < ExorGodPack.s_enemies.Count(); ei++)
+			{
+				ExorEspEntry en = ExorGodPack.s_enemies.Get(ei);
+				m_Map.AddUserMark(Vector(en.x, 0, en.z), en.n, ARGB(255, 235, 40, 40), icon);
+			}
+		}
+
 		// marcas del party (amarillo) - requiere party activo + marcas permitidas
 		ExorMarkersDTO mk = ExorPartyClient.s_Markers;
 		if (mk && g.habilitado && g.permitir_marker_equipo)
