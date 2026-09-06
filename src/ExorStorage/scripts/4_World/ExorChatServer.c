@@ -119,12 +119,20 @@ class ExorChatServer
 		if (!cfg.habilitado)
 			return;
 
-		// Sanitizar el texto (largo maximo; vacio se descarta)
+		// Sanitizar el texto (largo maximo; vacio se descarta).
+		// El tope sale de la CONFIG, no de un numero suelto: es exactamente lo que entra en
+		// las lineas que el mensaje tiene permitido ocupar. Antes habia un 120 fijo que no
+		// se llevaba con max_lineas_por_mensaje=3 y max_caracteres_por_linea=55 (=165), asi
+		// que el mensaje se cortaba a mitad de la segunda linea y subir el limite de lineas
+		// en el JSON no cambiaba nada.
 		string msgTxt = text;
 		if (msgTxt == "")
 			return;
-		if (msgTxt.Length() > 120)
-			msgTxt = msgTxt.Substring(0, 120);
+		int topeChat = cfg.max_caracteres_por_linea * cfg.max_lineas_por_mensaje;
+		if (topeChat < 40)
+			topeChat = 40;	// piso de cordura si alguien deja la config en 0
+		if (msgTxt.Length() > topeChat)
+			msgTxt = msgTxt.Substring(0, topeChat);
 
 		// ----------------- COMANDOS DE ADMIN -----------------
 		// Un mensaje que empieza con "/" no es chat: es un comando. Se resuelve ANTES del
