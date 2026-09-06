@@ -124,7 +124,9 @@ modded class ActionRaiseFlag
 	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
 	{
 		TerritoryFlag totem = TerritoryFlag.Cast(target.GetObject());
-		if (totem && totem.ExorGetGroupId() != "")
+		// OJO: ExorGetGroupId() es SERVER-ONLY (string, no viaja por netsync) y esta condicion
+		// se evalua en el CLIENTE -> con el id la supresion no hacia nada. Va por el bool sincronizado.
+		if (totem && totem.ExorEsMastilDeParty())
 			return false;
 		return super.ActionCondition(player, target, item);
 	}
@@ -135,7 +137,9 @@ modded class ActionLowerFlag
 	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
 	{
 		TerritoryFlag totem = TerritoryFlag.Cast(target.GetObject());
-		if (totem && totem.ExorGetGroupId() != "")
+		// OJO: ExorGetGroupId() es SERVER-ONLY (string, no viaja por netsync) y esta condicion
+		// se evalua en el CLIENTE -> con el id la supresion no hacia nada. Va por el bool sincronizado.
+		if (totem && totem.ExorEsMastilDeParty())
 			return false;
 		return super.ActionCondition(player, target, item);
 	}

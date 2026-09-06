@@ -607,6 +607,28 @@ class ExorTerritoryClient
 	}
 
 	// ------------------------------------------------------------------------
+	//  RESET AL ENTRAR A UNA MISION  (bug: el mastil no daba las acciones tras RECONECTAR)
+	// ------------------------------------------------------------------------
+	// Estas estaticas viven en el PROCESO del juego, no en la sesion: sobreviven a un
+	// reconectar (y hasta a cambiar de server) sin que nadie las limpie. El cliente que se
+	// reconecta arranca con:
+	//   - s_Cache viejo (zonas de la sesion anterior),
+	//   - s_RespuestaLlegada = true y s_PosUltimoPedido donde estaba antes,
+	//   - s_UltimoPedidoMs con un valor GRANDE mientras GetGame().GetTime() vuelve a empezar
+	//     de cero al recargar la mision.
+	// Esa ultima es la que mata: (ahora - s_UltimoPedidoMs) da NEGATIVO, o sea "todavia
+	// estas en cooldown", para siempre. El pedido por demanda no se manda nunca mas y el
+	// mastil se queda sin "Administrar party"/"Invitar" hasta cerrar el juego entero.
+	// Reconectar no alcanzaba, que es justo lo que hace un jugador al que lo patea la red.
+	static void ResetSesion()
+	{
+		s_Cache = null;
+		s_UltimoPedidoMs = 0;
+		s_PosUltimoPedido = "0 0 0";
+		s_RespuestaLlegada = false;
+	}
+
+	// ------------------------------------------------------------------------
 	//  SYNC POR DEMANDA (nunca periodico)
 	// ------------------------------------------------------------------------
 	// El cache se manda solo en eventos puntuales (conectarse, cambios de grupo) y ademas
@@ -640,6 +662,10 @@ class ExorTerritoryClient
 		if (!p || !GetGame() || !GetGame().IsClient())
 			return;
 		int ahora = GetGame().GetTime();
+		// El reloj volvio para atras (mision recargada). Cinturon ademas de ResetSesion():
+		// sin esto la resta da negativo y el cooldown queda trabado para siempre.
+		if (ahora < s_UltimoPedidoMs)
+			ResetSesion();
 		if (s_UltimoPedidoMs != 0)
 		{
 			if ((ahora - s_UltimoPedidoMs) < PEDIDO_COOLDOWN_MS)

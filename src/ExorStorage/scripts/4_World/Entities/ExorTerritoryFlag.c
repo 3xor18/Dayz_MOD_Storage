@@ -23,8 +23,18 @@ modded class TerritoryFlag
 	protected int m_ExorKothSmoke;		// NETSYNC: humo actual -1 ninguno / 0 blanco / 1..3 color
 	protected Particle m_ExorSmokeFx;	// cliente: particula de humo activa (SIN ref: Particle es Object, gestionado por el motor)
 
+	// "este mastil es de un party" en una variable SINCRONIZADA. m_ExorGroupId es un string
+	// y los strings no viajan por netsync: en el CLIENTE siempre valia "", asi que el
+	// override de ActionRaiseFlag/ActionLowerFlag que suprime las acciones VANILLA nunca
+	// suprimia nada (la condicion de esas acciones se evalua en el cliente). Resultado: en
+	// el mastil convivian la accion vanilla de 40 s -con sus propias reglas de slot, que en
+	// ventana de bandera blanca esta trabado- y la nuestra, y el jugador terminaba usando la
+	// vanilla y le "no dejaba bajar la bandera".
+	protected bool m_ExorEsMastilDeParty;
+
 	void TerritoryFlag()
 	{
+		RegisterNetSyncVariableBool("m_ExorEsMastilDeParty");
 		RegisterNetSyncVariableBool("m_ExorFlagRaised");
 		RegisterNetSyncVariableBool("m_ExorInviteOpen");
 		RegisterNetSyncVariableInt("m_ExorKothSmoke", -1, 3);
@@ -32,8 +42,21 @@ modded class TerritoryFlag
 	}
 
 	// ------------------------- estado de grupo/bandera -------------------------
-	void ExorSetGroupId(string id) { m_ExorGroupId = id; }
+	void ExorSetGroupId(string id)
+	{
+		m_ExorGroupId = id;
+		// espejo sincronizable del "tiene grupo": lo lee el CLIENTE (ver m_ExorEsMastilDeParty)
+		bool esParty = (id != "");
+		if (esParty != m_ExorEsMastilDeParty)
+		{
+			m_ExorEsMastilDeParty = esParty;
+			if (GetGame() && GetGame().IsServer())
+				SetSynchDirty();
+		}
+	}
 	string ExorGetGroupId() { return m_ExorGroupId; }
+	// Sirve en cliente Y server (a diferencia de ExorGetGroupId, que en cliente es siempre "").
+	bool ExorEsMastilDeParty() { return m_ExorEsMastilDeParty; }
 	void ExorMarkDisbanding() { m_ExorDisbanding = true; }
 	bool ExorIsFlagRaised() { return m_ExorFlagRaised; }
 
@@ -355,7 +378,7 @@ modded class TerritoryFlag
 			string gidPos = ExorGroupManager.Get().GroupIdEnPos(GetPosition());
 			if (gidPos != "")
 			{
-				m_ExorGroupId = gidPos;
+				ExorSetGroupId(gidPos);	// por el setter: mantiene sincronizado m_ExorEsMastilDeParty
 				Print(string.Format("%1 mastil re-ligado por posicion al grupo '%2' en %3", ExorStorageConstants.LOG, gidPos, GetPosition().ToString()));
 			}
 		}
@@ -440,7 +463,7 @@ modded class TerritoryFlag
 				GetGame().ObjectDelete(liveMast);
 
 				ExorAutoBuild(placer);
-				m_ExorGroupId = existing.id;
+				ExorSetGroupId(existing.id);	// por el setter: mantiene sincronizado m_ExorEsMastilDeParty
 				vector rpA = GetPosition();
 				existing.mast_x = rpA[0]; existing.mast_y = rpA[1]; existing.mast_z = rpA[2];
 				ExorTerritoryProbe.Bump();	// el territorio se MUDO -> caduca el indice de zonas
@@ -484,7 +507,7 @@ modded class TerritoryFlag
 			// TerritoryFlag no cargo, pero el grupo -groups/<id>.json- sobrevivio). Adoptamos esta
 			// bandera nueva HEREDANDO su bandera/ventana (misma base). SIN cooldown (es una reparacion).
 			ExorAutoBuild(placer);
-			m_ExorGroupId = existing.id;
+			ExorSetGroupId(existing.id);	// por el setter: mantiene sincronizado m_ExorEsMastilDeParty
 			vector rpB = GetPosition();
 			existing.mast_x = rpB[0]; existing.mast_y = rpB[1]; existing.mast_z = rpB[2];
 			ExorTerritoryProbe.Bump();	// territorio reclamado -> caduca el indice de zonas
@@ -523,7 +546,7 @@ modded class TerritoryFlag
 		ExorGroup g = ExorGroupManager.Get().CreateGroup(placer);
 		if (!g)
 			return;
-		m_ExorGroupId = g.id;
+		ExorSetGroupId(g.id);	// por el setter: mantiene sincronizado m_ExorEsMastilDeParty
 		int nowmN = ExorTimeUtil.NowMinutes();
 		ExorOnClaimed(nowmN);
 		vector p = GetPosition();
@@ -739,7 +762,7 @@ modded class TerritoryFlag
 	{
 		if (!GetGame().IsServer())
 			return;
-		m_ExorGroupId = groupId;
+		ExorSetGroupId(groupId);	// por el setter: mantiene sincronizado m_ExorEsMastilDeParty
 		if (builder)
 			ExorAutoBuild(builder);
 		m_ExorFlagRaised = true;

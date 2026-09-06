@@ -131,6 +131,15 @@ modded class MissionGameplay
 	bool m_ExorYPrev;
 	bool m_ExorDotPrev;
 
+	// Entrar a una mision = sesion NUEVA. Las estaticas del cliente viven en el proceso del
+	// juego, asi que sin esto un reconectar arrastra el cache y el cooldown de la sesion
+	// anterior y el mastil se queda sin las acciones de party. Ver ExorTerritoryClient.ResetSesion.
+	override void OnMissionStart()
+	{
+		super.OnMissionStart();
+		ExorTerritoryClient.ResetSesion();
+	}
+
 	override UIScriptedMenu CreateScriptedMenu(int id)
 	{
 		if (id == ExorMenuIDs.SPAWN)
