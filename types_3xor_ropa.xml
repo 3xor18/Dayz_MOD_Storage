@@ -1,653 +1,913 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <types>
   <type name="Exor_GorkaJacket_Rosa">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_GorkaPants_Rosa">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_BallisticHelmet_Rosa">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_Mich2001Helmet_Rosa">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_GorkaHelmet_Rosa">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_BalaclavaMask_Rosa">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_CombatBoots_Rosa">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_TacticalGloves_Rosa">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_PressVest_Rosa">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_PlateCarrierVest_Rosa">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_PlateCarrierHolster_Rosa">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_PlateCarrierPouches_Rosa">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_TortillaBag_Rosa">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_GorkaJacket_Arido">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_GorkaPants_Arido">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_BallisticHelmet_Arido">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_Mich2001Helmet_Arido">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_GorkaHelmet_Arido">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_BalaclavaMask_Arido">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_CombatBoots_Arido">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_TacticalGloves_Arido">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_PressVest_Arido">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_PlateCarrierVest_Arido">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_PlateCarrierHolster_Arido">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_PlateCarrierPouches_Arido">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_TortillaBag_Arido">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_GorkaJacket_Urbano">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_GorkaPants_Urbano">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_BallisticHelmet_Urbano">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_Mich2001Helmet_Urbano">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_GorkaHelmet_Urbano">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_BalaclavaMask_Urbano">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_CombatBoots_Urbano">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_TacticalGloves_Urbano">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_PressVest_Urbano">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_PlateCarrierVest_Urbano">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_PlateCarrierHolster_Urbano">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_PlateCarrierPouches_Urbano">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_TortillaBag_Urbano">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_GorkaJacket_Nieve">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_GorkaPants_Nieve">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_BallisticHelmet_Nieve">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_Mich2001Helmet_Nieve">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_GorkaHelmet_Nieve">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_BalaclavaMask_Nieve">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_CombatBoots_Nieve">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_TacticalGloves_Nieve">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_PressVest_Nieve">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_PlateCarrierVest_Nieve">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_PlateCarrierHolster_Nieve">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_PlateCarrierPouches_Nieve">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_TortillaBag_Nieve">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_GorkaJacket_Negro">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_GorkaPants_Negro">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_BallisticHelmet_Negro">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_Mich2001Helmet_Negro">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_GorkaHelmet_Negro">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_BalaclavaMask_Negro">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_CombatBoots_Negro">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_TacticalGloves_Negro">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_PressVest_Negro">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_PlateCarrierVest_Negro">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_PlateCarrierHolster_Negro">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_PlateCarrierPouches_Negro">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
   <type name="Exor_TortillaBag_Negro">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
 </types>

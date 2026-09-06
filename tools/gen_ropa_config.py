@@ -156,17 +156,28 @@ def escribir_config():
 
 
 def escribir_types():
-    # nominal=0 + min=0: el CE no los mete en el loot de mundo (salen por cofre/KOTH/admin),
-    # pero la entrada hace falta igual para que respeten el lifetime.
+    # Loot de mundo, 2 de cada pieza por color.
+    #
+    # 'category', 'usage' y 'value' NO son decorativos: sin ellos el CE no sabe en que
+    # edificio poner el item y NO lo spawnea nunca, por mas que nominal sea mayor que cero.
+    # usage Military + Tier2/Tier3 los deja en zona militar, que en Alteria es ~27% del mapa.
+    #
+    # lifetime 14400 (4 h) es el de la ropa vanilla, no los 45 dias de los Exor_ colocables:
+    # esto se lootea y se reemplaza, no se planta. El lifetime solo corre en el suelo, asi
+    # que lo guardado en un contenedor no se toca.
     ent = """  <type name="%s">
-    <nominal>0</nominal>
-    <lifetime>3888000</lifetime>
-    <restock>0</restock>
-    <min>0</min>
+    <nominal>2</nominal>
+    <lifetime>14400</lifetime>
+    <restock>600</restock>
+    <min>1</min>
     <quantmin>-1</quantmin>
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <category name="clothes" />
+    <usage name="Military" />
+    <value name="Tier2" />
+    <value name="Tier3" />
   </type>
 """
     txt = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<types>\n'
