@@ -84,7 +84,12 @@ CABECERA = '''\t// =============================================================
 
 
 def tex_path(color, nombre):
-    return '"ExorStorage\\\\data\\\\ropa\\\\exor_%s_%s_co.paa"' % (color.lower(), nombre)
+    # OJO con el escape: el config.cpp lleva UNA barra invertida por separador, igual que
+    # el barril ("ExorStorage\data\exor_barrel_500_co.paa"). Con DOS barras el motor no
+    # encuentra el archivo y NO avisa por ningun lado: renderiza la prenda con el material
+    # por defecto y se ve blanca brillante, que es facil de confundir con "el recoloreo
+    # salio mal". Ya paso una vez.
+    return '"ExorStorage\\data\\ropa\\exor_%s_%s_co.paa"' % (color.lower(), nombre)
 
 
 def generar_clases():

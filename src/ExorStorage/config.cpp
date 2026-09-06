@@ -130,9 +130,9 @@ class CfgVehicles
 		displayName = "Camisa Gorka Rosa";
 		descriptionShort = "Camisa Gorka del set Rosa de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_rosa_jacket_ground_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_jacket_worn_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_jacket_worn_co.paa"
+			"ExorStorage\data\ropa\exor_rosa_jacket_ground_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_jacket_worn_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_jacket_worn_co.paa"
 		};
 	};
 
@@ -142,9 +142,9 @@ class CfgVehicles
 		displayName = "Pantalon Gorka Rosa";
 		descriptionShort = "Pantalon Gorka del set Rosa de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_rosa_pants_ground_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_pants_worn_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_pants_worn_co.paa"
+			"ExorStorage\data\ropa\exor_rosa_pants_ground_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_pants_worn_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_pants_worn_co.paa"
 		};
 	};
 
@@ -154,9 +154,9 @@ class CfgVehicles
 		displayName = "Casco balistico Rosa";
 		descriptionShort = "Casco balistico del set Rosa de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_rosa_helmet_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_helmet_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_helmet_co.paa"
+			"ExorStorage\data\ropa\exor_rosa_helmet_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_helmet_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_helmet_co.paa"
 		};
 	};
 
@@ -166,9 +166,9 @@ class CfgVehicles
 		displayName = "Casco MICH 2001 Rosa";
 		descriptionShort = "Casco MICH 2001 del set Rosa de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_rosa_mich_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_mich_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_mich_co.paa"
+			"ExorStorage\data\ropa\exor_rosa_mich_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_mich_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_mich_co.paa"
 		};
 	};
 
@@ -178,9 +178,9 @@ class CfgVehicles
 		displayName = "Casco Gorka Rosa";
 		descriptionShort = "Casco Gorka del set Rosa de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_rosa_gorkahelmet_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_gorkahelmet_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_gorkahelmet_co.paa"
+			"ExorStorage\data\ropa\exor_rosa_gorkahelmet_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_gorkahelmet_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_gorkahelmet_co.paa"
 		};
 	};
 
@@ -190,9 +190,9 @@ class CfgVehicles
 		displayName = "Balaclava Rosa";
 		descriptionShort = "Balaclava del set Rosa de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_rosa_balaclava_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_balaclava_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_balaclava_co.paa"
+			"ExorStorage\data\ropa\exor_rosa_balaclava_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_balaclava_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_balaclava_co.paa"
 		};
 	};
 
@@ -202,9 +202,9 @@ class CfgVehicles
 		displayName = "Botas de combate Rosa";
 		descriptionShort = "Botas de combate del set Rosa de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_rosa_boots_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_boots_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_boots_co.paa"
+			"ExorStorage\data\ropa\exor_rosa_boots_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_boots_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_boots_co.paa"
 		};
 	};
 
@@ -214,9 +214,9 @@ class CfgVehicles
 		displayName = "Guantes tacticos Rosa";
 		descriptionShort = "Guantes tacticos del set Rosa de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_rosa_gloves_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_gloves_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_gloves_co.paa"
+			"ExorStorage\data\ropa\exor_rosa_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_gloves_co.paa"
 		};
 	};
 
@@ -226,9 +226,9 @@ class CfgVehicles
 		displayName = "Chaleco de prensa Rosa";
 		descriptionShort = "Chaleco de prensa del set Rosa de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_rosa_press_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_press_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_press_co.paa"
+			"ExorStorage\data\ropa\exor_rosa_press_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_press_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_press_co.paa"
 		};
 	};
 
@@ -239,9 +239,9 @@ class CfgVehicles
 		descriptionShort = "Chaleco balistico del set Rosa de 3xor.";
 		hiddenSelections[] = {"camoGround", "camoMale", "camoFemale"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_rosa_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_plate_co.paa"
+			"ExorStorage\data\ropa\exor_rosa_plate_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_plate_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_plate_co.paa"
 		};
 	};
 
@@ -252,9 +252,9 @@ class CfgVehicles
 		descriptionShort = "Pistolera de chaleco del set Rosa de 3xor.";
 		hiddenSelections[] = {"camoGround"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_rosa_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_plate_co.paa"
+			"ExorStorage\data\ropa\exor_rosa_plate_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_plate_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_plate_co.paa"
 		};
 	};
 
@@ -265,9 +265,9 @@ class CfgVehicles
 		descriptionShort = "Bolsillos de chaleco del set Rosa de 3xor.";
 		hiddenSelections[] = {"camoGround"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_rosa_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_plate_co.paa"
+			"ExorStorage\data\ropa\exor_rosa_plate_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_plate_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_plate_co.paa"
 		};
 	};
 
@@ -278,9 +278,9 @@ class CfgVehicles
 		descriptionShort = "Mochila tactica del set Rosa de 3xor.";
 		hiddenSelections[] = {"camoGround", "camoMale", "camoFemale"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_rosa_tortilla_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_tortilla_co.paa",
-			"ExorStorage\\data\\ropa\\exor_rosa_tortilla_co.paa"
+			"ExorStorage\data\ropa\exor_rosa_tortilla_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_tortilla_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_tortilla_co.paa"
 		};
 		itemsCargoSize[] = {10, 12};
 		attachments[] += {"Shoulder", "Melee"};
@@ -294,9 +294,9 @@ class CfgVehicles
 		displayName = "Camisa Gorka Arido";
 		descriptionShort = "Camisa Gorka del set Arido de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_arido_jacket_ground_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_jacket_worn_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_jacket_worn_co.paa"
+			"ExorStorage\data\ropa\exor_arido_jacket_ground_co.paa",
+			"ExorStorage\data\ropa\exor_arido_jacket_worn_co.paa",
+			"ExorStorage\data\ropa\exor_arido_jacket_worn_co.paa"
 		};
 	};
 
@@ -306,9 +306,9 @@ class CfgVehicles
 		displayName = "Pantalon Gorka Arido";
 		descriptionShort = "Pantalon Gorka del set Arido de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_arido_pants_ground_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_pants_worn_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_pants_worn_co.paa"
+			"ExorStorage\data\ropa\exor_arido_pants_ground_co.paa",
+			"ExorStorage\data\ropa\exor_arido_pants_worn_co.paa",
+			"ExorStorage\data\ropa\exor_arido_pants_worn_co.paa"
 		};
 	};
 
@@ -318,9 +318,9 @@ class CfgVehicles
 		displayName = "Casco balistico Arido";
 		descriptionShort = "Casco balistico del set Arido de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_arido_helmet_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_helmet_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_helmet_co.paa"
+			"ExorStorage\data\ropa\exor_arido_helmet_co.paa",
+			"ExorStorage\data\ropa\exor_arido_helmet_co.paa",
+			"ExorStorage\data\ropa\exor_arido_helmet_co.paa"
 		};
 	};
 
@@ -330,9 +330,9 @@ class CfgVehicles
 		displayName = "Casco MICH 2001 Arido";
 		descriptionShort = "Casco MICH 2001 del set Arido de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_arido_mich_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_mich_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_mich_co.paa"
+			"ExorStorage\data\ropa\exor_arido_mich_co.paa",
+			"ExorStorage\data\ropa\exor_arido_mich_co.paa",
+			"ExorStorage\data\ropa\exor_arido_mich_co.paa"
 		};
 	};
 
@@ -342,9 +342,9 @@ class CfgVehicles
 		displayName = "Casco Gorka Arido";
 		descriptionShort = "Casco Gorka del set Arido de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_arido_gorkahelmet_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_gorkahelmet_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_gorkahelmet_co.paa"
+			"ExorStorage\data\ropa\exor_arido_gorkahelmet_co.paa",
+			"ExorStorage\data\ropa\exor_arido_gorkahelmet_co.paa",
+			"ExorStorage\data\ropa\exor_arido_gorkahelmet_co.paa"
 		};
 	};
 
@@ -354,9 +354,9 @@ class CfgVehicles
 		displayName = "Balaclava Arido";
 		descriptionShort = "Balaclava del set Arido de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_arido_balaclava_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_balaclava_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_balaclava_co.paa"
+			"ExorStorage\data\ropa\exor_arido_balaclava_co.paa",
+			"ExorStorage\data\ropa\exor_arido_balaclava_co.paa",
+			"ExorStorage\data\ropa\exor_arido_balaclava_co.paa"
 		};
 	};
 
@@ -366,9 +366,9 @@ class CfgVehicles
 		displayName = "Botas de combate Arido";
 		descriptionShort = "Botas de combate del set Arido de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_arido_boots_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_boots_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_boots_co.paa"
+			"ExorStorage\data\ropa\exor_arido_boots_co.paa",
+			"ExorStorage\data\ropa\exor_arido_boots_co.paa",
+			"ExorStorage\data\ropa\exor_arido_boots_co.paa"
 		};
 	};
 
@@ -378,9 +378,9 @@ class CfgVehicles
 		displayName = "Guantes tacticos Arido";
 		descriptionShort = "Guantes tacticos del set Arido de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_arido_gloves_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_gloves_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_gloves_co.paa"
+			"ExorStorage\data\ropa\exor_arido_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_arido_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_arido_gloves_co.paa"
 		};
 	};
 
@@ -390,9 +390,9 @@ class CfgVehicles
 		displayName = "Chaleco de prensa Arido";
 		descriptionShort = "Chaleco de prensa del set Arido de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_arido_press_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_press_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_press_co.paa"
+			"ExorStorage\data\ropa\exor_arido_press_co.paa",
+			"ExorStorage\data\ropa\exor_arido_press_co.paa",
+			"ExorStorage\data\ropa\exor_arido_press_co.paa"
 		};
 	};
 
@@ -403,9 +403,9 @@ class CfgVehicles
 		descriptionShort = "Chaleco balistico del set Arido de 3xor.";
 		hiddenSelections[] = {"camoGround", "camoMale", "camoFemale"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_arido_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_plate_co.paa"
+			"ExorStorage\data\ropa\exor_arido_plate_co.paa",
+			"ExorStorage\data\ropa\exor_arido_plate_co.paa",
+			"ExorStorage\data\ropa\exor_arido_plate_co.paa"
 		};
 	};
 
@@ -416,9 +416,9 @@ class CfgVehicles
 		descriptionShort = "Pistolera de chaleco del set Arido de 3xor.";
 		hiddenSelections[] = {"camoGround"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_arido_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_plate_co.paa"
+			"ExorStorage\data\ropa\exor_arido_plate_co.paa",
+			"ExorStorage\data\ropa\exor_arido_plate_co.paa",
+			"ExorStorage\data\ropa\exor_arido_plate_co.paa"
 		};
 	};
 
@@ -429,9 +429,9 @@ class CfgVehicles
 		descriptionShort = "Bolsillos de chaleco del set Arido de 3xor.";
 		hiddenSelections[] = {"camoGround"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_arido_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_plate_co.paa"
+			"ExorStorage\data\ropa\exor_arido_plate_co.paa",
+			"ExorStorage\data\ropa\exor_arido_plate_co.paa",
+			"ExorStorage\data\ropa\exor_arido_plate_co.paa"
 		};
 	};
 
@@ -442,9 +442,9 @@ class CfgVehicles
 		descriptionShort = "Mochila tactica del set Arido de 3xor.";
 		hiddenSelections[] = {"camoGround", "camoMale", "camoFemale"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_arido_tortilla_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_tortilla_co.paa",
-			"ExorStorage\\data\\ropa\\exor_arido_tortilla_co.paa"
+			"ExorStorage\data\ropa\exor_arido_tortilla_co.paa",
+			"ExorStorage\data\ropa\exor_arido_tortilla_co.paa",
+			"ExorStorage\data\ropa\exor_arido_tortilla_co.paa"
 		};
 		itemsCargoSize[] = {10, 12};
 		attachments[] += {"Shoulder", "Melee"};
@@ -458,9 +458,9 @@ class CfgVehicles
 		displayName = "Camisa Gorka Urbano";
 		descriptionShort = "Camisa Gorka del set Urbano de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_urbano_jacket_ground_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_jacket_worn_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_jacket_worn_co.paa"
+			"ExorStorage\data\ropa\exor_urbano_jacket_ground_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_jacket_worn_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_jacket_worn_co.paa"
 		};
 	};
 
@@ -470,9 +470,9 @@ class CfgVehicles
 		displayName = "Pantalon Gorka Urbano";
 		descriptionShort = "Pantalon Gorka del set Urbano de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_urbano_pants_ground_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_pants_worn_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_pants_worn_co.paa"
+			"ExorStorage\data\ropa\exor_urbano_pants_ground_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_pants_worn_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_pants_worn_co.paa"
 		};
 	};
 
@@ -482,9 +482,9 @@ class CfgVehicles
 		displayName = "Casco balistico Urbano";
 		descriptionShort = "Casco balistico del set Urbano de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_urbano_helmet_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_helmet_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_helmet_co.paa"
+			"ExorStorage\data\ropa\exor_urbano_helmet_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_helmet_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_helmet_co.paa"
 		};
 	};
 
@@ -494,9 +494,9 @@ class CfgVehicles
 		displayName = "Casco MICH 2001 Urbano";
 		descriptionShort = "Casco MICH 2001 del set Urbano de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_urbano_mich_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_mich_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_mich_co.paa"
+			"ExorStorage\data\ropa\exor_urbano_mich_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_mich_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_mich_co.paa"
 		};
 	};
 
@@ -506,9 +506,9 @@ class CfgVehicles
 		displayName = "Casco Gorka Urbano";
 		descriptionShort = "Casco Gorka del set Urbano de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_urbano_gorkahelmet_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_gorkahelmet_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_gorkahelmet_co.paa"
+			"ExorStorage\data\ropa\exor_urbano_gorkahelmet_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_gorkahelmet_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_gorkahelmet_co.paa"
 		};
 	};
 
@@ -518,9 +518,9 @@ class CfgVehicles
 		displayName = "Balaclava Urbano";
 		descriptionShort = "Balaclava del set Urbano de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_urbano_balaclava_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_balaclava_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_balaclava_co.paa"
+			"ExorStorage\data\ropa\exor_urbano_balaclava_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_balaclava_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_balaclava_co.paa"
 		};
 	};
 
@@ -530,9 +530,9 @@ class CfgVehicles
 		displayName = "Botas de combate Urbano";
 		descriptionShort = "Botas de combate del set Urbano de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_urbano_boots_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_boots_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_boots_co.paa"
+			"ExorStorage\data\ropa\exor_urbano_boots_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_boots_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_boots_co.paa"
 		};
 	};
 
@@ -542,9 +542,9 @@ class CfgVehicles
 		displayName = "Guantes tacticos Urbano";
 		descriptionShort = "Guantes tacticos del set Urbano de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_urbano_gloves_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_gloves_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_gloves_co.paa"
+			"ExorStorage\data\ropa\exor_urbano_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_gloves_co.paa"
 		};
 	};
 
@@ -554,9 +554,9 @@ class CfgVehicles
 		displayName = "Chaleco de prensa Urbano";
 		descriptionShort = "Chaleco de prensa del set Urbano de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_urbano_press_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_press_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_press_co.paa"
+			"ExorStorage\data\ropa\exor_urbano_press_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_press_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_press_co.paa"
 		};
 	};
 
@@ -567,9 +567,9 @@ class CfgVehicles
 		descriptionShort = "Chaleco balistico del set Urbano de 3xor.";
 		hiddenSelections[] = {"camoGround", "camoMale", "camoFemale"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_urbano_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_plate_co.paa"
+			"ExorStorage\data\ropa\exor_urbano_plate_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_plate_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_plate_co.paa"
 		};
 	};
 
@@ -580,9 +580,9 @@ class CfgVehicles
 		descriptionShort = "Pistolera de chaleco del set Urbano de 3xor.";
 		hiddenSelections[] = {"camoGround"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_urbano_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_plate_co.paa"
+			"ExorStorage\data\ropa\exor_urbano_plate_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_plate_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_plate_co.paa"
 		};
 	};
 
@@ -593,9 +593,9 @@ class CfgVehicles
 		descriptionShort = "Bolsillos de chaleco del set Urbano de 3xor.";
 		hiddenSelections[] = {"camoGround"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_urbano_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_plate_co.paa"
+			"ExorStorage\data\ropa\exor_urbano_plate_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_plate_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_plate_co.paa"
 		};
 	};
 
@@ -606,9 +606,9 @@ class CfgVehicles
 		descriptionShort = "Mochila tactica del set Urbano de 3xor.";
 		hiddenSelections[] = {"camoGround", "camoMale", "camoFemale"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_urbano_tortilla_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_tortilla_co.paa",
-			"ExorStorage\\data\\ropa\\exor_urbano_tortilla_co.paa"
+			"ExorStorage\data\ropa\exor_urbano_tortilla_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_tortilla_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_tortilla_co.paa"
 		};
 		itemsCargoSize[] = {10, 12};
 		attachments[] += {"Shoulder", "Melee"};
@@ -622,9 +622,9 @@ class CfgVehicles
 		displayName = "Camisa Gorka Nieve";
 		descriptionShort = "Camisa Gorka del set Nieve de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_nieve_jacket_ground_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_jacket_worn_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_jacket_worn_co.paa"
+			"ExorStorage\data\ropa\exor_nieve_jacket_ground_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_jacket_worn_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_jacket_worn_co.paa"
 		};
 	};
 
@@ -634,9 +634,9 @@ class CfgVehicles
 		displayName = "Pantalon Gorka Nieve";
 		descriptionShort = "Pantalon Gorka del set Nieve de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_nieve_pants_ground_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_pants_worn_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_pants_worn_co.paa"
+			"ExorStorage\data\ropa\exor_nieve_pants_ground_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_pants_worn_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_pants_worn_co.paa"
 		};
 	};
 
@@ -646,9 +646,9 @@ class CfgVehicles
 		displayName = "Casco balistico Nieve";
 		descriptionShort = "Casco balistico del set Nieve de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_nieve_helmet_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_helmet_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_helmet_co.paa"
+			"ExorStorage\data\ropa\exor_nieve_helmet_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_helmet_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_helmet_co.paa"
 		};
 	};
 
@@ -658,9 +658,9 @@ class CfgVehicles
 		displayName = "Casco MICH 2001 Nieve";
 		descriptionShort = "Casco MICH 2001 del set Nieve de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_nieve_mich_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_mich_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_mich_co.paa"
+			"ExorStorage\data\ropa\exor_nieve_mich_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_mich_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_mich_co.paa"
 		};
 	};
 
@@ -670,9 +670,9 @@ class CfgVehicles
 		displayName = "Casco Gorka Nieve";
 		descriptionShort = "Casco Gorka del set Nieve de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_nieve_gorkahelmet_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_gorkahelmet_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_gorkahelmet_co.paa"
+			"ExorStorage\data\ropa\exor_nieve_gorkahelmet_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_gorkahelmet_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_gorkahelmet_co.paa"
 		};
 	};
 
@@ -682,9 +682,9 @@ class CfgVehicles
 		displayName = "Balaclava Nieve";
 		descriptionShort = "Balaclava del set Nieve de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_nieve_balaclava_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_balaclava_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_balaclava_co.paa"
+			"ExorStorage\data\ropa\exor_nieve_balaclava_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_balaclava_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_balaclava_co.paa"
 		};
 	};
 
@@ -694,9 +694,9 @@ class CfgVehicles
 		displayName = "Botas de combate Nieve";
 		descriptionShort = "Botas de combate del set Nieve de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_nieve_boots_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_boots_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_boots_co.paa"
+			"ExorStorage\data\ropa\exor_nieve_boots_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_boots_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_boots_co.paa"
 		};
 	};
 
@@ -706,9 +706,9 @@ class CfgVehicles
 		displayName = "Guantes tacticos Nieve";
 		descriptionShort = "Guantes tacticos del set Nieve de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_nieve_gloves_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_gloves_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_gloves_co.paa"
+			"ExorStorage\data\ropa\exor_nieve_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_gloves_co.paa"
 		};
 	};
 
@@ -718,9 +718,9 @@ class CfgVehicles
 		displayName = "Chaleco de prensa Nieve";
 		descriptionShort = "Chaleco de prensa del set Nieve de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_nieve_press_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_press_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_press_co.paa"
+			"ExorStorage\data\ropa\exor_nieve_press_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_press_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_press_co.paa"
 		};
 	};
 
@@ -731,9 +731,9 @@ class CfgVehicles
 		descriptionShort = "Chaleco balistico del set Nieve de 3xor.";
 		hiddenSelections[] = {"camoGround", "camoMale", "camoFemale"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_nieve_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_plate_co.paa"
+			"ExorStorage\data\ropa\exor_nieve_plate_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_plate_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_plate_co.paa"
 		};
 	};
 
@@ -744,9 +744,9 @@ class CfgVehicles
 		descriptionShort = "Pistolera de chaleco del set Nieve de 3xor.";
 		hiddenSelections[] = {"camoGround"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_nieve_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_plate_co.paa"
+			"ExorStorage\data\ropa\exor_nieve_plate_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_plate_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_plate_co.paa"
 		};
 	};
 
@@ -757,9 +757,9 @@ class CfgVehicles
 		descriptionShort = "Bolsillos de chaleco del set Nieve de 3xor.";
 		hiddenSelections[] = {"camoGround"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_nieve_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_plate_co.paa"
+			"ExorStorage\data\ropa\exor_nieve_plate_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_plate_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_plate_co.paa"
 		};
 	};
 
@@ -770,9 +770,9 @@ class CfgVehicles
 		descriptionShort = "Mochila tactica del set Nieve de 3xor.";
 		hiddenSelections[] = {"camoGround", "camoMale", "camoFemale"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_nieve_tortilla_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_tortilla_co.paa",
-			"ExorStorage\\data\\ropa\\exor_nieve_tortilla_co.paa"
+			"ExorStorage\data\ropa\exor_nieve_tortilla_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_tortilla_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_tortilla_co.paa"
 		};
 		itemsCargoSize[] = {10, 12};
 		attachments[] += {"Shoulder", "Melee"};
@@ -786,9 +786,9 @@ class CfgVehicles
 		displayName = "Camisa Gorka Negro";
 		descriptionShort = "Camisa Gorka del set Negro de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_negro_jacket_ground_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_jacket_worn_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_jacket_worn_co.paa"
+			"ExorStorage\data\ropa\exor_negro_jacket_ground_co.paa",
+			"ExorStorage\data\ropa\exor_negro_jacket_worn_co.paa",
+			"ExorStorage\data\ropa\exor_negro_jacket_worn_co.paa"
 		};
 	};
 
@@ -798,9 +798,9 @@ class CfgVehicles
 		displayName = "Pantalon Gorka Negro";
 		descriptionShort = "Pantalon Gorka del set Negro de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_negro_pants_ground_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_pants_worn_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_pants_worn_co.paa"
+			"ExorStorage\data\ropa\exor_negro_pants_ground_co.paa",
+			"ExorStorage\data\ropa\exor_negro_pants_worn_co.paa",
+			"ExorStorage\data\ropa\exor_negro_pants_worn_co.paa"
 		};
 	};
 
@@ -810,9 +810,9 @@ class CfgVehicles
 		displayName = "Casco balistico Negro";
 		descriptionShort = "Casco balistico del set Negro de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_negro_helmet_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_helmet_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_helmet_co.paa"
+			"ExorStorage\data\ropa\exor_negro_helmet_co.paa",
+			"ExorStorage\data\ropa\exor_negro_helmet_co.paa",
+			"ExorStorage\data\ropa\exor_negro_helmet_co.paa"
 		};
 	};
 
@@ -822,9 +822,9 @@ class CfgVehicles
 		displayName = "Casco MICH 2001 Negro";
 		descriptionShort = "Casco MICH 2001 del set Negro de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_negro_mich_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_mich_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_mich_co.paa"
+			"ExorStorage\data\ropa\exor_negro_mich_co.paa",
+			"ExorStorage\data\ropa\exor_negro_mich_co.paa",
+			"ExorStorage\data\ropa\exor_negro_mich_co.paa"
 		};
 	};
 
@@ -834,9 +834,9 @@ class CfgVehicles
 		displayName = "Casco Gorka Negro";
 		descriptionShort = "Casco Gorka del set Negro de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_negro_gorkahelmet_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_gorkahelmet_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_gorkahelmet_co.paa"
+			"ExorStorage\data\ropa\exor_negro_gorkahelmet_co.paa",
+			"ExorStorage\data\ropa\exor_negro_gorkahelmet_co.paa",
+			"ExorStorage\data\ropa\exor_negro_gorkahelmet_co.paa"
 		};
 	};
 
@@ -846,9 +846,9 @@ class CfgVehicles
 		displayName = "Balaclava Negro";
 		descriptionShort = "Balaclava del set Negro de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_negro_balaclava_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_balaclava_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_balaclava_co.paa"
+			"ExorStorage\data\ropa\exor_negro_balaclava_co.paa",
+			"ExorStorage\data\ropa\exor_negro_balaclava_co.paa",
+			"ExorStorage\data\ropa\exor_negro_balaclava_co.paa"
 		};
 	};
 
@@ -858,9 +858,9 @@ class CfgVehicles
 		displayName = "Botas de combate Negro";
 		descriptionShort = "Botas de combate del set Negro de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_negro_boots_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_boots_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_boots_co.paa"
+			"ExorStorage\data\ropa\exor_negro_boots_co.paa",
+			"ExorStorage\data\ropa\exor_negro_boots_co.paa",
+			"ExorStorage\data\ropa\exor_negro_boots_co.paa"
 		};
 	};
 
@@ -870,9 +870,9 @@ class CfgVehicles
 		displayName = "Guantes tacticos Negro";
 		descriptionShort = "Guantes tacticos del set Negro de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_negro_gloves_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_gloves_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_gloves_co.paa"
+			"ExorStorage\data\ropa\exor_negro_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_negro_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_negro_gloves_co.paa"
 		};
 	};
 
@@ -882,9 +882,9 @@ class CfgVehicles
 		displayName = "Chaleco de prensa Negro";
 		descriptionShort = "Chaleco de prensa del set Negro de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_negro_press_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_press_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_press_co.paa"
+			"ExorStorage\data\ropa\exor_negro_press_co.paa",
+			"ExorStorage\data\ropa\exor_negro_press_co.paa",
+			"ExorStorage\data\ropa\exor_negro_press_co.paa"
 		};
 	};
 
@@ -895,9 +895,9 @@ class CfgVehicles
 		descriptionShort = "Chaleco balistico del set Negro de 3xor.";
 		hiddenSelections[] = {"camoGround", "camoMale", "camoFemale"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_negro_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_plate_co.paa"
+			"ExorStorage\data\ropa\exor_negro_plate_co.paa",
+			"ExorStorage\data\ropa\exor_negro_plate_co.paa",
+			"ExorStorage\data\ropa\exor_negro_plate_co.paa"
 		};
 	};
 
@@ -908,9 +908,9 @@ class CfgVehicles
 		descriptionShort = "Pistolera de chaleco del set Negro de 3xor.";
 		hiddenSelections[] = {"camoGround"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_negro_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_plate_co.paa"
+			"ExorStorage\data\ropa\exor_negro_plate_co.paa",
+			"ExorStorage\data\ropa\exor_negro_plate_co.paa",
+			"ExorStorage\data\ropa\exor_negro_plate_co.paa"
 		};
 	};
 
@@ -921,9 +921,9 @@ class CfgVehicles
 		descriptionShort = "Bolsillos de chaleco del set Negro de 3xor.";
 		hiddenSelections[] = {"camoGround"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_negro_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_plate_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_plate_co.paa"
+			"ExorStorage\data\ropa\exor_negro_plate_co.paa",
+			"ExorStorage\data\ropa\exor_negro_plate_co.paa",
+			"ExorStorage\data\ropa\exor_negro_plate_co.paa"
 		};
 	};
 
@@ -934,9 +934,9 @@ class CfgVehicles
 		descriptionShort = "Mochila tactica del set Negro de 3xor.";
 		hiddenSelections[] = {"camoGround", "camoMale", "camoFemale"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\\data\\ropa\\exor_negro_tortilla_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_tortilla_co.paa",
-			"ExorStorage\\data\\ropa\\exor_negro_tortilla_co.paa"
+			"ExorStorage\data\ropa\exor_negro_tortilla_co.paa",
+			"ExorStorage\data\ropa\exor_negro_tortilla_co.paa",
+			"ExorStorage\data\ropa\exor_negro_tortilla_co.paa"
 		};
 		itemsCargoSize[] = {10, 12};
 		attachments[] += {"Shoulder", "Melee"};
