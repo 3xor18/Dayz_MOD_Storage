@@ -156,7 +156,7 @@ class ExorChatServer
 		{
 			if (now - last < cfg.cooldown_segundos * 1000)
 			{
-				sender.MessageImportant("Esperá un momento antes de volver a escribir.");
+				ExorAviso.Enviar(sender, "Esperá un momento antes de volver a escribir.");
 				return;
 			}
 		}
@@ -164,7 +164,7 @@ class ExorChatServer
 		string lastTxt;
 		if (cfg.bloquear_repetidos && s_LastText.Find(sid, lastTxt) && lastTxt == msgTxt)
 		{
-			sender.MessageImportant("No repitas el mismo mensaje.");
+			ExorAviso.Enviar(sender, "No repitas el mismo mensaje.");
 			return;
 		}
 

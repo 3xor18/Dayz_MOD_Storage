@@ -107,7 +107,7 @@ modded class GardenPlot
 		if (!ExorTerritoryManager.Get().CanPlaceServer(pb, GetPosition(), GetType()))
 		{
 			if (pb)
-				pb.MessageImportant("No podés hacer campos de plantación en territorio ajeno.");
+				ExorAviso.Enviar(pb, "No podés hacer campos de plantación en territorio ajeno.");
 			GetGame().ObjectDelete(this);
 		}
 	}

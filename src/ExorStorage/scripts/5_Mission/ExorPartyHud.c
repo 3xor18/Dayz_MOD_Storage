@@ -282,7 +282,7 @@ modded class MissionGameplay
 			ExorChat.Toggle();
 			PlayerBase p = PlayerBase.Cast(GetGame().GetPlayer());
 			if (p)
-				p.MessageImportant("Canal de chat: " + ExorChat.ChannelName());
+				ExorAviso.Enviar(p, "Canal de chat: " + ExorChat.ChannelName());
 		}
 		m_ExorDotPrev = dot;
 	}

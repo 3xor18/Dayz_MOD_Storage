@@ -953,6 +953,14 @@ class CfgVehicles
 		hologramMaterial = "barrel";
 		hologramMaterialPath = "dz\gear\containers\data";
 		hiddenSelections[] = {"camoGround"};
+		// NO es un balde: solo guarda loot. Barrel_ColorBase declara un liquidContainerType
+		// con media mascara de bits puesta, y eso es lo que hace que el motor lo acepte como
+		// recipiente de agua/gasolina -por accion de inventario, no solo por receta, que es
+		// por lo que el guard de recetas no alcanzaba-. En 0 deja de ser recipiente y se
+		// cierra esa via entera de una.
+		liquidContainerType = 0;
+		varQuantityMax = 0;
+		quantityBar = 0;
 	};
 
 	class Exor_Barrel_500: Exor_Barrel_Base
@@ -1469,6 +1477,14 @@ class CfgVehicles
 	class Exor_KothCrate_Base: Barrel_ColorBase
 	{
 		scope = 0;
+		// NO es un balde: solo guarda loot. Barrel_ColorBase declara un liquidContainerType
+		// con media mascara de bits puesta, y eso es lo que hace que el motor lo acepte como
+		// recipiente de agua/gasolina -por accion de inventario, no solo por receta, que es
+		// por lo que el guard de recetas no alcanzaba-. En 0 deja de ser recipiente y se
+		// cierra esa via entera de una.
+		liquidContainerType = 0;
+		varQuantityMax = 0;
+		quantityBar = 0;
 		class Cargo
 		{
 			// ancho 10 (normal, como los barriles) x alto 100 = 1000 slots. NO usar un
@@ -1544,6 +1560,14 @@ class CfgVehicles
 	{
 		scope = 0;
 		model = "\DZ\structures\Furniture\Cases\PaperBox\PaperBox_01_small_open.p3d";
+		// NO es un balde: solo guarda loot. Barrel_ColorBase declara un liquidContainerType
+		// con media mascara de bits puesta, y eso es lo que hace que el motor lo acepte como
+		// recipiente de agua/gasolina -por accion de inventario, no solo por receta, que es
+		// por lo que el guard de recetas no alcanzaba-. En 0 deja de ser recipiente y se
+		// cierra esa via entera de una.
+		liquidContainerType = 0;
+		varQuantityMax = 0;
+		quantityBar = 0;
 		class Cargo
 		{
 			// ancho 10 x alto 13 = 130 slots. NO ampliar el ancho: la grilla se va "para

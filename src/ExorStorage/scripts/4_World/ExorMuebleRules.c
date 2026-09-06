@@ -46,24 +46,12 @@ class ExorMuebleRules
 		return false;
 	}
 
+	// Delega en ExorAviso: era la misma rutina de envio duplicada, y encima con el ancho
+	// de linea puesto a mano en 60 en vez de leerlo de la config (55), asi que estos
+	// avisos se partian distinto que el resto del chat.
 	static void SendMsg(PlayerBase p, string text, int kind)
 	{
-		if (!p || !p.GetIdentity() || !GetGame().IsServer() || text == "")
-			return;
-		ExorChatMsg m = new ExorChatMsg();
-		m.name = "";
-		m.text = text;
-		m.channel = 0;
-		m.dur = 8;
-		m.max = 3;
-		m.kind = kind;   // 1 = verde (info), 2 = rojo (error)
-		m.chars = 60;
-		m.maxlin = 3;
-		JsonSerializer js = new JsonSerializer();
-		string data;
-		js.WriteToString(m, false, data);
-		Param1<string> pr = new Param1<string>(data);
-		p.RPCSingleParam(ExorRPC.CHAT_MSG, pr, true, p.GetIdentity());
+		ExorAviso.Mostrar(p, text, kind);   // 1 = verde (info), 2 = rojo (error)
 	}
 
 	// -------- conteo de muebles (openables) dentro de 'radius' de 'center' --------

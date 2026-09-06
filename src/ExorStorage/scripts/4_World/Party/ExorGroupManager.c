@@ -349,7 +349,7 @@ class ExorGroupManager
 				pb.ExorSetGroupId("");
 				SyncToPlayer(pb, null);
 				ExorPartyLive.Get().ClearForPlayer(pb);	// limpiar HUD/nameplates/marcas al disolverse
-				pb.MessageImportant(reason);
+				ExorAviso.Enviar(pb, reason);
 			}
 		}
 		// NO se borra el file: se marca borrado=1 (se conserva el roster para baneo de clan).
@@ -413,7 +413,7 @@ class ExorGroupManager
 		{
 			PlayerBase pb = FindOnline(g.members.Get(i).steamid);
 			if (pb)
-				pb.MessageImportant("Tu mástil desapareció (bug del servidor). Tu party sigue activo; el mástil se restaurará solo (reconectá si no aparece).");
+				ExorAviso.Enviar(pb, "Tu mástil desapareció (bug del servidor). Tu party sigue activo; el mástil se restaurará solo (reconectá si no aparece).");
 		}
 
 		Print(string.Format("%1 Party: MASTIL PERDIDO del grupo %2 -> party conservado, pendiente de auto-restaurar (%3)", ExorStorageConstants.LOG, g.id, reason));
@@ -583,25 +583,25 @@ class ExorGroupManager
 		ExorGroup g = FindByPlayer(SteamId(leader));
 		if (!g)
 		{
-			leader.MessageImportant("No tenes un party. Reclama territorio con un mastil primero.");
+			ExorAviso.Enviar(leader, "No tenes un party. Reclama territorio con un mastil primero.");
 			return false;
 		}
 		if (!g.IsOwner(SteamId(leader)))
 		{
-			leader.MessageImportant("Solo el lider del party puede invitar.");
+			ExorAviso.Enviar(leader, "Solo el lider del party puede invitar.");
 			return false;
 		}
 
 		string tsid = SteamId(target);
 		if (g.HasMember(tsid))
 		{
-			leader.MessageImportant("Esa persona ya esta en tu party.");
+			ExorAviso.Enviar(leader, "Esa persona ya esta en tu party.");
 			return false;
 		}
 		int max = GetExorConfig().party.grupo.max_miembros;
 		if (g.members.Count() >= max)
 		{
-			leader.MessageImportant(string.Format("Party lleno (max %1).", max));
+			ExorAviso.Enviar(leader, string.Format("Party lleno (max %1).", max));
 			return false;
 		}
 
@@ -612,8 +612,8 @@ class ExorGroupManager
 		m_PendingInvites.Set(tsid, inv);
 
 		target.RPCSingleParam(ExorRPC.INVITE, new Param2<string, string>(g.id, inv.inviter_name), true, target.GetIdentity());
-		target.MessageImportant(string.Format("%1 te invito a su party. Abri el menu (P) para aceptar.", inv.inviter_name));
-		leader.MessageImportant(string.Format("Invitacion enviada a %1.", PlayerName(target)));
+		ExorAviso.Enviar(target, string.Format("%1 te invito a su party. Abri el menu (P) para aceptar.", inv.inviter_name));
+		ExorAviso.Enviar(leader, string.Format("Invitacion enviada a %1.", PlayerName(target)));
 		return true;
 	}
 
@@ -626,19 +626,19 @@ class ExorGroupManager
 		ExorPendingInvite inv;
 		if (!m_PendingInvites.Find(tsid, inv))
 		{
-			target.MessageImportant("No tenes invitaciones pendientes.");
+			ExorAviso.Enviar(target, "No tenes invitaciones pendientes.");
 			return false;
 		}
 		if (GetGame().GetTime() - inv.created_ms > 120000)
 		{
 			m_PendingInvites.Remove(tsid);
-			target.MessageImportant("La invitacion expiro.");
+			ExorAviso.Enviar(target, "La invitacion expiro.");
 			return false;
 		}
 
 		if (FindByPlayer(tsid))
 		{
-			target.MessageImportant("Sali de tu party actual antes de aceptar otro.");
+			ExorAviso.Enviar(target, "Sali de tu party actual antes de aceptar otro.");
 			return false;
 		}
 
@@ -646,14 +646,14 @@ class ExorGroupManager
 		if (!g)
 		{
 			m_PendingInvites.Remove(tsid);
-			target.MessageImportant("El party ya no existe.");
+			ExorAviso.Enviar(target, "El party ya no existe.");
 			return false;
 		}
 		int max = GetExorConfig().party.grupo.max_miembros;
 		if (g.members.Count() >= max)
 		{
 			m_PendingInvites.Remove(tsid);
-			target.MessageImportant("El party esta lleno.");
+			ExorAviso.Enviar(target, "El party esta lleno.");
 			return false;
 		}
 
@@ -664,10 +664,10 @@ class ExorGroupManager
 		SyncGroup(g);
 		ExorTerritoryManager.Get().SyncToPlayer(target);	// FIX: refrescar la zona de territorio (mine=true) al que se une, para que pueda construir cerca del mastil sin reloguear
 
-		target.MessageImportant("Te uniste al party.");
+		ExorAviso.Enviar(target, "Te uniste al party.");
 		PlayerBase leader = FindOnline(g.owner_id);
 		if (leader)
-			leader.MessageImportant(string.Format("%1 acepto y se unio al party.", PlayerName(target)));
+			ExorAviso.Enviar(leader, string.Format("%1 acepto y se unio al party.", PlayerName(target)));
 		return true;
 	}
 
@@ -682,9 +682,9 @@ class ExorGroupManager
 			m_PendingInvites.Remove(tsid);
 			PlayerBase leader = FindOnline(ExorFindLeaderOfGroup(inv.group_id));
 			if (leader)
-				leader.MessageImportant(string.Format("%1 rechazo la invitacion.", PlayerName(target)));
+				ExorAviso.Enviar(leader, string.Format("%1 rechazo la invitacion.", PlayerName(target)));
 		}
-		target.MessageImportant("Invitacion rechazada.");
+		ExorAviso.Enviar(target, "Invitacion rechazada.");
 	}
 
 	string ExorFindLeaderOfGroup(string groupId)
@@ -706,17 +706,17 @@ class ExorGroupManager
 		ExorGroup g = FindById(mast.ExorGetGroupId());
 		if (!g || !g.HasMember(SteamId(member)))
 		{
-			member.MessageImportant("No sos miembro de este party.");
+			ExorAviso.Enviar(member, "No sos miembro de este party.");
 			return;
 		}
 		int max = GetExorConfig().party.grupo.max_miembros;
 		if (g.members.Count() >= max)
 		{
-			member.MessageImportant(string.Format("Party lleno (max %1).", max));
+			ExorAviso.Enviar(member, string.Format("Party lleno (max %1).", max));
 			return;
 		}
 		mast.ExorOpenInvite();
-		member.MessageImportant("Invitacion abierta (10 min). Otro jugador puede 'Unirse al grupo' mirando el mastil.");
+		ExorAviso.Enviar(member, "Invitacion abierta (10 min). Otro jugador puede 'Unirse al grupo' mirando el mastil.");
 	}
 
 	void CancelInviteAtMast(PlayerBase member, TerritoryFlag mast)
@@ -727,7 +727,7 @@ class ExorGroupManager
 		if (!g || !g.HasMember(SteamId(member)))
 			return;
 		mast.ExorCloseInvite();
-		member.MessageImportant("Invitacion cancelada.");
+		ExorAviso.Enviar(member, "Invitacion cancelada.");
 	}
 
 	void JoinAtMast(PlayerBase joiner, TerritoryFlag mast)
@@ -736,25 +736,25 @@ class ExorGroupManager
 			return;
 		if (!mast.ExorIsInviteOpen())
 		{
-			joiner.MessageImportant("No hay invitacion abierta en este mastil.");
+			ExorAviso.Enviar(joiner, "No hay invitacion abierta en este mastil.");
 			return;
 		}
 		string jsid = SteamId(joiner);
 		if (FindByPlayer(jsid))
 		{
-			joiner.MessageImportant("Ya estas en un territorio. Sali o disolve el tuyo primero para poder unirte a otro.");
+			ExorAviso.Enviar(joiner, "Ya estas en un territorio. Sali o disolve el tuyo primero para poder unirte a otro.");
 			return;
 		}
 		ExorGroup g = FindById(mast.ExorGetGroupId());
 		if (!g)
 		{
-			joiner.MessageImportant("El party ya no existe.");
+			ExorAviso.Enviar(joiner, "El party ya no existe.");
 			return;
 		}
 		int max = GetExorConfig().party.grupo.max_miembros;
 		if (g.members.Count() >= max)
 		{
-			joiner.MessageImportant("El party esta lleno.");
+			ExorAviso.Enviar(joiner, "El party esta lleno.");
 			return;
 		}
 		g.AddOrUpdate(jsid, PlayerName(joiner), ExorTimeUtil.TodayNumber());
@@ -763,10 +763,10 @@ class ExorGroupManager
 		SaveGroup(g);
 		SyncGroup(g);
 		ExorTerritoryManager.Get().SyncToPlayer(joiner);	// FIX: refrescar zona de territorio al que se une (mine=true) -> puede construir sin reloguear
-		joiner.MessageImportant("Te uniste al party.");
+		ExorAviso.Enviar(joiner, "Te uniste al party.");
 		PlayerBase owner = FindOnline(g.owner_id);
 		if (owner && owner != joiner)
-			owner.MessageImportant(string.Format("%1 se unio al party.", PlayerName(joiner)));
+			ExorAviso.Enviar(owner, string.Format("%1 se unio al party.", PlayerName(joiner)));
 	}
 
 	// ------------------------- salir / kick -------------------------
@@ -778,7 +778,7 @@ class ExorGroupManager
 		ExorGroup g = FindByPlayer(sid);
 		if (!g)
 		{
-			player.MessageImportant("No estas en ningun party.");
+			ExorAviso.Enviar(player, "No estas en ningun party.");
 			return;
 		}
 
@@ -804,7 +804,7 @@ class ExorGroupManager
 		player.ExorSetGroupId("");
 		SyncToPlayer(player, null);
 		ExorPartyLive.Get().ClearForPlayer(player);	// limpiar HUD/nameplates/marcas del que sale
-		player.MessageImportant("Saliste del party.");
+		ExorAviso.Enviar(player, "Saliste del party.");
 		SaveGroup(g);
 		SyncGroup(g);
 		ExorTerritoryManager.Get().SyncToPlayer(player);	// FIX: la zona vuelve a AJENA para el que sale (deja de ver mine=true)
@@ -818,13 +818,13 @@ class ExorGroupManager
 		ExorGroup g = FindByPlayer(asid);
 		if (!g || !g.HasMember(asid))
 		{
-			leader.MessageImportant("No estas en ningun party.");
+			ExorAviso.Enviar(leader, "No estas en ningun party.");
 			return false;
 		}
 		ExorGroupMember mm = g.FindMember(targetSid);
 		if (!mm)
 		{
-			leader.MessageImportant("Esa persona no esta en tu party.");
+			ExorAviso.Enviar(leader, "Esa persona no esta en tu party.");
 			return false;
 		}
 		// Expulsar al DUENO = disolver el party + borrar el mastil. MISMO guard que disolver
@@ -863,9 +863,9 @@ class ExorGroupManager
 			SyncToPlayer(kicked, null);
 			ExorTerritoryManager.Get().SyncToPlayer(kicked);	// FIX: la zona vuelve a AJENA para el expulsado
 			ExorPartyLive.Get().ClearForPlayer(kicked);	// limpiar HUD/nameplates/marcas del expulsado
-			kicked.MessageImportant("Fuiste sacado del party.");
+			ExorAviso.Enviar(kicked, "Fuiste sacado del party.");
 		}
-		leader.MessageImportant(string.Format("%1 fue sacado del party.", nm));
+		ExorAviso.Enviar(leader, string.Format("%1 fue sacado del party.", nm));
 		return true;
 	}
 

@@ -62,11 +62,11 @@ class ExorActionRaiseFlag : ActionContinuousBase
 			return;
 		if (!ExorPartyHelper.IsMemberOfMast(player, mast))
 		{
-			player.MessageImportant("Solo los miembros del party pueden izar la bandera.");
+			ExorAviso.Enviar(player, "Solo los miembros del party pueden izar la bandera.");
 			return;
 		}
 		mast.ExorServerSetFlagRaised(true);
-		player.MessageImportant("Bandera izada.");
+		ExorAviso.Enviar(player, "Bandera izada.");
 	}
 }
 
@@ -110,11 +110,11 @@ class ExorActionLowerFlag : ActionContinuousBase
 			return;
 		if (!ExorPartyHelper.IsMemberOfMast(player, mast) && !GetExorConfig().party.bandera.ajenos_pueden_bajar)
 		{
-			player.MessageImportant("No podés bajar esta bandera (no sos del party).");
+			ExorAviso.Enviar(player, "No podés bajar esta bandera (no sos del party).");
 			return;
 		}
 		mast.ExorServerSetFlagRaised(false);
-		player.MessageImportant("Bandera bajada.");
+		ExorAviso.Enviar(player, "Bandera bajada.");
 	}
 }
 

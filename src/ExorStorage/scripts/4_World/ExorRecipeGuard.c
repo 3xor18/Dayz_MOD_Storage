@@ -1,9 +1,8 @@
 // ============================================================================
 //  GUARD GENERICO DE CRAFTEO
 // ----------------------------------------------------------------------------
-//  Los contenedores 3xor son ALMACENAMIENTO Y NADA MAS: no pueden ser ingrediente de
-//  ninguna receta, ni de vanilla ni de ningun mod. Ni agujerearlos para asador, ni
-//  cortarlos, ni usarlos de recipiente de liquido.
+//  Ninguna receta -de vanilla o de cualquier mod- puede CONSUMIR un contenedor 3xor: ni
+//  agujerearlo para asador, ni cortarlo con la sierra, ni convertirlo en otra cosa.
 //
 //  EL PROBLEMA TECNICO
 //  Nuestros contenedores heredan de las bases vanilla (Barrel_ColorBase, SeaChest,
@@ -21,13 +20,18 @@
 //  general y NO lo pisa ninguna receta (0 de 221). Enganchado ahi, el bloqueo vale para
 //  toda receta presente o futura de cualquier mod sin perseguirlas una por una.
 //
-//  ALCANCE: TODAS, no solo las que lo destruyen
-//  El barril vanilla es contenedor Y recipiente de liquido, asi que ademas de las que lo
-//  transforman (agujerear, cortar) hay recetas que lo usan sin consumirlo: verter y sacar
-//  agua, purificar con tabletas, lavar trapos, cargar la motosierra, apagar una antorcha.
-//  Esas TAMBIEN quedan bloqueadas, por decision de diseño: el barril del mod es un mueble
-//  de storage y no un balde. Distinguir unas de otras se podia (las que transforman marcan
-//  m_IngredientDestroy y declaran AddResult), pero no es lo que se quiere.
+//  ALCANCE: TODAS las recetas, no solo las que lo destruyen
+//  El barril del mod es un mueble de storage y nada mas, asi que tampoco se usa de balde:
+//  ni echarle agua, ni purificar con tabletas, ni lavar trapos, ni cargar la motosierra.
+//  Se podia distinguir a las que transforman (marcan m_IngredientDestroy y declaran
+//  AddResult) de las que solo mueven liquido, pero no es lo que se quiere.
+//
+//  OJO: esto solo cubre las RECETAS. Echarle agua a un barril tambien se puede por accion
+//  de inventario, sin pasar por ninguna receta, y por eso al probar "el agua igual entraba"
+//  aunque el guard estuviera puesto. Esa via se cierra en el config, no aca:
+//  liquidContainerType = 0 en Exor_Barrel_Base, Exor_KothCrate_Base y Exor_Cofre_Base hace
+//  que el motor deje de considerarlos recipientes de liquido. Las dos cosas juntas son las
+//  que dejan el barril como storage puro.
 //
 //  Devolver false hace que la receta NO SE OFREZCA, no que falle a mitad de camino: el
 //  jugador no llega a ver la accion, en vez de verla y perder el barril al usarla.
@@ -57,8 +61,8 @@ modded class RecipeBase
 			return false;
 
 		// EXCEPCION: la ropa 3xor. No es un contenedor ni guarda nada en disco -es una
-		// retextura de una prenda vanilla-, asi que no hay loot que perder y la regla de
-		// "solo storage" no le aplica: puede entrar en las recetas normales de ropa.
+		// retextura de una prenda vanilla-, asi que no hay loot que perder y puede entrar
+		// en las recetas normales de ropa.
 		// Si la comprobacion fallara, el resultado es bloquear, que es el lado seguro.
 		if (it.IsInherited(Clothing))
 			return false;

@@ -265,13 +265,13 @@ class ExorPartyLive
 		ExorCfgPartyGrupo cg = GetExorConfig().party.grupo;
 		if (!cg.habilitado || !cg.permitir_marker_equipo)
 		{
-			player.MessageImportant("Las marcas del party estan desactivadas.");
+			ExorAviso.Enviar(player, "Las marcas del party estan desactivadas.");
 			return;
 		}
 		ExorGroup g = ExorGroupManager.Get().FindByPlayer(ExorGroupManager.SteamId(player));
 		if (!g)
 		{
-			player.MessageImportant("No estás en ningún party.");
+			ExorAviso.Enviar(player, "No estás en ningún party.");
 			return;
 		}
 		ExorMarkersDTO m;
@@ -306,7 +306,7 @@ class ExorPartyLive
 		mk.z = pos[2];
 		m.markers.Insert(mk);
 		BroadcastMarkers(g);
-		player.MessageImportant("Marca puesta: " + mk.label);
+		ExorAviso.Enviar(player, "Marca puesta: " + mk.label);
 	}
 
 	void ClearMarkers(PlayerBase player)
@@ -322,7 +322,7 @@ class ExorPartyLive
 		if (m_MarkersByGroup.Find(g.id, m))
 			m.markers.Clear();
 		BroadcastMarkers(g);
-		player.MessageImportant("Marcas del party limpiadas.");
+		ExorAviso.Enviar(player, "Marcas del party limpiadas.");
 	}
 
 	// Borra las marcas con mas de MARK_TTL_MS (10 min) de antiguedad y re-broadcastea

@@ -240,7 +240,7 @@ modded class TerritoryFlag
 			{
 				PlayerBase pb = ExorGroupManager.Get().FindOnline(g.members.Get(i).steamid);
 				if (pb)
-					pb.MessageImportant("Proteccion de bandera blanca terminada: ya pueden cambiarla por su bandera.");
+					ExorAviso.Enviar(pb, "Proteccion de bandera blanca terminada: ya pueden cambiarla por su bandera.");
 			}
 		}
 	}
@@ -417,7 +417,7 @@ modded class TerritoryFlag
 					// (solo un MessageImportant client-side) -> "construi y no aparece" era invisible.
 					Print(string.Format("%1 Party: rebuild BLOQUEADO por cooldown (grupo %2, mastil vivo en %3, faltan %4 min) -> se borra el mastil nuevo de %5",
 						ExorStorageConstants.LOG, existing.id, liveMast.GetPosition(), restan, ExorGroupManager.PlayerName(placer)));
-					placer.MessageImportant(string.Format("Solo podés mover/reconstruir tu mástil cada %1 h. Faltan %2 h %3 min.", cdMin / 60, restan / 60, restan % 60));
+					ExorAviso.Enviar(placer, string.Format("Solo podés mover/reconstruir tu mástil cada %1 h. Faltan %2 h %3 min.", cdMin / 60, restan / 60, restan % 60));
 					ExorMarkDisbanding();
 					GetGame().ObjectDelete(this);
 					return;
@@ -453,7 +453,7 @@ modded class TerritoryFlag
 					m_ExorFlagRaised = true;
 					SetSynchDirty();
 					GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorHangSavedFlag, 1500, false);
-					placer.MessageImportant("Mástil reconstruido en la misma base: mantiene tu bandera (sin bandera blanca nueva).");
+					ExorAviso.Enviar(placer, "Mástil reconstruido en la misma base: mantiene tu bandera (sin bandera blanca nueva).");
 				}
 				else
 				{
@@ -462,7 +462,7 @@ modded class TerritoryFlag
 					existing.mast_flag = "";
 					ExorOnClaimed(nowm);
 					GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorEnsureWhiteFlag, 1500, false);
-					placer.MessageImportant("Mástil movido a una base nueva (>100 m): protección de bandera blanca reiniciada.");
+					ExorAviso.Enviar(placer, "Mástil movido a una base nueva (>100 m): protección de bandera blanca reiniciada.");
 				}
 				ExorGroupManager.Get().SaveGroup(existing);
 				ExorTerritoryManager.Get().RequestSyncToAll();
@@ -502,7 +502,7 @@ modded class TerritoryFlag
 			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorHangSavedFlag, 1500, false);
 			ExorScheduleWhiteFlagExpiry();
 			Print(string.Format("%1 mastil REPARADO para grupo %2 (se habia perdido; re-ligado a bandera nueva)", ExorStorageConstants.LOG, existing.id));
-			placer.MessageImportant("Tu mástil se había perdido: se reconstruyó y quedó ligado a tu party.");
+			ExorAviso.Enviar(placer, "Tu mástil se había perdido: se reconstruyó y quedó ligado a tu party.");
 			return;
 		}
 
@@ -536,7 +536,7 @@ modded class TerritoryFlag
 		// Bandera blanca (si esta activada): colgar Flag_White cuando el poste este listo.
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorEnsureWhiteFlag, 1500, false);
 		ExorScheduleWhiteFlagExpiry();	// destrabar el slot al terminar la proteccion
-		placer.MessageImportant("Territorio reclamado y party creado. Apuntá a un jugador y usá 'Invitar a mi party'.");
+		ExorAviso.Enviar(placer, "Territorio reclamado y party creado. Apuntá a un jugador y usá 'Invitar a mi party'.");
 	}
 
 	// El item es el kit que arma la bandera (vanilla lo deja como FenceKit/TerritoryFlagKit)

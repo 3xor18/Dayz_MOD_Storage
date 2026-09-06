@@ -400,25 +400,25 @@ class ExorSpawn
 			ExorCfgVip vip = GetExorConfig().vip;
 			if (!vip.equip_habilitado || !vip.IsVip(sid) || !vip.TieneLoadout())
 			{
-				player.MessageImportant("El equipamiento VIP no está disponible.");
+				ExorAviso.Enviar(player, "El equipamiento VIP no está disponible.");
 				return;
 			}
 			if (ExorVipState.Get().RemainingUses(sid) <= 0)
 			{
-				player.MessageImportant("No te quedan usos de equipamiento VIP (avisá al admin para renovar).");
+				ExorAviso.Enviar(player, "No te quedan usos de equipamiento VIP (avisá al admin para renovar).");
 				return;
 			}
 			pos = ChooseBase(sid, player);	// respeta bandera + cooldown (y consume cd de base)
 			if (pos == vector.Zero)
 			{
-				player.MessageImportant("No podés aparecer en tu base ahora (bandera abajo o en cooldown).");
+				ExorAviso.Enviar(player, "No podés aparecer en tu base ahora (bandera abajo o en cooldown).");
 				return;
 			}
 			player.SetPosition(pos);
 			ExorVipState.Get().ConsumeUse(sid);
 			ExorVipState.ApplyLoadout(player);
 			int rem = ExorVipState.Get().RemainingUses(sid);
-			player.MessageImportant(string.Format("Apareciste en tu base con equipamiento VIP. Usos restantes: %1", rem));
+			ExorAviso.Enviar(player, string.Format("Apareciste en tu base con equipamiento VIP. Usos restantes: %1", rem));
 			return;
 		}
 
@@ -427,7 +427,7 @@ class ExorSpawn
 			pos = ChooseBase(sid, player);	// respeta bandera + cooldown
 			if (pos == vector.Zero)
 			{
-				player.MessageImportant("No podés aparecer en tu base ahora (bandera abajo o en cooldown).");
+				ExorAviso.Enviar(player, "No podés aparecer en tu base ahora (bandera abajo o en cooldown).");
 				return;
 			}
 		}
@@ -443,7 +443,7 @@ class ExorSpawn
 			// un cliente modificado puede mandar cualquiera.
 			if (pt.solo_vip && !GetExorConfig().vip.IsVip(sid))
 			{
-				player.MessageImportant("Ese punto de aparición es solo para VIP.");
+				ExorAviso.Enviar(player, "Ese punto de aparición es solo para VIP.");
 				Print(string.Format("%1 SPAWN: %2 intento usar el punto VIP '%3' sin serlo", ExorStorageConstants.LOG, sid, pt.nombre));
 				return;
 			}
@@ -456,7 +456,7 @@ class ExorSpawn
 				int cd = pt.cooldown_segundos * 1000;
 				if (cd > 0 && now - last < cd)
 				{
-					player.MessageImportant("Ese punto está en cooldown.");
+					ExorAviso.Enviar(player, "Ese punto está en cooldown.");
 					return;
 				}
 			}
@@ -468,7 +468,7 @@ class ExorSpawn
 		if (pos != vector.Zero)
 		{
 			player.SetPosition(pos);
-			player.MessageImportant("Apareciste en el punto elegido.");
+			ExorAviso.Enviar(player, "Apareciste en el punto elegido.");
 		}
 	}
 }

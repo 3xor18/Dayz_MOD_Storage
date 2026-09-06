@@ -99,7 +99,7 @@ class ExorNoBuild
 	{
 		PlayerBase pb = PlayerBase.Cast(player);
 		if (pb)
-			pb.MessageImportant("No se puede construir en esta zona (zona protegida).");
+			ExorAviso.Enviar(pb, "No se puede construir en esta zona (zona protegida).");
 	}
 
 	// true si hay que BLOQUEAR este kit de base en 'pos'. Loguea + avisa. Lo usan los

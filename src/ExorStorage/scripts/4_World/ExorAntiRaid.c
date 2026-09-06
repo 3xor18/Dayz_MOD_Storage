@@ -311,7 +311,7 @@ class ExorAntiRaid
 		int pushM = Math.Round(push);
 		string detalle = string.Format("reconecto dentro de territorio de %1 -> movido al borde (%2m del mastil)", GroupLabel(m), pushM);
 		ExorRaidLog.Write("EXPULSADO_BASE_AJENA", sid, nm, pp, detalle);
-		player.MessageImportant("Apareciste dentro de un territorio ajeno: fuiste movido afuera.");
+		ExorAviso.Enviar(player, "Apareciste dentro de un territorio ajeno: fuiste movido afuera.");
 	}
 }
 
