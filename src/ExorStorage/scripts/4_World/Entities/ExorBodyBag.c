@@ -249,7 +249,7 @@ class Exor_BodyBag extends Container_Base
 		ExorHijosDirectos(this, pend);	// nivel 1: la tumba MISMA no se toca
 
 		int guard = 0;
-		while (pend.Count() > 0 && guard < 512)	// tope: arbol de loot roto no cuelga el server
+		while (pend.Count() > 0 && guard < 4096)	// tope anti-ciclo; el arbol real de una tumba son ~50 nodos
 		{
 			guard++;
 			EntityAI e = pend.Get(0);

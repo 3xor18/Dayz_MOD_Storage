@@ -596,11 +596,14 @@ class ExorTerritoryManager
 class ExorTerritoryClient
 {
 	static ref ExorTerritoryCacheDTO s_Cache;
-	static int s_UltimoPedidoMs;	// ultimo TERRITORY_REQ mandado (cooldown del sync por demanda)
+	static int s_UltimoPedidoMs;		// ultimo TERRITORY_REQ mandado (cooldown del sync por demanda)
+	static vector s_PosUltimoPedido;	// donde estaba el jugador cuando lo pidio
+	static bool s_RespuestaLlegada;		// ya llego un cache DESPUES de ese pedido
 
 	static void SetCache(ExorTerritoryCacheDTO c)
 	{
 		s_Cache = c;
+		s_RespuestaLlegada = true;
 	}
 
 	// ------------------------------------------------------------------------
@@ -615,17 +618,43 @@ class ExorTerritoryClient
 	// Refrescar cada N segundos a todos NO va: SyncToPlayer arma un DTO, lo serializa a
 	// JSON y lo manda chunkeado POR JUGADOR; con 60 online son envios constantes que nadie
 	// pidio. Aca lo pide el CLIENTE, y solo cuando esta mirando un mastil y le falta el
-	// dato, con cooldown. Si el cache ya sirve -el 99% del tiempo- no se manda nada.
+	// dato. Si el cache ya sirve -el 99% del tiempo- no se manda nada.
+	//
+	// TRES CANDADOS, en orden de barato a caro, para que esto no pueda escalar con la
+	// cantidad de jugadores:
+	//   1. cooldown de 10 s;
+	//   2. NO se repite el pedido si el server YA contesto y el jugador no se movio: la
+	//      respuesta es autoritativa, insistir parado en el mismo lugar no puede cambiarla.
+	//      Esto deja en CERO los dos casos que si se repetirian solos -un raider mirando el
+	//      mastil enemigo y alguien sin party mirando cualquier mastil-, que son
+	//      justamente los mas comunes;
+	//   3. throttle propio del server (5 s por jugador), porque el cooldown del cliente no
+	//      es garantia: un cliente modificado no lo respeta.
+	// Queda vivo el unico caso que importa: caminaste hasta tu base y el cache es de otra
+	// posicion -> te moviste -> se vuelve a pedir.
 	static const int PEDIDO_COOLDOWN_MS = 10000;
+	static const float PEDIDO_MOVER_M = 30.0;	// cuanto hay que moverse para volver a preguntar
 
 	static void PedirSyncSiFalta(PlayerBase p)
 	{
 		if (!p || !GetGame() || !GetGame().IsClient())
 			return;
 		int ahora = GetGame().GetTime();
-		if (s_UltimoPedidoMs != 0 && (ahora - s_UltimoPedidoMs) < PEDIDO_COOLDOWN_MS)
-			return;
+		if (s_UltimoPedidoMs != 0)
+		{
+			if ((ahora - s_UltimoPedidoMs) < PEDIDO_COOLDOWN_MS)
+				return;
+			// ya preguntamos y el server contesto: sin moverse, la respuesta sigue siendo
+			// la misma. Si NO contesto (se perdio un trozo) se reintenta igual.
+			vector ppos = p.GetPosition();
+			float ddx = ppos[0] - s_PosUltimoPedido[0];
+			float ddz = ppos[2] - s_PosUltimoPedido[2];
+			if (s_RespuestaLlegada && ((ddx * ddx) + (ddz * ddz)) < (PEDIDO_MOVER_M * PEDIDO_MOVER_M))
+				return;
+		}
 		s_UltimoPedidoMs = ahora;
+		s_PosUltimoPedido = p.GetPosition();
+		s_RespuestaLlegada = false;
 		p.ExorReqTerritorySync();	// el server contesta con ROSTER_SYNC + TERRITORY_SYNC
 	}
 
