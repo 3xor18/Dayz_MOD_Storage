@@ -57,6 +57,8 @@ class ExorGodPack
 		if (cmd == "/medicina")   { Medicina(p);   return true; }
 		if (cmd == "/ammo")       { Ammo(p);       return true; }
 		if (cmd == "/ropa")       { Ropa(p);       return true; }
+		if (cmd == "/rosa")       { SetRopa(p, "Rosa");  return true; }
+		if (cmd == "/arido")      { SetRopa(p, "Arido"); return true; }
 		if (cmd == "/explosivos2") { Explosivos2(p); return true; }
 		if (cmd == "/explosivos")  { Explosivos(p);  return true; }
 		if (cmd == "/bambi")       { Bambi(p);       return true; }
@@ -249,6 +251,27 @@ class ExorGodPack
 		Piso(b, "GhillieSuit_Woodland");		// ghillie de bosque, cubierto entero
 		Piso(b, "GhillieHood_Woodland");		// ghillie de la cabeza
 		Piso(b, "AssaultBag_Green");			// mochila de combate verde
+	}
+
+	// Set de ropa 3xor completo (una sola pieza de cada cosa). 'variante' = "Rosa" | "Arido".
+	// Los bolsillos y la pistolera van ENGANCHADOS al chaleco, como en /ropa: sueltos en el
+	// piso confunden, porque son attachments y no se pueden vestir por si solos.
+	static void SetRopa(PlayerBase p, string variante)
+	{
+		vector b = p.GetPosition();
+		s_slot = 0;
+		Piso(b, "Exor_GorkaJacket_" + variante);
+		Piso(b, "Exor_GorkaPants_" + variante);
+		Piso(b, "Exor_BallisticHelmet_" + variante);
+		Piso(b, "Exor_CombatBoots_" + variante);
+		Piso(b, "Exor_TacticalGloves_" + variante);
+
+		EntityAI pc = Piso(b, "Exor_PlateCarrierVest_" + variante);
+		if (pc)
+		{
+			pc.GetInventory().CreateAttachment("Exor_PlateCarrierPouches_" + variante);
+			pc.GetInventory().CreateAttachment("Exor_PlateCarrierHolster_" + variante);
+		}
 	}
 
 	static void Explosivos(PlayerBase p)

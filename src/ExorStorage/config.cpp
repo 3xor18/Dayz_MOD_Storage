@@ -9,12 +9,15 @@ class CfgPatches
 {
 	class ExorStorage
 	{
-		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_OpenableStorage", "Exor_Fridge", "Exor_Refrigerador_Packed", "Exor_Refrigerador_Ghost", "Exor_Locker", "Exor_Locker_Packed", "Exor_Locker_Ghost", "Exor_LockerRojo", "Exor_LockerRojo_Packed", "Exor_LockerRojo_Ghost", "Exor_MuebleArmas", "Exor_MuebleArmas_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight", "Exor_Parking", "Exor_Parking_Packed", "Exor_Parking_Ghost"};
+		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_OpenableStorage", "Exor_Fridge", "Exor_Refrigerador_Packed", "Exor_Refrigerador_Ghost", "Exor_Locker", "Exor_Locker_Packed", "Exor_Locker_Ghost", "Exor_LockerRojo", "Exor_LockerRojo_Packed", "Exor_LockerRojo_Ghost", "Exor_MuebleArmas", "Exor_MuebleArmas_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight", "Exor_Parking", "Exor_Parking_Packed", "Exor_Parking_Ghost", "Exor_GorkaJacket_Rosa", "Exor_GorkaPants_Rosa", "Exor_BallisticHelmet_Rosa", "Exor_CombatBoots_Rosa", "Exor_TacticalGloves_Rosa", "Exor_PlateCarrierVest_Rosa", "Exor_PlateCarrierHolster_Rosa", "Exor_PlateCarrierPouches_Rosa", "Exor_GorkaJacket_Arido", "Exor_GorkaPants_Arido", "Exor_BallisticHelmet_Arido", "Exor_CombatBoots_Arido", "Exor_TacticalGloves_Arido", "Exor_PlateCarrierVest_Arido", "Exor_PlateCarrierHolster_Arido", "Exor_PlateCarrierPouches_Arido"};
 		weapons[] = {};
 		requiredVersion = 0.1;
 		// DZ_Gear_Camping = TerritoryFlag/Kit + SeaChest. DZ_Characters_Backpacks =
 		// GhillieSuit vanilla. DZ_Characters = modelo del cuerpo (bolsa de cadaver).
-		requiredAddons[] = {"DZ_Data", "DZ_Scripts", "DZ_Gear_Containers", "DZ_Weapons_Ammunition", "DZ_Gear_Camping", "DZ_Characters_Backpacks", "DZ_Characters", "DZ_Gear_Consumables", "DZ_Structures_Furniture"};
+		// Los DZ_Characters_* de abajo son los que traen las bases de los sets de ropa
+		// retexturizados (tops/pants/headgear/shoes/gloves/vests): sin ellos las clases
+		// nuevas no encuentran su padre y el juego las descarta en silencio.
+		requiredAddons[] = {"DZ_Data", "DZ_Scripts", "DZ_Gear_Containers", "DZ_Weapons_Ammunition", "DZ_Gear_Camping", "DZ_Characters_Backpacks", "DZ_Characters", "DZ_Gear_Consumables", "DZ_Structures_Furniture", "DZ_Characters_Tops", "DZ_Characters_Pants", "DZ_Characters_Headgear", "DZ_Characters_Shoes", "DZ_Characters_Gloves", "DZ_Characters_Vests"};
 	};
 };
 
@@ -83,6 +86,251 @@ class CfgVehicles
 	class GhillieHood_Woodland: GhillieHood_ColorBase { inventorySlot[] = {"Hips"}; };
 	class GhillieHood_Winter: GhillieHood_ColorBase { inventorySlot[] = {"Hips"}; };
 	class GhillieHood_Tan: GhillieHood_ColorBase { inventorySlot[] = {"Hips"}; };
+
+	// ==================================================================
+	//  SETS DE ROPA 3xor (retexturizados)  -- rosa sobrio y arido
+	// ------------------------------------------------------------------
+	//  Son ITEMS NUEVOS: cada clase HEREDA de la base vanilla y solo cambia
+	//  'hiddenSelectionsTextures'. Las bases se declaran sin cuerpo (forward
+	//  declaration), que NO modifica la clase vanilla: los items originales del
+	//  juego quedan intactos, igual que los modelos, que se reusan tal cual.
+	//
+	//  Las texturas son el _co (color) vanilla recoloreado en HSV conservando la
+	//  luminancia -o sea costuras, correas, sombras y desgaste-. El _nohq (relieve)
+	//  y el _smdi (brillo) NO se tocan: siguen siendo los de vanilla, heredados.
+	//
+	//  ROSA: rosa viejo / malva, tono 322-358 grados y saturacion topeada en 0.36.
+	//  Ese tope es lo unico que separa esto de un fucsia de disfraz.
+	//
+	//  ARIDO: tierra -> arena -> khaki -> oliva (27-65 grados). NO es un arena plano
+	//  a proposito: en Alteria hay pasto y asfalto ademas de tierra, y el oliva de los
+	//  medios es lo que hace que rompa la silueta ahi en vez de brillar como una mancha
+	//  clara. Un desierto puro solo funciona en desierto puro.
+	//
+	//  Para volver atras: borrar este bloque, sus entradas en CfgPatches.units, la
+	//  carpeta data\ropa y las lineas de types.xml. Nada mas depende de esto.
+	// ==================================================================
+	class Clothing;					// externa (DZ_Data)
+	class GorkaEJacket_ColorBase;			// externa (DZ_Characters_Tops)
+	class GorkaPants_ColorBase;			// externa (DZ_Characters_Pants)
+	class BallisticHelmet_ColorBase;		// externa (DZ_Characters_Headgear) - modelo HelmetMich
+	class CombatBoots_ColorBase;			// externa (DZ_Characters_Shoes)
+	class TacticalGloves_ColorBase;			// externa (DZ_Characters_Gloves)
+	class PlateCarrierVest;				// externa (DZ_Characters_Vests)
+	class PlateCarrierHolster;			// externa (DZ_Characters_Vests)
+	class PlateCarrierPouches;			// externa (DZ_Gear_Containers)
+
+	// ---------------- SET ROSA ----------------
+
+	class Exor_GorkaJacket_Rosa: GorkaEJacket_ColorBase
+	{
+		scope = 2;
+		visibilityModifier = 0.7;
+		displayName = "Camisa Gorka Rosa";
+		descriptionShort = "Chaqueta Gorka con camuflaje Rosa. Impermeable.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_rosa_jacket_ground_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_jacket_worn_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_jacket_worn_co.paa"
+		};
+	};
+
+	class Exor_GorkaPants_Rosa: GorkaPants_ColorBase
+	{
+		scope = 2;
+		visibilityModifier = 0.7;
+		displayName = "Pantalon Gorka Rosa";
+		descriptionShort = "Pantalon Gorka con camuflaje Rosa. Impermeable.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_rosa_pants_ground_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_pants_worn_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_pants_worn_co.paa"
+		};
+	};
+
+	class Exor_BallisticHelmet_Rosa: BallisticHelmet_ColorBase
+	{
+		scope = 2;
+		visibilityModifier = 0.7;
+		displayName = "Casco balistico Rosa";
+		descriptionShort = "Casco balistico de combate en acabado Rosa.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_rosa_helmet_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_helmet_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_helmet_co.paa"
+		};
+	};
+
+	class Exor_CombatBoots_Rosa: CombatBoots_ColorBase
+	{
+		scope = 2;
+		visibilityModifier = 0.7;
+		displayName = "Botas de combate Rosa";
+		descriptionShort = "Botas de combate en acabado Rosa.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_rosa_boots_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_boots_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_boots_co.paa"
+		};
+	};
+
+	class Exor_TacticalGloves_Rosa: TacticalGloves_ColorBase
+	{
+		scope = 2;
+		visibilityModifier = 0.7;
+		displayName = "Guantes tacticos Rosa";
+		descriptionShort = "Guantes tacticos en acabado Rosa.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_rosa_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_gloves_co.paa"
+		};
+	};
+
+	class Exor_PlateCarrierVest_Rosa: PlateCarrierVest
+	{
+		scope = 2;
+		displayName = "Chaleco balistico Rosa";
+		descriptionShort = "Chaleco balistico en acabado Rosa.";
+		hiddenSelections[] = {"camoGround", "camoMale", "camoFemale"};
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_rosa_plate_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_plate_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_plate_co.paa"
+		};
+	};
+
+	class Exor_PlateCarrierHolster_Rosa: PlateCarrierHolster
+	{
+		scope = 2;
+		displayName = "Pistolera de chaleco Rosa";
+		descriptionShort = "Pistolera para chaleco balistico, acabado Rosa.";
+		hiddenSelections[] = {"camoGround"};
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_rosa_plate_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_plate_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_plate_co.paa"
+		};
+	};
+
+	class Exor_PlateCarrierPouches_Rosa: PlateCarrierPouches
+	{
+		scope = 2;
+		displayName = "Bolsillos de chaleco Rosa";
+		descriptionShort = "Bolsillos para chaleco balistico, acabado Rosa.";
+		hiddenSelections[] = {"camoGround"};
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_rosa_plate_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_plate_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_plate_co.paa"
+		};
+	};
+
+	// ---------------- SET ARIDO ----------------
+
+	class Exor_GorkaJacket_Arido: GorkaEJacket_ColorBase
+	{
+		scope = 2;
+		visibilityModifier = 0.7;
+		displayName = "Camisa Gorka Arido";
+		descriptionShort = "Chaqueta Gorka con camuflaje Arido. Impermeable.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_arido_jacket_ground_co.paa",
+			"ExorStorage\data\ropa\exor_arido_jacket_worn_co.paa",
+			"ExorStorage\data\ropa\exor_arido_jacket_worn_co.paa"
+		};
+	};
+
+	class Exor_GorkaPants_Arido: GorkaPants_ColorBase
+	{
+		scope = 2;
+		visibilityModifier = 0.7;
+		displayName = "Pantalon Gorka Arido";
+		descriptionShort = "Pantalon Gorka con camuflaje Arido. Impermeable.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_arido_pants_ground_co.paa",
+			"ExorStorage\data\ropa\exor_arido_pants_worn_co.paa",
+			"ExorStorage\data\ropa\exor_arido_pants_worn_co.paa"
+		};
+	};
+
+	class Exor_BallisticHelmet_Arido: BallisticHelmet_ColorBase
+	{
+		scope = 2;
+		visibilityModifier = 0.7;
+		displayName = "Casco balistico Arido";
+		descriptionShort = "Casco balistico de combate en acabado Arido.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_arido_helmet_co.paa",
+			"ExorStorage\data\ropa\exor_arido_helmet_co.paa",
+			"ExorStorage\data\ropa\exor_arido_helmet_co.paa"
+		};
+	};
+
+	class Exor_CombatBoots_Arido: CombatBoots_ColorBase
+	{
+		scope = 2;
+		visibilityModifier = 0.7;
+		displayName = "Botas de combate Arido";
+		descriptionShort = "Botas de combate en acabado Arido.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_arido_boots_co.paa",
+			"ExorStorage\data\ropa\exor_arido_boots_co.paa",
+			"ExorStorage\data\ropa\exor_arido_boots_co.paa"
+		};
+	};
+
+	class Exor_TacticalGloves_Arido: TacticalGloves_ColorBase
+	{
+		scope = 2;
+		visibilityModifier = 0.7;
+		displayName = "Guantes tacticos Arido";
+		descriptionShort = "Guantes tacticos en acabado Arido.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_arido_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_arido_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_arido_gloves_co.paa"
+		};
+	};
+
+	class Exor_PlateCarrierVest_Arido: PlateCarrierVest
+	{
+		scope = 2;
+		displayName = "Chaleco balistico Arido";
+		descriptionShort = "Chaleco balistico en acabado Arido.";
+		hiddenSelections[] = {"camoGround", "camoMale", "camoFemale"};
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_arido_plate_co.paa",
+			"ExorStorage\data\ropa\exor_arido_plate_co.paa",
+			"ExorStorage\data\ropa\exor_arido_plate_co.paa"
+		};
+	};
+
+	class Exor_PlateCarrierHolster_Arido: PlateCarrierHolster
+	{
+		scope = 2;
+		displayName = "Pistolera de chaleco Arido";
+		descriptionShort = "Pistolera para chaleco balistico, acabado Arido.";
+		hiddenSelections[] = {"camoGround"};
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_arido_plate_co.paa",
+			"ExorStorage\data\ropa\exor_arido_plate_co.paa",
+			"ExorStorage\data\ropa\exor_arido_plate_co.paa"
+		};
+	};
+
+	class Exor_PlateCarrierPouches_Arido: PlateCarrierPouches
+	{
+		scope = 2;
+		displayName = "Bolsillos de chaleco Arido";
+		descriptionShort = "Bolsillos para chaleco balistico, acabado Arido.";
+		hiddenSelections[] = {"camoGround"};
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_arido_plate_co.paa",
+			"ExorStorage\data\ropa\exor_arido_plate_co.paa",
+			"ExorStorage\data\ropa\exor_arido_plate_co.paa"
+		};
+	};
 
 	// ------------------------------------------------------------------
 	// Barril 3xor desplegado (funcional)
