@@ -596,10 +596,50 @@ class ExorTerritoryManager
 class ExorTerritoryClient
 {
 	static ref ExorTerritoryCacheDTO s_Cache;
+	static int s_UltimoPedidoMs;	// ultimo TERRITORY_REQ mandado (cooldown del sync por demanda)
 
 	static void SetCache(ExorTerritoryCacheDTO c)
 	{
 		s_Cache = c;
+	}
+
+	// ------------------------------------------------------------------------
+	//  SYNC POR DEMANDA (nunca periodico)
+	// ------------------------------------------------------------------------
+	// El cache se manda solo en eventos puntuales (conectarse, cambios de grupo) y ademas
+	// se arma RELATIVO A LA POSICION del jugador (top-40 zonas dentro de 1500 m). O sea que
+	// si te conectas lejos de tu base y caminas hasta ella sin que pase nada en el grupo, el
+	// cache no tiene tu zona -> el mastil solo ofrece "Bajar bandera", sin "Administrar
+	// party" ni "Invitar". Ese es el bug reportado.
+	//
+	// Refrescar cada N segundos a todos NO va: SyncToPlayer arma un DTO, lo serializa a
+	// JSON y lo manda chunkeado POR JUGADOR; con 60 online son envios constantes que nadie
+	// pidio. Aca lo pide el CLIENTE, y solo cuando esta mirando un mastil y le falta el
+	// dato, con cooldown. Si el cache ya sirve -el 99% del tiempo- no se manda nada.
+	static const int PEDIDO_COOLDOWN_MS = 10000;
+
+	static void PedirSyncSiFalta(PlayerBase p)
+	{
+		if (!p || !GetGame() || !GetGame().IsClient())
+			return;
+		int ahora = GetGame().GetTime();
+		if (s_UltimoPedidoMs != 0 && (ahora - s_UltimoPedidoMs) < PEDIDO_COOLDOWN_MS)
+			return;
+		s_UltimoPedidoMs = ahora;
+		p.ExorReqTerritorySync();	// el server contesta con ROSTER_SYNC + TERRITORY_SYNC
+	}
+
+	// CLIENTE: "este mastil es de MI grupo?" -> condicion de todas las acciones de miembro
+	// del mastil. Cuando da false pide el sync (una vez por cooldown): si fue por cache
+	// faltante o viejo, a los pocos segundos la accion aparece sola sin relogear.
+	static bool MastEsMio(PlayerBase p, vector pos)
+	{
+		if (!p)
+			return false;
+		if (p.ExorClientInGroup() && IsOwnMastNear(pos))
+			return true;
+		PedirSyncSiFalta(p);
+		return false;
 	}
 
 	// true si 'pos' cae dentro del radio de un mastil de MI PROPIO territorio

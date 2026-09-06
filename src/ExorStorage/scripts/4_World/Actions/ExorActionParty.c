@@ -130,7 +130,7 @@ class ExorActionLeaveParty : ActionContinuousBase
 		}
 		// cliente: solo en MI propio mastil (no en ajenos; evita "Salir del party"
 		// fantasma que te sacaria de TU party parado en base ajena)
-		return player.ExorClientInGroup() && !player.ExorClientIsLeader() && ExorTerritoryClient.IsOwnMastNear(mast.GetPosition());
+		return !player.ExorClientIsLeader() && ExorTerritoryClient.MastEsMio(player, mast.GetPosition());
 	}
 
 	override void OnFinishProgressServer(ActionData action_data)

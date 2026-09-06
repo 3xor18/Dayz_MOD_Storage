@@ -228,6 +228,87 @@ class Exor_BodyBag extends Container_Base
 	// items reales que tiene la bolsa AHORA = ropa en los slots de equipo (attachments) +
 	// cargo directo. La mayor parte del loot del muerto vive en los slots (vest/back/body/...),
 	// NO en el cargo, asi que contar solo el cargo daba 0 y rompia el guard de virtualizar.
+	// ------------------- armas colgadas de una mochila: DESCOLGARLAS -------------------
+	// Las mochilas de mods con slots propios de arma ("Shoulder" / "Melee") se NIEGAN a
+	// salir de un contenedor mientras tengan algo colgado: el mod que las trae overridea
+	// CanPutIntoHands() y CanPutInCargo() para devolver false si HasAttachments()
+	// (ej. STAG_Clothing_ArmyBackpack_Base en Alteria). En un cadaver vanilla eso se
+	// resuelve descolgando el rifle primero, pero DENTRO de la tumba el jugador la ve y no
+	// la puede sacar de ninguna forma -> la mochila quedaba trabada, con todo su contenido.
+	//
+	// Al armar la tumba las descolgamos y las dejamos SUELTAS en el cargo: no se pierde
+	// nada, la mochila sale como cualquier otra prenda y el arma queda a un click. Es el
+	// mismo criterio que HoistRuinedContents (sacar del nudo lo que el motor no deja mover).
+	//
+	// OJO: se saltea la tumba MISMA. Ella declara "Shoulder"/"Melee" en sus attachments,
+	// que es donde caen las armas que el muerto llevaba encima; esas salen sin problema y
+	// tienen que quedarse en su slot.
+	void ExorDescolgarArmas()
+	{
+		array<EntityAI> pend = new array<EntityAI>;
+		ExorHijosDirectos(this, pend);	// nivel 1: la tumba MISMA no se toca
+
+		int guard = 0;
+		while (pend.Count() > 0 && guard < 512)	// tope: arbol de loot roto no cuelga el server
+		{
+			guard++;
+			EntityAI e = pend.Get(0);
+			pend.Remove(0);
+			if (!e)
+				continue;
+			ExorHijosDirectos(e, pend);	// seguir bajando (mochila dentro de mochila)
+			ExorDescolgarSlot(e, "Shoulder");
+			ExorDescolgarSlot(e, "Melee");
+		}
+	}
+
+	// Si 'e' tiene algo colgado en 'slot', lo pasa al cargo de la tumba.
+	void ExorDescolgarSlot(EntityAI e, string slot)
+	{
+		EntityAI arma = e.FindAttachmentBySlotName(slot);
+		if (!arma)
+			return;
+		// MOVER la entidad REAL (nunca copiar: perderia cargador y miras)
+		if (GetInventory().TakeEntityToCargo(InventoryMode.SERVER, arma))
+		{
+			Print(string.Format("%1 BodyBag %2: %3 descolgada de %4 -> al cargo de la tumba", ExorStorageConstants.LOG, ExorGetID(), arma.GetType(), e.GetType()));
+			return;
+		}
+		// no entro en el cargo (300 slots: practicamente imposible) -> al piso al lado de la
+		// tumba antes que dejarla trabada adentro. Nunca se pierde.
+		arma.SetPosition(GetPosition());
+		arma.SetOrientation("0 0 0");
+		ItemBase armaib = ItemBase.Cast(arma);
+		if (armaib)
+			armaib.PlaceOnSurface();
+		Print(string.Format("%1 AVISO: BodyBag %2: %3 no entro en el cargo -> dejada en el piso al lado", ExorStorageConstants.LOG, ExorGetID(), arma.GetType()));
+	}
+
+	// Agrega a 'dest' los attachments + el cargo DIRECTO de 'e' (un solo nivel).
+	static void ExorHijosDirectos(EntityAI e, array<EntityAI> dest)
+	{
+		GameInventory inv = e.GetInventory();
+		if (!inv)
+			return;
+		int i;
+		for (i = 0; i < inv.AttachmentCount(); i++)
+		{
+			EntityAI att = inv.GetAttachmentFromIndex(i);
+			if (att)
+				dest.Insert(att);
+		}
+		CargoBase cg = inv.GetCargo();
+		if (cg)
+		{
+			for (i = 0; i < cg.GetItemCount(); i++)
+			{
+				EntityAI it = cg.GetItem(i);
+				if (it)
+					dest.Insert(it);
+			}
+		}
+	}
+
 	int ExorContentCount()
 	{
 		GameInventory inv = GetInventory();
@@ -471,6 +552,10 @@ class Exor_BodyBag extends Container_Base
 				ok++;
 		}
 
+		// El restore ubica cada item con FindInventoryLocationType.ANY -> una mochila con
+		// slots de arma se puede volver a quedar el rifle. Descolgar aca tambien.
+		ExorDescolgarArmas();
+
 		DeleteFile(path);	// consumido tras restaurar (anti-dupe)
 		ExorSetVirtualizada(false);
 		SetSynchDirty();
@@ -599,6 +684,11 @@ class Exor_BodyBag extends Container_Base
 				Print(string.Format("%1 AVISO: %2 no entro en la bolsa -> dejada en el piso al lado (real, intacta)", ExorStorageConstants.LOG, it.GetType()));
 			}
 		}
+
+		// VA AL FINAL a proposito: el loop de moveItems usa FindInventoryLocationType.ANY,
+		// asi que el propio motor puede colgar el rifle del slot "Shoulder" de una mochila
+		// que ya esta adentro. Descolgar antes no serviria de nada.
+		bag.ExorDescolgarArmas();
 
 		bag.ExorStampSpawn();
 		Print(string.Format("%1 BodyBag %2 creada en %3 (loot %4/%5)", ExorStorageConstants.LOG, bag.ExorGetID(), pos.ToString(), restored, captured));

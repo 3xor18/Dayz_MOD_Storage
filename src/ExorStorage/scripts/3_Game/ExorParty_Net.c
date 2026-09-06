@@ -46,6 +46,7 @@ class ExorRPC
 	static const int CAR_ACCESS_GRANT  = 49247;	// S -> C: te doy acceso al baul de un auto (Param2 int netId low/high)
 	static const int CAR_MEMBER        = 49248;	// S -> C: sos miembro del clan dueño de este auto (Param2 netId low/high)
 	static const int ESP_SYNC          = 49249;	// S -> C: posiciones de TODOS los players para el mapa (solo al duenio del godpack) [chunked]
+	static const int TERRITORY_REQ     = 49250;	// C -> S: el cliente pide su roster + las zonas de donde esta parado (sync POR DEMANDA)
 
 	// ------------------------------------------------------------------------
 	//  DIRECCION DEL RPC  (control de autoridad)

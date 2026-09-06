@@ -44,7 +44,7 @@ class ExorActionOpenInvite : ActionContinuousBase
 			return g && g.HasMember(ExorGroupManager.SteamId(player));
 		}
 		// cliente: solo en MI propio mastil (no en ajenos)
-		return player.ExorClientInGroup() && ExorTerritoryClient.IsOwnMastNear(mast.GetPosition());
+		return ExorTerritoryClient.MastEsMio(player, mast.GetPosition());
 	}
 
 	// Efecto en OnStartServer (no en OnFinishProgressServer): las acciones continuas
@@ -146,7 +146,7 @@ class ExorActionCancelInvite : ActionContinuousBase
 			return g && g.HasMember(ExorGroupManager.SteamId(player));
 		}
 		// cliente: solo en MI propio mastil (no en ajenos)
-		return player.ExorClientInGroup() && ExorTerritoryClient.IsOwnMastNear(mast.GetPosition());
+		return ExorTerritoryClient.MastEsMio(player, mast.GetPosition());
 	}
 
 	override void OnStartServer(ActionData action_data)

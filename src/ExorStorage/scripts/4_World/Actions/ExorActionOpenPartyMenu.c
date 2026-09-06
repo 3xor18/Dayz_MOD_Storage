@@ -47,7 +47,7 @@ class ExorActionOpenPartyMenu : ActionContinuousBase
 		}
 		// cliente: solo si estoy en un grupo Y este mastil es de MI territorio
 		// (evita que "Administrar" aparezca en mastiles ajenos)
-		return player.ExorClientInGroup() && ExorTerritoryClient.IsOwnMastNear(mast.GetPosition());
+		return ExorTerritoryClient.MastEsMio(player, mast.GetPosition());
 	}
 
 	override void OnStart(ActionData action_data)

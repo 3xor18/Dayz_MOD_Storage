@@ -24,6 +24,7 @@ modded class PlayerBase
 	// --- Auto-run (cliente, jugador local) ---
 	protected bool m_ExorAutoRun;       // auto-run activo
 	protected int  m_ExorLastScoreReqMs;	// throttle del pedido de leaderboard (SCORE_REQ)
+	protected int  m_ExorLastTerrReqMs;	// throttle del pedido de territorio (TERRITORY_REQ)
 	protected bool m_ExorArKeyPrev;     // estado previo de la tecla (deteccion de flanco)
 	protected bool m_ExorArApplied;     // el override esta puesto (para soltarlo 1 sola vez al apagar)
 	protected bool m_ExorArTired;       // sin stamina -> baja a trote sin sprint hasta recuperar (histeresis)
@@ -1042,6 +1043,25 @@ modded class PlayerBase
 			case ExorRPC.SCORE_DATA:
 				ExorOnScoreData(ctx);
 				break;
+			case ExorRPC.TERRITORY_REQ:
+				if (GetGame().IsServer())
+				{
+					// SYNC POR DEMANDA: el cliente lo pide cuando esta mirando un mastil y no
+					// tiene el dato (ver ExorTerritoryClient.PedirSyncSiFalta). Se contestan las
+					// DOS piezas que gobiernan las acciones de miembro -roster y zonas-, porque
+					// desde el cliente no se sabe cual de las dos falto.
+					// El cooldown del cliente no es garantia (un cliente modificado no lo
+					// respeta) y cada respuesta serializa JSON + lo manda en trozos: el
+					// throttle autoritativo va aca.
+					int nowTerr = GetGame().GetTime();
+					if (m_ExorLastTerrReqMs != 0 && (nowTerr - m_ExorLastTerrReqMs) < 5000)
+						break;
+					m_ExorLastTerrReqMs = nowTerr;
+					ExorGroupManager gmReq = ExorGroupManager.Get();
+					gmReq.SyncToPlayer(this, gmReq.FindByPlayer(ExorGroupManager.SteamId(this)));
+					ExorTerritoryManager.Get().SyncToPlayer(this);
+				}
+				break;
 			case ExorRPC.POP_REQ:
 				if (GetGame().IsServer())
 				{
@@ -1173,6 +1193,14 @@ modded class PlayerBase
 	void ExorReqPop()
 	{
 		RPCSingleParam(ExorRPC.POP_REQ, new Param1<int>(0), true, null);
+	}
+
+	// Pide al server MI roster + las zonas de territorio de donde estoy parado (cliente).
+	// Lo dispara ExorTerritoryClient.MastEsMio cuando la accion del mastil no puede
+	// resolverse por falta de cache. Ver el comentario de PedirSyncSiFalta.
+	void ExorReqTerritorySync()
+	{
+		RPCSingleParam(ExorRPC.TERRITORY_REQ, new Param1<int>(0), true, null);
 	}
 
 	// Leaderboard recibido (cliente): lo cachea para que lo lea el menu.
