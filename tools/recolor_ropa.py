@@ -87,11 +87,31 @@ def recolor(img, p):
     sn = np.minimum(sn, p["sat_max"])
     sn = np.where(s < p["neutro"], s * p["sat_scale"] * 0.35, sn)
 
+    # AUTO-NIVELADO opcional: lleva la luminancia MEDIA de esta textura a 'v_target' con
+    # una gamma calculada, ignorando el fondo negro del UV. Hace falta en las paletas
+    # acromaticas: el plate y los cascos vanilla ya vienen oscuros de fabrica, asi que sin
+    # esto un "urbano" les queda casi negro mientras la campera queda gris medio, y el set
+    # se ve despareado. Con esto todas las piezas parten del mismo gris y solo entonces la
+    # ventana decide el rango final. En rosa y arido va apagado: el tono ya une el set.
+    vv = np.clip(v, 0.0, 1.0)
+    if p["v_target"] > 0.0:
+        util = vv[vv > 0.02]
+        if util.size > 0:
+            med = float(np.clip(util.mean(), 0.02, 0.98))
+            vv = np.power(vv, np.log(p["v_target"]) / np.log(med))
+
     # Luminancia: gamma suave + ganancia + un contraste leve alrededor del medio. El
     # contraste es lo que devuelve profundidad: al desaturar, las manchas del camo se
     # acercan entre si y el conjunto se lee lavado.
-    vn = np.power(np.clip(v, 0.0, 1.0), p["val_gamma"]) * p["val_gain"] + p["val_lift"]
+    vn = np.power(vv, p["val_gamma"]) * p["val_gain"] + p["val_lift"]
     vn = np.clip(0.5 + (vn - 0.5) * p["contraste"], 0.0, 1.0)
+
+    # VENTANA de luminancia: comprime todo el rango a [v_lo, v_hi]. En las paletas de color
+    # el tono hace el trabajo, pero nieve y negro son casi acromaticas -ahi lo unico que
+    # define el camuflaje es DONDE cae el rango de grises-. Sin esta ventana, "nieve" con
+    # solo subir el brillo se quema a blanco plano y se pierde el patron; con ella, el blanco
+    # nunca llega a 1.0 y las manchas siguen separadas.
+    vn = p["v_lo"] + vn * (p["v_hi"] - p["v_lo"])
     vn = np.where(v < 0.02, v, vn)   # negro del fondo del UV: intacto
 
     out = hsv_to_rgb(hn, sn, vn)
@@ -108,7 +128,8 @@ def recolor(img, p):
 # rojo puro, que son los dos lados por donde un rosa se vuelve disfraz.
 ROSA = dict(hue=0.945, spread=0.34, spread_min=-0.050, spread_max=0.050,
             sat_scale=1.10, sat_add=0.05, sat_max=0.36, neutro=0.10,
-            val_gamma=0.96, val_gain=1.05, val_lift=0.01, contraste=1.14)
+            val_gamma=0.96, val_gain=1.05, val_lift=0.01, contraste=1.14,
+            v_lo=0.00, v_hi=1.00, v_target=0.0)
 
 # ARIDO: base arena/khaki con oliva y marron en los medios. Tono 0.105 = ~38 grados.
 # 'spread' mas alto que en el rosa: en camuflaje real de desierto la variacion entre manchas
@@ -117,12 +138,40 @@ ROSA = dict(hue=0.945, spread=0.34, spread_min=-0.050, spread_max=0.050,
 # hacia el rojo es menos de la mitad que hacia el verde justamente para matar el salmon.
 ARIDO = dict(hue=0.105, spread=0.55, spread_min=-0.030, spread_max=0.075,
              sat_scale=0.98, sat_add=0.04, sat_max=0.40, neutro=0.10,
-             val_gamma=0.90, val_gain=1.11, val_lift=0.02, contraste=1.08)
+             val_gamma=0.90, val_gain=1.11, val_lift=0.02, contraste=1.08,
+             v_lo=0.00, v_hi=1.00, v_target=0.0)
 
-SETS = {"rosa": ROSA, "arido": ARIDO}
+# Las tres de abajo son CASI ACROMATICAS: la saturacion se aplasta y el camuflaje lo hace
+# entero el rango de grises. El poquito de tono frio que queda (~215 grados) no se ve como
+# azul; evita que el gris salga amarillento, que es como se ve "sucio" en pantalla.
+#
+# URBANO: gris medio, con el rango bien abierto para que convivan hormigon claro, sombra y
+# negro de las aberturas. Es el que mas contraste necesita: en ciudad lo que rompe la
+# silueta son los saltos duros, no las transiciones suaves.
+URBANO = dict(hue=0.60, spread=0.20, spread_min=-0.040, spread_max=0.040,
+              sat_scale=0.20, sat_add=0.0, sat_max=0.10, neutro=0.06,
+              val_gamma=0.98, val_gain=1.0, val_lift=0.0, contraste=1.30,
+              v_lo=0.10, v_hi=0.82, v_target=0.46)
+
+# NIEVE: blanco sucio con sombras gris-azuladas. El techo en 0.97 y no en 1.0 es a proposito:
+# apenas el blanco satura, el patron se quema y queda un mameluco liso.
+NIEVE = dict(hue=0.58, spread=0.18, spread_min=-0.035, spread_max=0.035,
+             sat_scale=0.22, sat_add=0.0, sat_max=0.09, neutro=0.06,
+             val_gamma=0.80, val_gain=1.0, val_lift=0.0, contraste=1.18,
+             v_lo=0.58, v_hi=0.97, v_target=0.50)
+
+# NEGRO: no es negro plano. El piso en 0.02 y el techo en 0.30 dejan ver la silueta y las
+# costuras; con todo a 0 la prenda se ve como un agujero recortado en la pantalla.
+NEGRO = dict(hue=0.62, spread=0.18, spread_min=-0.035, spread_max=0.035,
+             sat_scale=0.25, sat_add=0.0, sat_max=0.10, neutro=0.06,
+             val_gamma=1.15, val_gain=1.0, val_lift=0.0, contraste=1.22,
+             v_lo=0.03, v_hi=0.36, v_target=0.48)
+
+SETS = {"rosa": ROSA, "arido": ARIDO, "urbano": URBANO, "nieve": NIEVE, "negro": NEGRO}
 
 TEXTURAS = ["jacket_ground", "jacket_worn", "pants_ground", "pants_worn",
-            "plate", "helmet", "boots", "gloves"]
+            "plate", "helmet", "boots", "gloves",
+            "mich", "gorkahelmet", "press", "tortilla", "balaclava"]
 
 
 def main():

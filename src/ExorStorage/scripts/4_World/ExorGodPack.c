@@ -57,8 +57,12 @@ class ExorGodPack
 		if (cmd == "/medicina")   { Medicina(p);   return true; }
 		if (cmd == "/ammo")       { Ammo(p);       return true; }
 		if (cmd == "/ropa")       { Ropa(p);       return true; }
-		if (cmd == "/rosa")       { SetRopa(p, "Rosa");  return true; }
-		if (cmd == "/arido")      { SetRopa(p, "Arido"); return true; }
+		if (cmd == "/rosa")       { SetRopa(p, "Rosa");   return true; }
+		if (cmd == "/arido")      { SetRopa(p, "Arido");  return true; }
+		if (cmd == "/urbano")     { SetRopa(p, "Urbano"); return true; }
+		if (cmd == "/nieve")      { SetRopa(p, "Nieve");  return true; }
+		if (cmd == "/negro")      { SetRopa(p, "Negro");  return true; }
+		if (cmd == "/test_ropa")  { TestRopa(p);          return true; }
 		if (cmd == "/explosivos2") { Explosivos2(p); return true; }
 		if (cmd == "/explosivos")  { Explosivos(p);  return true; }
 		if (cmd == "/bambi")       { Bambi(p);       return true; }
@@ -253,7 +257,10 @@ class ExorGodPack
 		Piso(b, "AssaultBag_Green");			// mochila de combate verde
 	}
 
-	// Set de ropa 3xor completo (una sola pieza de cada cosa). 'variante' = "Rosa" | "Arido".
+	// Los cinco colores del set de ropa 3xor. El orden es el mismo que usa /test_ropa.
+	static ref TStringArray SETS_ROPA = {"Rosa", "Arido", "Urbano", "Nieve", "Negro"};
+
+	// Set de ropa 3xor completo (una sola pieza de cada cosa) tirado al piso.
 	// Los bolsillos y la pistolera van ENGANCHADOS al chaleco, como en /ropa: sueltos en el
 	// piso confunden, porque son attachments y no se pueden vestir por si solos.
 	static void SetRopa(PlayerBase p, string variante)
@@ -262,9 +269,14 @@ class ExorGodPack
 		s_slot = 0;
 		Piso(b, "Exor_GorkaJacket_" + variante);
 		Piso(b, "Exor_GorkaPants_" + variante);
+		Piso(b, "Exor_BalaclavaMask_" + variante);
 		Piso(b, "Exor_BallisticHelmet_" + variante);
+		Piso(b, "Exor_Mich2001Helmet_" + variante);
+		Piso(b, "Exor_GorkaHelmet_" + variante);
 		Piso(b, "Exor_CombatBoots_" + variante);
 		Piso(b, "Exor_TacticalGloves_" + variante);
+		Piso(b, "Exor_PressVest_" + variante);
+		Piso(b, "Exor_TortillaBag_" + variante);
 
 		EntityAI pc = Piso(b, "Exor_PlateCarrierVest_" + variante);
 		if (pc)
@@ -272,6 +284,75 @@ class ExorGodPack
 			pc.GetInventory().CreateAttachment("Exor_PlateCarrierPouches_" + variante);
 			pc.GetInventory().CreateAttachment("Exor_PlateCarrierHolster_" + variante);
 		}
+	}
+
+	// Viste un maniqui con el set entero de 'variante'. Devuelve false si no se pudo crear.
+	static bool Maniqui(string cuerpo, vector pos, float yaw, string variante)
+	{
+		PlayerBase d = PlayerBase.Cast(GetGame().CreateObject(cuerpo, pos, false, false, true));
+		if (!d)
+			return false;
+		d.SetPosition(pos);
+		d.SetOrientation(Vector(yaw, 0, 0));
+		d.SetAllowDamage(false);	// que no se caiga ni se muera mientras se le saca la foto
+
+		d.GetInventory().CreateAttachment("Exor_GorkaJacket_" + variante);
+		d.GetInventory().CreateAttachment("Exor_GorkaPants_" + variante);
+		d.GetInventory().CreateAttachment("Exor_CombatBoots_" + variante);
+		d.GetInventory().CreateAttachment("Exor_TacticalGloves_" + variante);
+		d.GetInventory().CreateAttachment("Exor_BalaclavaMask_" + variante);
+		d.GetInventory().CreateAttachment("Exor_BallisticHelmet_" + variante);
+		d.GetInventory().CreateAttachment("Exor_TortillaBag_" + variante);
+
+		EntityAI v = d.GetInventory().CreateAttachment("Exor_PlateCarrierVest_" + variante);
+		if (v)
+		{
+			v.GetInventory().CreateAttachment("Exor_PlateCarrierPouches_" + variante);
+			v.GetInventory().CreateAttachment("Exor_PlateCarrierHolster_" + variante);
+		}
+		return true;
+	}
+
+	// /test_ropa: un maniqui por color, en fila y mirando al jugador, para la foto.
+	// Las piezas que COMPITEN por el mismo slot y por eso no pueden ir puestas a la vez
+	// -los otros dos cascos y el chaleco de prensa- se dejan en el piso a los pies de cada
+	// uno, asi la foto igual muestra el set completo.
+	static void TestRopa(PlayerBase p)
+	{
+		TStringArray cuerpos = {"SurvivorM_Mirek", "SurvivorM_Boris", "SurvivorM_Cyril",
+								"SurvivorM_Denis", "SurvivorM_Elias"};
+		vector orig = p.GetPosition();
+		vector fwd = p.GetDirection();
+		fwd[1] = 0;
+		fwd.Normalize();
+		vector lado = Vector(-fwd[2], 0, fwd[0]);	// perpendicular, para alinearlos
+
+		// mirando al jugador = 180 grados respecto de hacia donde el jugador mira
+		float yaw = fwd.VectorToAngles()[0] + 180.0;
+		int n = SETS_ROPA.Count();
+		int i;
+		int ok = 0;
+		for (i = 0; i < n; i++)
+		{
+			string variante = SETS_ROPA.Get(i);
+			// centrados: (i - (n-1)/2) los reparte a ambos lados del eje de la mirada
+			float off = (i - (n - 1) * 0.5) * 1.6;
+			vector pos = orig + fwd * 6.0 + lado * off;
+			pos[1] = GetGame().SurfaceY(pos[0], pos[2]);
+			if (!Maniqui(cuerpos.Get(i), pos, yaw, variante))
+			{
+				Print(string.Format("%1 GODPACK /test_ropa: no se pudo crear el maniqui %2", ExorStorageConstants.LOG, variante));
+				continue;
+			}
+			ok++;
+			// alternativas al piso, justo delante de cada maniqui
+			vector pie = pos + fwd * -0.9;
+			pie[1] = GetGame().SurfaceY(pie[0], pie[2]);
+			GetGame().CreateObjectEx("Exor_Mich2001Helmet_" + variante, pie, ECE_PLACE_ON_SURFACE);
+			GetGame().CreateObjectEx("Exor_GorkaHelmet_" + variante, pie + lado * 0.35, ECE_PLACE_ON_SURFACE);
+			GetGame().CreateObjectEx("Exor_PressVest_" + variante, pie + lado * 0.7, ECE_PLACE_ON_SURFACE);
+		}
+		Print(string.Format("%1 GODPACK /test_ropa: %2/%3 maniquies vestidos", ExorStorageConstants.LOG, ok, n));
 	}
 
 	static void Explosivos(PlayerBase p)

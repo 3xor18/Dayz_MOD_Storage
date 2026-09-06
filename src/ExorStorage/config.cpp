@@ -9,7 +9,7 @@ class CfgPatches
 {
 	class ExorStorage
 	{
-		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_OpenableStorage", "Exor_Fridge", "Exor_Refrigerador_Packed", "Exor_Refrigerador_Ghost", "Exor_Locker", "Exor_Locker_Packed", "Exor_Locker_Ghost", "Exor_LockerRojo", "Exor_LockerRojo_Packed", "Exor_LockerRojo_Ghost", "Exor_MuebleArmas", "Exor_MuebleArmas_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight", "Exor_Parking", "Exor_Parking_Packed", "Exor_Parking_Ghost", "Exor_GorkaJacket_Rosa", "Exor_GorkaPants_Rosa", "Exor_BallisticHelmet_Rosa", "Exor_CombatBoots_Rosa", "Exor_TacticalGloves_Rosa", "Exor_PlateCarrierVest_Rosa", "Exor_PlateCarrierHolster_Rosa", "Exor_PlateCarrierPouches_Rosa", "Exor_GorkaJacket_Arido", "Exor_GorkaPants_Arido", "Exor_BallisticHelmet_Arido", "Exor_CombatBoots_Arido", "Exor_TacticalGloves_Arido", "Exor_PlateCarrierVest_Arido", "Exor_PlateCarrierHolster_Arido", "Exor_PlateCarrierPouches_Arido"};
+		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_OpenableStorage", "Exor_Fridge", "Exor_Refrigerador_Packed", "Exor_Refrigerador_Ghost", "Exor_Locker", "Exor_Locker_Packed", "Exor_Locker_Ghost", "Exor_LockerRojo", "Exor_LockerRojo_Packed", "Exor_LockerRojo_Ghost", "Exor_MuebleArmas", "Exor_MuebleArmas_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight", "Exor_Parking", "Exor_Parking_Packed", "Exor_Parking_Ghost", "Exor_GorkaJacket_Rosa", "Exor_GorkaPants_Rosa", "Exor_BallisticHelmet_Rosa", "Exor_Mich2001Helmet_Rosa", "Exor_GorkaHelmet_Rosa", "Exor_BalaclavaMask_Rosa", "Exor_CombatBoots_Rosa", "Exor_TacticalGloves_Rosa", "Exor_PressVest_Rosa", "Exor_PlateCarrierVest_Rosa", "Exor_PlateCarrierHolster_Rosa", "Exor_PlateCarrierPouches_Rosa", "Exor_TortillaBag_Rosa", "Exor_GorkaJacket_Arido", "Exor_GorkaPants_Arido", "Exor_BallisticHelmet_Arido", "Exor_Mich2001Helmet_Arido", "Exor_GorkaHelmet_Arido", "Exor_BalaclavaMask_Arido", "Exor_CombatBoots_Arido", "Exor_TacticalGloves_Arido", "Exor_PressVest_Arido", "Exor_PlateCarrierVest_Arido", "Exor_PlateCarrierHolster_Arido", "Exor_PlateCarrierPouches_Arido", "Exor_TortillaBag_Arido", "Exor_GorkaJacket_Urbano", "Exor_GorkaPants_Urbano", "Exor_BallisticHelmet_Urbano", "Exor_Mich2001Helmet_Urbano", "Exor_GorkaHelmet_Urbano", "Exor_BalaclavaMask_Urbano", "Exor_CombatBoots_Urbano", "Exor_TacticalGloves_Urbano", "Exor_PressVest_Urbano", "Exor_PlateCarrierVest_Urbano", "Exor_PlateCarrierHolster_Urbano", "Exor_PlateCarrierPouches_Urbano", "Exor_TortillaBag_Urbano", "Exor_GorkaJacket_Nieve", "Exor_GorkaPants_Nieve", "Exor_BallisticHelmet_Nieve", "Exor_Mich2001Helmet_Nieve", "Exor_GorkaHelmet_Nieve", "Exor_BalaclavaMask_Nieve", "Exor_CombatBoots_Nieve", "Exor_TacticalGloves_Nieve", "Exor_PressVest_Nieve", "Exor_PlateCarrierVest_Nieve", "Exor_PlateCarrierHolster_Nieve", "Exor_PlateCarrierPouches_Nieve", "Exor_TortillaBag_Nieve", "Exor_GorkaJacket_Negro", "Exor_GorkaPants_Negro", "Exor_BallisticHelmet_Negro", "Exor_Mich2001Helmet_Negro", "Exor_GorkaHelmet_Negro", "Exor_BalaclavaMask_Negro", "Exor_CombatBoots_Negro", "Exor_TacticalGloves_Negro", "Exor_PressVest_Negro", "Exor_PlateCarrierVest_Negro", "Exor_PlateCarrierHolster_Negro", "Exor_PlateCarrierPouches_Negro", "Exor_TortillaBag_Negro"};
 		weapons[] = {};
 		requiredVersion = 0.1;
 		// DZ_Gear_Camping = TerritoryFlag/Kit + SeaChest. DZ_Characters_Backpacks =
@@ -17,7 +17,7 @@ class CfgPatches
 		// Los DZ_Characters_* de abajo son los que traen las bases de los sets de ropa
 		// retexturizados (tops/pants/headgear/shoes/gloves/vests): sin ellos las clases
 		// nuevas no encuentran su padre y el juego las descarta en silencio.
-		requiredAddons[] = {"DZ_Data", "DZ_Scripts", "DZ_Gear_Containers", "DZ_Weapons_Ammunition", "DZ_Gear_Camping", "DZ_Characters_Backpacks", "DZ_Characters", "DZ_Gear_Consumables", "DZ_Structures_Furniture", "DZ_Characters_Tops", "DZ_Characters_Pants", "DZ_Characters_Headgear", "DZ_Characters_Shoes", "DZ_Characters_Gloves", "DZ_Characters_Vests"};
+		requiredAddons[] = {"DZ_Data", "DZ_Scripts", "DZ_Gear_Containers", "DZ_Weapons_Ammunition", "DZ_Gear_Camping", "DZ_Characters_Backpacks", "DZ_Characters", "DZ_Gear_Consumables", "DZ_Structures_Furniture", "DZ_Characters_Tops", "DZ_Characters_Pants", "DZ_Characters_Headgear", "DZ_Characters_Shoes", "DZ_Characters_Gloves", "DZ_Characters_Vests", "DZ_Characters_Masks"};
 	};
 };
 
@@ -87,103 +87,148 @@ class CfgVehicles
 	class GhillieHood_Winter: GhillieHood_ColorBase { inventorySlot[] = {"Hips"}; };
 	class GhillieHood_Tan: GhillieHood_ColorBase { inventorySlot[] = {"Hips"}; };
 
+	// >>> SETS DE ROPA 3xor (generado por tools/gen_ropa_config.py) >>>
 	// ==================================================================
-	//  SETS DE ROPA 3xor (retexturizados)  -- rosa sobrio y arido
+	//  SETS DE ROPA 3xor (retexturizados)
 	// ------------------------------------------------------------------
-	//  Son ITEMS NUEVOS: cada clase HEREDA de la base vanilla y solo cambia
-	//  'hiddenSelectionsTextures'. Las bases se declaran sin cuerpo (forward
-	//  declaration), que NO modifica la clase vanilla: los items originales del
-	//  juego quedan intactos, igual que los modelos, que se reusan tal cual.
+	//  Cinco colores x trece piezas. Son ITEMS NUEVOS: cada clase HEREDA de la base vanilla
+	//  y solo cambia 'hiddenSelectionsTextures'. Las bases se declaran sin cuerpo (forward
+	//  declaration), que NO modifica la clase vanilla: los items originales del juego quedan
+	//  intactos, igual que los modelos, que se reusan tal cual. No hay ni un 'modded class'.
 	//
-	//  Las texturas son el _co (color) vanilla recoloreado en HSV conservando la
-	//  luminancia -o sea costuras, correas, sombras y desgaste-. El _nohq (relieve)
-	//  y el _smdi (brillo) NO se tocan: siguen siendo los de vanilla, heredados.
+	//  Las texturas son el _co (color) vanilla recoloreado en HSV conservando la luminancia
+	//  -o sea costuras, correas, sombras y desgaste-. El _nohq (relieve) y el _smdi (brillo)
+	//  NO se tocan: siguen siendo los de vanilla, heredados. Ver tools/recolor_ropa.py, que
+	//  documenta cada paleta y por que esta donde esta.
 	//
-	//  ROSA: rosa viejo / malva, tono 322-358 grados y saturacion topeada en 0.36.
-	//  Ese tope es lo unico que separa esto de un fucsia de disfraz.
-	//
-	//  ARIDO: tierra -> arena -> khaki -> oliva (27-65 grados). NO es un arena plano
-	//  a proposito: en Alteria hay pasto y asfalto ademas de tierra, y el oliva de los
-	//  medios es lo que hace que rompa la silueta ahi en vez de brillar como una mancha
-	//  clara. Un desierto puro solo funciona en desierto puro.
-	//
-	//  Para volver atras: borrar este bloque, sus entradas en CfgPatches.units, la
+	//  ESTE BLOQUE ES GENERADO. Para agregar un color o una pieza, editar las tablas de
+	//  tools/gen_ropa_config.py y correrlo; reescribe entre los marcadores >>> y <<<.
+	//  Para volver atras: borrar el bloque entero, sus entradas en CfgPatches.units, la
 	//  carpeta data\ropa y las lineas de types.xml. Nada mas depende de esto.
 	// ==================================================================
-	class Clothing;					// externa (DZ_Data)
-	class GorkaEJacket_ColorBase;			// externa (DZ_Characters_Tops)
-	class GorkaPants_ColorBase;			// externa (DZ_Characters_Pants)
-	class BallisticHelmet_ColorBase;		// externa (DZ_Characters_Headgear) - modelo HelmetMich
-	class CombatBoots_ColorBase;			// externa (DZ_Characters_Shoes)
-	class TacticalGloves_ColorBase;			// externa (DZ_Characters_Gloves)
-	class PlateCarrierVest;				// externa (DZ_Characters_Vests)
-	class PlateCarrierHolster;			// externa (DZ_Characters_Vests)
-	class PlateCarrierPouches;			// externa (DZ_Gear_Containers)
+
+	class Clothing;				// externa (DZ_Data)
+	class GorkaEJacket_ColorBase;	// externa (DZ_Characters_Tops)
+	class GorkaPants_ColorBase;	// externa (DZ_Characters_Pants)
+	class BallisticHelmet_ColorBase;	// externa (DZ_Characters_Headgear)
+	class Mich2001Helmet;	// externa (DZ_Characters_Headgear)
+	class GorkaHelmet;	// externa (DZ_Characters_Headgear)
+	class BalaclavaMask_ColorBase;	// externa (DZ_Characters_Masks)
+	class CombatBoots_ColorBase;	// externa (DZ_Characters_Shoes)
+	class TacticalGloves_ColorBase;	// externa (DZ_Characters_Gloves)
+	class PressVest_ColorBase;	// externa (DZ_Characters_Vests)
+	class PlateCarrierVest;	// externa (DZ_Characters_Vests)
+	class PlateCarrierHolster;	// externa (DZ_Characters_Vests)
+	class PlateCarrierPouches;	// externa (DZ_Gear_Containers)
+	class TortillaBag;	// externa (DZ_Characters_Backpacks)
 
 	// ---------------- SET ROSA ----------------
 
 	class Exor_GorkaJacket_Rosa: GorkaEJacket_ColorBase
 	{
 		scope = 2;
-		visibilityModifier = 0.7;
 		displayName = "Camisa Gorka Rosa";
-		descriptionShort = "Chaqueta Gorka con camuflaje Rosa. Impermeable.";
+		descriptionShort = "Camisa Gorka del set Rosa de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\data\ropa\exor_rosa_jacket_ground_co.paa",
-			"ExorStorage\data\ropa\exor_rosa_jacket_worn_co.paa",
-			"ExorStorage\data\ropa\exor_rosa_jacket_worn_co.paa"
+			"ExorStorage\\data\\ropa\\exor_rosa_jacket_ground_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_jacket_worn_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_jacket_worn_co.paa"
 		};
 	};
 
 	class Exor_GorkaPants_Rosa: GorkaPants_ColorBase
 	{
 		scope = 2;
-		visibilityModifier = 0.7;
 		displayName = "Pantalon Gorka Rosa";
-		descriptionShort = "Pantalon Gorka con camuflaje Rosa. Impermeable.";
+		descriptionShort = "Pantalon Gorka del set Rosa de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\data\ropa\exor_rosa_pants_ground_co.paa",
-			"ExorStorage\data\ropa\exor_rosa_pants_worn_co.paa",
-			"ExorStorage\data\ropa\exor_rosa_pants_worn_co.paa"
+			"ExorStorage\\data\\ropa\\exor_rosa_pants_ground_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_pants_worn_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_pants_worn_co.paa"
 		};
 	};
 
 	class Exor_BallisticHelmet_Rosa: BallisticHelmet_ColorBase
 	{
 		scope = 2;
-		visibilityModifier = 0.7;
 		displayName = "Casco balistico Rosa";
-		descriptionShort = "Casco balistico de combate en acabado Rosa.";
+		descriptionShort = "Casco balistico del set Rosa de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\data\ropa\exor_rosa_helmet_co.paa",
-			"ExorStorage\data\ropa\exor_rosa_helmet_co.paa",
-			"ExorStorage\data\ropa\exor_rosa_helmet_co.paa"
+			"ExorStorage\\data\\ropa\\exor_rosa_helmet_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_helmet_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_helmet_co.paa"
+		};
+	};
+
+	class Exor_Mich2001Helmet_Rosa: Mich2001Helmet
+	{
+		scope = 2;
+		displayName = "Casco MICH 2001 Rosa";
+		descriptionShort = "Casco MICH 2001 del set Rosa de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_rosa_mich_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_mich_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_mich_co.paa"
+		};
+	};
+
+	class Exor_GorkaHelmet_Rosa: GorkaHelmet
+	{
+		scope = 2;
+		displayName = "Casco Gorka Rosa";
+		descriptionShort = "Casco Gorka del set Rosa de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_rosa_gorkahelmet_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_gorkahelmet_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_gorkahelmet_co.paa"
+		};
+	};
+
+	class Exor_BalaclavaMask_Rosa: BalaclavaMask_ColorBase
+	{
+		scope = 2;
+		displayName = "Balaclava Rosa";
+		descriptionShort = "Balaclava del set Rosa de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_rosa_balaclava_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_balaclava_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_balaclava_co.paa"
 		};
 	};
 
 	class Exor_CombatBoots_Rosa: CombatBoots_ColorBase
 	{
 		scope = 2;
-		visibilityModifier = 0.7;
 		displayName = "Botas de combate Rosa";
-		descriptionShort = "Botas de combate en acabado Rosa.";
+		descriptionShort = "Botas de combate del set Rosa de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\data\ropa\exor_rosa_boots_co.paa",
-			"ExorStorage\data\ropa\exor_rosa_boots_co.paa",
-			"ExorStorage\data\ropa\exor_rosa_boots_co.paa"
+			"ExorStorage\\data\\ropa\\exor_rosa_boots_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_boots_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_boots_co.paa"
 		};
 	};
 
 	class Exor_TacticalGloves_Rosa: TacticalGloves_ColorBase
 	{
 		scope = 2;
-		visibilityModifier = 0.7;
 		displayName = "Guantes tacticos Rosa";
-		descriptionShort = "Guantes tacticos en acabado Rosa.";
+		descriptionShort = "Guantes tacticos del set Rosa de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\data\ropa\exor_rosa_gloves_co.paa",
-			"ExorStorage\data\ropa\exor_rosa_gloves_co.paa",
-			"ExorStorage\data\ropa\exor_rosa_gloves_co.paa"
+			"ExorStorage\\data\\ropa\\exor_rosa_gloves_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_gloves_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_gloves_co.paa"
+		};
+	};
+
+	class Exor_PressVest_Rosa: PressVest_ColorBase
+	{
+		scope = 2;
+		displayName = "Chaleco de prensa Rosa";
+		descriptionShort = "Chaleco de prensa del set Rosa de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_rosa_press_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_press_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_press_co.paa"
 		};
 	};
 
@@ -191,12 +236,12 @@ class CfgVehicles
 	{
 		scope = 2;
 		displayName = "Chaleco balistico Rosa";
-		descriptionShort = "Chaleco balistico en acabado Rosa.";
+		descriptionShort = "Chaleco balistico del set Rosa de 3xor.";
 		hiddenSelections[] = {"camoGround", "camoMale", "camoFemale"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\data\ropa\exor_rosa_plate_co.paa",
-			"ExorStorage\data\ropa\exor_rosa_plate_co.paa",
-			"ExorStorage\data\ropa\exor_rosa_plate_co.paa"
+			"ExorStorage\\data\\ropa\\exor_rosa_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_plate_co.paa"
 		};
 	};
 
@@ -204,12 +249,12 @@ class CfgVehicles
 	{
 		scope = 2;
 		displayName = "Pistolera de chaleco Rosa";
-		descriptionShort = "Pistolera para chaleco balistico, acabado Rosa.";
+		descriptionShort = "Pistolera de chaleco del set Rosa de 3xor.";
 		hiddenSelections[] = {"camoGround"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\data\ropa\exor_rosa_plate_co.paa",
-			"ExorStorage\data\ropa\exor_rosa_plate_co.paa",
-			"ExorStorage\data\ropa\exor_rosa_plate_co.paa"
+			"ExorStorage\\data\\ropa\\exor_rosa_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_plate_co.paa"
 		};
 	};
 
@@ -217,13 +262,28 @@ class CfgVehicles
 	{
 		scope = 2;
 		displayName = "Bolsillos de chaleco Rosa";
-		descriptionShort = "Bolsillos para chaleco balistico, acabado Rosa.";
+		descriptionShort = "Bolsillos de chaleco del set Rosa de 3xor.";
 		hiddenSelections[] = {"camoGround"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\data\ropa\exor_rosa_plate_co.paa",
-			"ExorStorage\data\ropa\exor_rosa_plate_co.paa",
-			"ExorStorage\data\ropa\exor_rosa_plate_co.paa"
+			"ExorStorage\\data\\ropa\\exor_rosa_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_plate_co.paa"
 		};
+	};
+
+	class Exor_TortillaBag_Rosa: TortillaBag
+	{
+		scope = 2;
+		displayName = "Mochila tactica Rosa";
+		descriptionShort = "Mochila tactica del set Rosa de 3xor.";
+		hiddenSelections[] = {"camoGround", "camoMale", "camoFemale"};
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_rosa_tortilla_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_tortilla_co.paa",
+			"ExorStorage\\data\\ropa\\exor_rosa_tortilla_co.paa"
+		};
+		itemsCargoSize[] = {10, 12};
+		attachments[] += {"Shoulder", "Melee"};
 	};
 
 	// ---------------- SET ARIDO ----------------
@@ -231,65 +291,108 @@ class CfgVehicles
 	class Exor_GorkaJacket_Arido: GorkaEJacket_ColorBase
 	{
 		scope = 2;
-		visibilityModifier = 0.7;
 		displayName = "Camisa Gorka Arido";
-		descriptionShort = "Chaqueta Gorka con camuflaje Arido. Impermeable.";
+		descriptionShort = "Camisa Gorka del set Arido de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\data\ropa\exor_arido_jacket_ground_co.paa",
-			"ExorStorage\data\ropa\exor_arido_jacket_worn_co.paa",
-			"ExorStorage\data\ropa\exor_arido_jacket_worn_co.paa"
+			"ExorStorage\\data\\ropa\\exor_arido_jacket_ground_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_jacket_worn_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_jacket_worn_co.paa"
 		};
 	};
 
 	class Exor_GorkaPants_Arido: GorkaPants_ColorBase
 	{
 		scope = 2;
-		visibilityModifier = 0.7;
 		displayName = "Pantalon Gorka Arido";
-		descriptionShort = "Pantalon Gorka con camuflaje Arido. Impermeable.";
+		descriptionShort = "Pantalon Gorka del set Arido de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\data\ropa\exor_arido_pants_ground_co.paa",
-			"ExorStorage\data\ropa\exor_arido_pants_worn_co.paa",
-			"ExorStorage\data\ropa\exor_arido_pants_worn_co.paa"
+			"ExorStorage\\data\\ropa\\exor_arido_pants_ground_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_pants_worn_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_pants_worn_co.paa"
 		};
 	};
 
 	class Exor_BallisticHelmet_Arido: BallisticHelmet_ColorBase
 	{
 		scope = 2;
-		visibilityModifier = 0.7;
 		displayName = "Casco balistico Arido";
-		descriptionShort = "Casco balistico de combate en acabado Arido.";
+		descriptionShort = "Casco balistico del set Arido de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\data\ropa\exor_arido_helmet_co.paa",
-			"ExorStorage\data\ropa\exor_arido_helmet_co.paa",
-			"ExorStorage\data\ropa\exor_arido_helmet_co.paa"
+			"ExorStorage\\data\\ropa\\exor_arido_helmet_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_helmet_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_helmet_co.paa"
+		};
+	};
+
+	class Exor_Mich2001Helmet_Arido: Mich2001Helmet
+	{
+		scope = 2;
+		displayName = "Casco MICH 2001 Arido";
+		descriptionShort = "Casco MICH 2001 del set Arido de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_arido_mich_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_mich_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_mich_co.paa"
+		};
+	};
+
+	class Exor_GorkaHelmet_Arido: GorkaHelmet
+	{
+		scope = 2;
+		displayName = "Casco Gorka Arido";
+		descriptionShort = "Casco Gorka del set Arido de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_arido_gorkahelmet_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_gorkahelmet_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_gorkahelmet_co.paa"
+		};
+	};
+
+	class Exor_BalaclavaMask_Arido: BalaclavaMask_ColorBase
+	{
+		scope = 2;
+		displayName = "Balaclava Arido";
+		descriptionShort = "Balaclava del set Arido de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_arido_balaclava_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_balaclava_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_balaclava_co.paa"
 		};
 	};
 
 	class Exor_CombatBoots_Arido: CombatBoots_ColorBase
 	{
 		scope = 2;
-		visibilityModifier = 0.7;
 		displayName = "Botas de combate Arido";
-		descriptionShort = "Botas de combate en acabado Arido.";
+		descriptionShort = "Botas de combate del set Arido de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\data\ropa\exor_arido_boots_co.paa",
-			"ExorStorage\data\ropa\exor_arido_boots_co.paa",
-			"ExorStorage\data\ropa\exor_arido_boots_co.paa"
+			"ExorStorage\\data\\ropa\\exor_arido_boots_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_boots_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_boots_co.paa"
 		};
 	};
 
 	class Exor_TacticalGloves_Arido: TacticalGloves_ColorBase
 	{
 		scope = 2;
-		visibilityModifier = 0.7;
 		displayName = "Guantes tacticos Arido";
-		descriptionShort = "Guantes tacticos en acabado Arido.";
+		descriptionShort = "Guantes tacticos del set Arido de 3xor.";
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\data\ropa\exor_arido_gloves_co.paa",
-			"ExorStorage\data\ropa\exor_arido_gloves_co.paa",
-			"ExorStorage\data\ropa\exor_arido_gloves_co.paa"
+			"ExorStorage\\data\\ropa\\exor_arido_gloves_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_gloves_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_gloves_co.paa"
+		};
+	};
+
+	class Exor_PressVest_Arido: PressVest_ColorBase
+	{
+		scope = 2;
+		displayName = "Chaleco de prensa Arido";
+		descriptionShort = "Chaleco de prensa del set Arido de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_arido_press_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_press_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_press_co.paa"
 		};
 	};
 
@@ -297,12 +400,12 @@ class CfgVehicles
 	{
 		scope = 2;
 		displayName = "Chaleco balistico Arido";
-		descriptionShort = "Chaleco balistico en acabado Arido.";
+		descriptionShort = "Chaleco balistico del set Arido de 3xor.";
 		hiddenSelections[] = {"camoGround", "camoMale", "camoFemale"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\data\ropa\exor_arido_plate_co.paa",
-			"ExorStorage\data\ropa\exor_arido_plate_co.paa",
-			"ExorStorage\data\ropa\exor_arido_plate_co.paa"
+			"ExorStorage\\data\\ropa\\exor_arido_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_plate_co.paa"
 		};
 	};
 
@@ -310,12 +413,12 @@ class CfgVehicles
 	{
 		scope = 2;
 		displayName = "Pistolera de chaleco Arido";
-		descriptionShort = "Pistolera para chaleco balistico, acabado Arido.";
+		descriptionShort = "Pistolera de chaleco del set Arido de 3xor.";
 		hiddenSelections[] = {"camoGround"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\data\ropa\exor_arido_plate_co.paa",
-			"ExorStorage\data\ropa\exor_arido_plate_co.paa",
-			"ExorStorage\data\ropa\exor_arido_plate_co.paa"
+			"ExorStorage\\data\\ropa\\exor_arido_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_plate_co.paa"
 		};
 	};
 
@@ -323,14 +426,523 @@ class CfgVehicles
 	{
 		scope = 2;
 		displayName = "Bolsillos de chaleco Arido";
-		descriptionShort = "Bolsillos para chaleco balistico, acabado Arido.";
+		descriptionShort = "Bolsillos de chaleco del set Arido de 3xor.";
 		hiddenSelections[] = {"camoGround"};
 		hiddenSelectionsTextures[] = {
-			"ExorStorage\data\ropa\exor_arido_plate_co.paa",
-			"ExorStorage\data\ropa\exor_arido_plate_co.paa",
-			"ExorStorage\data\ropa\exor_arido_plate_co.paa"
+			"ExorStorage\\data\\ropa\\exor_arido_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_plate_co.paa"
 		};
 	};
+
+	class Exor_TortillaBag_Arido: TortillaBag
+	{
+		scope = 2;
+		displayName = "Mochila tactica Arido";
+		descriptionShort = "Mochila tactica del set Arido de 3xor.";
+		hiddenSelections[] = {"camoGround", "camoMale", "camoFemale"};
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_arido_tortilla_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_tortilla_co.paa",
+			"ExorStorage\\data\\ropa\\exor_arido_tortilla_co.paa"
+		};
+		itemsCargoSize[] = {10, 12};
+		attachments[] += {"Shoulder", "Melee"};
+	};
+
+	// ---------------- SET URBANO ----------------
+
+	class Exor_GorkaJacket_Urbano: GorkaEJacket_ColorBase
+	{
+		scope = 2;
+		displayName = "Camisa Gorka Urbano";
+		descriptionShort = "Camisa Gorka del set Urbano de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_urbano_jacket_ground_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_jacket_worn_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_jacket_worn_co.paa"
+		};
+	};
+
+	class Exor_GorkaPants_Urbano: GorkaPants_ColorBase
+	{
+		scope = 2;
+		displayName = "Pantalon Gorka Urbano";
+		descriptionShort = "Pantalon Gorka del set Urbano de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_urbano_pants_ground_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_pants_worn_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_pants_worn_co.paa"
+		};
+	};
+
+	class Exor_BallisticHelmet_Urbano: BallisticHelmet_ColorBase
+	{
+		scope = 2;
+		displayName = "Casco balistico Urbano";
+		descriptionShort = "Casco balistico del set Urbano de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_urbano_helmet_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_helmet_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_helmet_co.paa"
+		};
+	};
+
+	class Exor_Mich2001Helmet_Urbano: Mich2001Helmet
+	{
+		scope = 2;
+		displayName = "Casco MICH 2001 Urbano";
+		descriptionShort = "Casco MICH 2001 del set Urbano de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_urbano_mich_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_mich_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_mich_co.paa"
+		};
+	};
+
+	class Exor_GorkaHelmet_Urbano: GorkaHelmet
+	{
+		scope = 2;
+		displayName = "Casco Gorka Urbano";
+		descriptionShort = "Casco Gorka del set Urbano de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_urbano_gorkahelmet_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_gorkahelmet_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_gorkahelmet_co.paa"
+		};
+	};
+
+	class Exor_BalaclavaMask_Urbano: BalaclavaMask_ColorBase
+	{
+		scope = 2;
+		displayName = "Balaclava Urbano";
+		descriptionShort = "Balaclava del set Urbano de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_urbano_balaclava_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_balaclava_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_balaclava_co.paa"
+		};
+	};
+
+	class Exor_CombatBoots_Urbano: CombatBoots_ColorBase
+	{
+		scope = 2;
+		displayName = "Botas de combate Urbano";
+		descriptionShort = "Botas de combate del set Urbano de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_urbano_boots_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_boots_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_boots_co.paa"
+		};
+	};
+
+	class Exor_TacticalGloves_Urbano: TacticalGloves_ColorBase
+	{
+		scope = 2;
+		displayName = "Guantes tacticos Urbano";
+		descriptionShort = "Guantes tacticos del set Urbano de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_urbano_gloves_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_gloves_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_gloves_co.paa"
+		};
+	};
+
+	class Exor_PressVest_Urbano: PressVest_ColorBase
+	{
+		scope = 2;
+		displayName = "Chaleco de prensa Urbano";
+		descriptionShort = "Chaleco de prensa del set Urbano de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_urbano_press_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_press_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_press_co.paa"
+		};
+	};
+
+	class Exor_PlateCarrierVest_Urbano: PlateCarrierVest
+	{
+		scope = 2;
+		displayName = "Chaleco balistico Urbano";
+		descriptionShort = "Chaleco balistico del set Urbano de 3xor.";
+		hiddenSelections[] = {"camoGround", "camoMale", "camoFemale"};
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_urbano_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_plate_co.paa"
+		};
+	};
+
+	class Exor_PlateCarrierHolster_Urbano: PlateCarrierHolster
+	{
+		scope = 2;
+		displayName = "Pistolera de chaleco Urbano";
+		descriptionShort = "Pistolera de chaleco del set Urbano de 3xor.";
+		hiddenSelections[] = {"camoGround"};
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_urbano_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_plate_co.paa"
+		};
+	};
+
+	class Exor_PlateCarrierPouches_Urbano: PlateCarrierPouches
+	{
+		scope = 2;
+		displayName = "Bolsillos de chaleco Urbano";
+		descriptionShort = "Bolsillos de chaleco del set Urbano de 3xor.";
+		hiddenSelections[] = {"camoGround"};
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_urbano_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_plate_co.paa"
+		};
+	};
+
+	class Exor_TortillaBag_Urbano: TortillaBag
+	{
+		scope = 2;
+		displayName = "Mochila tactica Urbano";
+		descriptionShort = "Mochila tactica del set Urbano de 3xor.";
+		hiddenSelections[] = {"camoGround", "camoMale", "camoFemale"};
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_urbano_tortilla_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_tortilla_co.paa",
+			"ExorStorage\\data\\ropa\\exor_urbano_tortilla_co.paa"
+		};
+		itemsCargoSize[] = {10, 12};
+		attachments[] += {"Shoulder", "Melee"};
+	};
+
+	// ---------------- SET NIEVE ----------------
+
+	class Exor_GorkaJacket_Nieve: GorkaEJacket_ColorBase
+	{
+		scope = 2;
+		displayName = "Camisa Gorka Nieve";
+		descriptionShort = "Camisa Gorka del set Nieve de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_nieve_jacket_ground_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_jacket_worn_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_jacket_worn_co.paa"
+		};
+	};
+
+	class Exor_GorkaPants_Nieve: GorkaPants_ColorBase
+	{
+		scope = 2;
+		displayName = "Pantalon Gorka Nieve";
+		descriptionShort = "Pantalon Gorka del set Nieve de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_nieve_pants_ground_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_pants_worn_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_pants_worn_co.paa"
+		};
+	};
+
+	class Exor_BallisticHelmet_Nieve: BallisticHelmet_ColorBase
+	{
+		scope = 2;
+		displayName = "Casco balistico Nieve";
+		descriptionShort = "Casco balistico del set Nieve de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_nieve_helmet_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_helmet_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_helmet_co.paa"
+		};
+	};
+
+	class Exor_Mich2001Helmet_Nieve: Mich2001Helmet
+	{
+		scope = 2;
+		displayName = "Casco MICH 2001 Nieve";
+		descriptionShort = "Casco MICH 2001 del set Nieve de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_nieve_mich_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_mich_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_mich_co.paa"
+		};
+	};
+
+	class Exor_GorkaHelmet_Nieve: GorkaHelmet
+	{
+		scope = 2;
+		displayName = "Casco Gorka Nieve";
+		descriptionShort = "Casco Gorka del set Nieve de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_nieve_gorkahelmet_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_gorkahelmet_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_gorkahelmet_co.paa"
+		};
+	};
+
+	class Exor_BalaclavaMask_Nieve: BalaclavaMask_ColorBase
+	{
+		scope = 2;
+		displayName = "Balaclava Nieve";
+		descriptionShort = "Balaclava del set Nieve de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_nieve_balaclava_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_balaclava_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_balaclava_co.paa"
+		};
+	};
+
+	class Exor_CombatBoots_Nieve: CombatBoots_ColorBase
+	{
+		scope = 2;
+		displayName = "Botas de combate Nieve";
+		descriptionShort = "Botas de combate del set Nieve de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_nieve_boots_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_boots_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_boots_co.paa"
+		};
+	};
+
+	class Exor_TacticalGloves_Nieve: TacticalGloves_ColorBase
+	{
+		scope = 2;
+		displayName = "Guantes tacticos Nieve";
+		descriptionShort = "Guantes tacticos del set Nieve de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_nieve_gloves_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_gloves_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_gloves_co.paa"
+		};
+	};
+
+	class Exor_PressVest_Nieve: PressVest_ColorBase
+	{
+		scope = 2;
+		displayName = "Chaleco de prensa Nieve";
+		descriptionShort = "Chaleco de prensa del set Nieve de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_nieve_press_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_press_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_press_co.paa"
+		};
+	};
+
+	class Exor_PlateCarrierVest_Nieve: PlateCarrierVest
+	{
+		scope = 2;
+		displayName = "Chaleco balistico Nieve";
+		descriptionShort = "Chaleco balistico del set Nieve de 3xor.";
+		hiddenSelections[] = {"camoGround", "camoMale", "camoFemale"};
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_nieve_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_plate_co.paa"
+		};
+	};
+
+	class Exor_PlateCarrierHolster_Nieve: PlateCarrierHolster
+	{
+		scope = 2;
+		displayName = "Pistolera de chaleco Nieve";
+		descriptionShort = "Pistolera de chaleco del set Nieve de 3xor.";
+		hiddenSelections[] = {"camoGround"};
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_nieve_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_plate_co.paa"
+		};
+	};
+
+	class Exor_PlateCarrierPouches_Nieve: PlateCarrierPouches
+	{
+		scope = 2;
+		displayName = "Bolsillos de chaleco Nieve";
+		descriptionShort = "Bolsillos de chaleco del set Nieve de 3xor.";
+		hiddenSelections[] = {"camoGround"};
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_nieve_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_plate_co.paa"
+		};
+	};
+
+	class Exor_TortillaBag_Nieve: TortillaBag
+	{
+		scope = 2;
+		displayName = "Mochila tactica Nieve";
+		descriptionShort = "Mochila tactica del set Nieve de 3xor.";
+		hiddenSelections[] = {"camoGround", "camoMale", "camoFemale"};
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_nieve_tortilla_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_tortilla_co.paa",
+			"ExorStorage\\data\\ropa\\exor_nieve_tortilla_co.paa"
+		};
+		itemsCargoSize[] = {10, 12};
+		attachments[] += {"Shoulder", "Melee"};
+	};
+
+	// ---------------- SET NEGRO ----------------
+
+	class Exor_GorkaJacket_Negro: GorkaEJacket_ColorBase
+	{
+		scope = 2;
+		displayName = "Camisa Gorka Negro";
+		descriptionShort = "Camisa Gorka del set Negro de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_negro_jacket_ground_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_jacket_worn_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_jacket_worn_co.paa"
+		};
+	};
+
+	class Exor_GorkaPants_Negro: GorkaPants_ColorBase
+	{
+		scope = 2;
+		displayName = "Pantalon Gorka Negro";
+		descriptionShort = "Pantalon Gorka del set Negro de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_negro_pants_ground_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_pants_worn_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_pants_worn_co.paa"
+		};
+	};
+
+	class Exor_BallisticHelmet_Negro: BallisticHelmet_ColorBase
+	{
+		scope = 2;
+		displayName = "Casco balistico Negro";
+		descriptionShort = "Casco balistico del set Negro de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_negro_helmet_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_helmet_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_helmet_co.paa"
+		};
+	};
+
+	class Exor_Mich2001Helmet_Negro: Mich2001Helmet
+	{
+		scope = 2;
+		displayName = "Casco MICH 2001 Negro";
+		descriptionShort = "Casco MICH 2001 del set Negro de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_negro_mich_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_mich_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_mich_co.paa"
+		};
+	};
+
+	class Exor_GorkaHelmet_Negro: GorkaHelmet
+	{
+		scope = 2;
+		displayName = "Casco Gorka Negro";
+		descriptionShort = "Casco Gorka del set Negro de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_negro_gorkahelmet_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_gorkahelmet_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_gorkahelmet_co.paa"
+		};
+	};
+
+	class Exor_BalaclavaMask_Negro: BalaclavaMask_ColorBase
+	{
+		scope = 2;
+		displayName = "Balaclava Negro";
+		descriptionShort = "Balaclava del set Negro de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_negro_balaclava_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_balaclava_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_balaclava_co.paa"
+		};
+	};
+
+	class Exor_CombatBoots_Negro: CombatBoots_ColorBase
+	{
+		scope = 2;
+		displayName = "Botas de combate Negro";
+		descriptionShort = "Botas de combate del set Negro de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_negro_boots_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_boots_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_boots_co.paa"
+		};
+	};
+
+	class Exor_TacticalGloves_Negro: TacticalGloves_ColorBase
+	{
+		scope = 2;
+		displayName = "Guantes tacticos Negro";
+		descriptionShort = "Guantes tacticos del set Negro de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_negro_gloves_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_gloves_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_gloves_co.paa"
+		};
+	};
+
+	class Exor_PressVest_Negro: PressVest_ColorBase
+	{
+		scope = 2;
+		displayName = "Chaleco de prensa Negro";
+		descriptionShort = "Chaleco de prensa del set Negro de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_negro_press_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_press_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_press_co.paa"
+		};
+	};
+
+	class Exor_PlateCarrierVest_Negro: PlateCarrierVest
+	{
+		scope = 2;
+		displayName = "Chaleco balistico Negro";
+		descriptionShort = "Chaleco balistico del set Negro de 3xor.";
+		hiddenSelections[] = {"camoGround", "camoMale", "camoFemale"};
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_negro_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_plate_co.paa"
+		};
+	};
+
+	class Exor_PlateCarrierHolster_Negro: PlateCarrierHolster
+	{
+		scope = 2;
+		displayName = "Pistolera de chaleco Negro";
+		descriptionShort = "Pistolera de chaleco del set Negro de 3xor.";
+		hiddenSelections[] = {"camoGround"};
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_negro_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_plate_co.paa"
+		};
+	};
+
+	class Exor_PlateCarrierPouches_Negro: PlateCarrierPouches
+	{
+		scope = 2;
+		displayName = "Bolsillos de chaleco Negro";
+		descriptionShort = "Bolsillos de chaleco del set Negro de 3xor.";
+		hiddenSelections[] = {"camoGround"};
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_negro_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_plate_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_plate_co.paa"
+		};
+	};
+
+	class Exor_TortillaBag_Negro: TortillaBag
+	{
+		scope = 2;
+		displayName = "Mochila tactica Negro";
+		descriptionShort = "Mochila tactica del set Negro de 3xor.";
+		hiddenSelections[] = {"camoGround", "camoMale", "camoFemale"};
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\\data\\ropa\\exor_negro_tortilla_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_tortilla_co.paa",
+			"ExorStorage\\data\\ropa\\exor_negro_tortilla_co.paa"
+		};
+		itemsCargoSize[] = {10, 12};
+		attachments[] += {"Shoulder", "Melee"};
+	};
+
+	// <<< SETS DE ROPA 3xor <<<
 
 	// ------------------------------------------------------------------
 	// Barril 3xor desplegado (funcional)
