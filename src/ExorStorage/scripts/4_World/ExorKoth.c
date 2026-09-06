@@ -541,8 +541,12 @@ class ExorKothRun
 				fb.ExorKothIgnite();
 		}
 
-		CleanupAnimals();
-
+		// Los zombies y los osos NO se limpian aca a proposito: siguen vivos hasta que se
+		// limpia el COFRE, en CleanupRewards(). Antes se borraban en el instante mismo de la
+		// captura -salian los fuegos y la zona quedaba vacia-, asi que lootear el premio era
+		// gratis. Ahora la zona se sigue defendiendo sola todo el rato que el cofre este
+		// lootable, y como TickCompleted posterga la limpieza mientras haya alguien cerca,
+		// los bichos duran exactamente lo mismo que el premio.
 		if (g.colocar_marca_mapa_para_todo_el_server)
 			SendMarker(true, argb, "Koth completado");
 
