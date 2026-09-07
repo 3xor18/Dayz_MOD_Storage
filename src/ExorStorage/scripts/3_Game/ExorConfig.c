@@ -63,13 +63,8 @@ class ExorCfgStorage
 	// por secuencia aisla solo la corrupta automaticamente). Es el ultimo recurso.
 	bool saltear_carga_neveras = false;
 
-	// EN HORARIO DE RAID (las ventanas de horario_looteo_libre) PAUSAR la auto-virtualizacion
-	// de barriles Y muebles: los que estan reales se quedan reales (abrir = instantaneo, sin
-	// restaurar) y no se gasta CPU virtualizando/re-virtualizando en el pico del raid. NADA
-	// desaparece (los items siguen ahi) y el snapshot a disco (crash-safety) sigue corriendo.
-	// Al terminar el raid la virtualizacion se retoma sola. Abrir/restaurar bajo demanda anda
-	// igual. Solo actua si hay horario_looteo_libre configurado (si no, no cambia nada).
-	bool pausar_virt_en_raid = true;
+	// NOTA: la pausa de virtualizacion en raid se MOVIO a raid.json
+	// (durante_el_raid.pausar_virtualizacion). Ver ExorCfgRaid.
 
 	// AUTO-VIRTUALIZADO DE AUTOS: un auto que lleva 'parking_auto_minutos' sin ningun jugador
 	// a 'parking_radio_metros' Y esta dentro del radio de un PARKING (en una base) se virtualiza
@@ -92,9 +87,9 @@ class ExorCfgStorage
 	bool setear_barriles_solo_cerca_mastil = true;   // el barril solo se setea dentro del radio del mastil de TU grupo
 	int cantidad_maxima_barriles_por_base = 0;       // maximo de BARRILES por base (0 = sin limite)
 	bool solo_miembros_lotean_muebles = false;       // solo miembros del territorio pueden abrir/lotear los muebles
-	int offset_horas = 0;                            // server corre en UTC; offset para el horario libre (ej Chile = -4)
-	// Ventanas (por dia) donde el looteo solo-miembros queda DESHABILITADO (ej: raid = cualquiera lootea)
-	ref array<ref ExorHorarioLibre> horario_looteo_libre;
+	// offset del reloj del host. Lo usa el bloqueo previo a los reinicios
+	// (reinicios_horas). El horario de RAID tiene su propio offset en raid.json.
+	int offset_horas = 0;
 	// Whitelist de STAFF: estos steamids SIEMPRE pueden abrir/lotear los muebles, ignorando
 	// solo_miembros_lotean_muebles y el horario (para admins/moderadores).
 	ref TStringArray bypass_lootear_steamids;
@@ -138,7 +133,6 @@ class ExorCfgStorage
 	void ExorCfgStorage()
 	{
 		blacklist = new TStringArray;
-		horario_looteo_libre = new array<ref ExorHorarioLibre>;
 		bypass_lootear_steamids = new TStringArray;
 		reinicios_horas = new TIntArray;
 	}
@@ -158,7 +152,6 @@ class ExorCfgStorage
 		cooldown_abrir_segundos = 3;
 		nevera_bateria_dias = 3.0;
 		saltear_carga_neveras = false;
-		pausar_virt_en_raid = true;
 		parking_auto_virtualizar = true;
 		parking_auto_minutos = 5;
 		parking_radio_metros = 30.0;
@@ -169,8 +162,6 @@ class ExorCfgStorage
 		solo_miembros_lotean_muebles = false;
 		offset_horas = 0;
 		blacklist.Clear();
-		if (horario_looteo_libre)
-			horario_looteo_libre.Clear();
 		if (bypass_lootear_steamids)
 		{
 			bypass_lootear_steamids.Clear();
@@ -1723,6 +1714,210 @@ class ExorCfgCarLock
 	}
 }
 
+// ============================================================================
+//  RAID: CONFIG MAESTRA DEL HORARIO (raid.json)
+// ============================================================================
+// UNICA fuente del horario de raid en todo el mod. Antes el horario vivia en
+// storage.horario_looteo_libre y solo gobernaba el looteo de muebles; ahora este
+// archivo tambien decide KOTH, virtualizacion, mesa de cofres y que estructuras
+// se pueden reventar con explosivos.
+//
+// storage.horario_looteo_libre y storage.pausar_virt_en_raid fueron ELIMINADOS:
+// vivian aca duplicados y ahora esto es la unica fuente. storage.offset_horas SI
+// sigue existiendo, pero solo para el bloqueo previo a los reinicios; el offset
+// del horario de raid es el de este archivo.
+// ============================================================================
+class ExorCfgRaidSwitches
+{
+	int lootear_contenedores_ajenos = 0;	// un ajeno puede abrir muebles/barriles de otra base
+	int desmantelar_en_base_ajena   = 0;	// un ajeno puede desmantelar partes de otra base
+	int pausar_virtualizacion       = 0;	// no virtualizar (todo queda real, abrir es instantaneo)
+	int pausar_koth                 = 0;	// no PROGRAMAR koth nuevos (el que corre termina igual)
+	int mesa_apertura_cofres        = 1;	// la mesa de apertura de cajas esta operativa
+}
+
+class ExorCfgRaidExplosivo
+{
+	string classname = "";	// classname REAL del juego (M67Grenade, Plastic_Explosive, ...)
+	float  cantidad  = 0;	// cuantos de ESTE solo hacen falta para tirar la pieza en tier 1
+}
+
+// Cuanto aguanta un tipo de estructura. El contador es FRACCIONARIO: cada impacto
+// resta 1/cantidad, asi que mezclar explosivos funciona solo (3 granadas de 5 = 0,6
+// + 1 plastico de 1 = 1,6 -> revienta). El tier multiplica lo que hace falta.
+class ExorCfgRaidEstructura
+{
+	string tipo = "";	// etiqueta legible ("puerta") - solo para el log
+	ref array<string> classnames;	// clases BBP que entran en este grupo
+	ref array<float>  multiplicador_por_tier;	// [t1, t2, t3]
+	ref array<ref ExorCfgRaidExplosivo> explosivos;
+	float balas_cantidad = 0;	// balas para tirarla en tier 1 (0 = las balas NO raidean)
+	// 0 = vuela SOLO la hoja de la puerta y el marco queda en pie (por ahi se entra/sube).
+	// 1 = se borra la pieza ENTERA. Para los portones, que no tienen marco util que dejar.
+	int destruir_pieza_completa = 0;
+
+	void ExorCfgRaidEstructura()
+	{
+		classnames = new array<string>;
+		multiplicador_por_tier = new array<float>;
+		explosivos = new array<ref ExorCfgRaidExplosivo>;
+	}
+}
+
+class ExorCfgRaid
+{
+	int version = 1;
+	int activado = 0;
+	int offset_horas = 0;	// se suma al reloj de la maquina (host en hora local = 0)
+	ref array<ref ExorHorarioLibre> ventanas;
+	ref ExorCfgRaidSwitches durante_el_raid;
+	ref ExorCfgRaidSwitches fuera_del_raid;
+
+	// Radio de busqueda de la pieza mas cercana al estallido. OJO: NO copiar el 0.6 de
+	// NoWallDamage. Una puerta vanilla tiene su origen EN la puerta; una pieza BBP es un
+	// panel de 6x3 con el origen en el CENTRO, asi que un explosivo apoyado al pie de la
+	// puerta puede quedar a 1,5-3 m del origen. Con 0.6 no lo encontraria nunca y el raid
+	// pareceria roto. Calibrar in-game.
+	float radio_deteccion_metros = 3.0;
+	int solo_la_pieza_mas_cercana = 1;	// una granada NO le baja el contador a media base
+	int borrar_candado_al_destruir = 1;	// al caer la pieza se borra tambien su CodeLock
+	int log_cada_impacto = 0;			// debug: loguear impacto por impacto (ruidoso)
+
+	// Clases BBP a las que NO se les puede enganchar un CodeLock. Vacio = todas lo admiten.
+	// Se chequea por NOMBRE del attachment (contiene "CodeLock"), no por la clase: asi el
+	// mod sigue compilando en un server sin el mod Code Lock, que no declara ningun define
+	// y por eso no se puede envolver con #ifdef.
+	ref array<string> no_admiten_codelock;
+
+	ref array<ref ExorCfgRaidEstructura> estructuras_raideables;
+
+	void ExorCfgRaid()
+	{
+		ventanas = new array<ref ExorHorarioLibre>;
+		durante_el_raid = new ExorCfgRaidSwitches;
+		fuera_del_raid = new ExorCfgRaidSwitches;
+		estructuras_raideables = new array<ref ExorCfgRaidEstructura>;
+		no_admiten_codelock = new array<string>;
+	}
+
+	void SetDefaults()
+	{
+		version = 1;
+		activado = 1;
+		offset_horas = 0;
+		ventanas = new array<ref ExorHorarioLibre>;
+		ExorHorarioLibre v = new ExorHorarioLibre;
+		v.dia = "sabado"; v.desde = "20:00"; v.hasta = "23:59";
+		ventanas.Insert(v);
+
+		durante_el_raid = new ExorCfgRaidSwitches;
+		durante_el_raid.lootear_contenedores_ajenos = 1;
+		durante_el_raid.desmantelar_en_base_ajena   = 0;
+		durante_el_raid.pausar_virtualizacion       = 0;
+		durante_el_raid.pausar_koth                 = 1;
+		durante_el_raid.mesa_apertura_cofres        = 0;
+
+		fuera_del_raid = new ExorCfgRaidSwitches;
+		fuera_del_raid.lootear_contenedores_ajenos = 0;
+		fuera_del_raid.desmantelar_en_base_ajena   = 0;
+		fuera_del_raid.pausar_virtualizacion       = 0;
+		fuera_del_raid.pausar_koth                 = 0;
+		fuera_del_raid.mesa_apertura_cofres        = 1;
+
+		radio_deteccion_metros = 3.0;
+		solo_la_pieza_mas_cercana = 1;
+		borrar_candado_al_destruir = 1;
+		log_cada_impacto = 0;
+
+		// Vacio a proposito: el motivo para prohibir el candado en las escotillas era que al
+		// reventarlas desaparecia toda la estructura y el raidero no podia subir. Eso se
+		// arreglo de raiz (ahora vuela solo la hoja de la puerta, ver DestruirPuerta), asi
+		// que no hace falta prohibir nada. La lista queda por si se quiere usar.
+		no_admiten_codelock = new array<string>;
+
+		estructuras_raideables = new array<ref ExorCfgRaidEstructura>;
+		// PUERTAS: vuela solo la hoja, el marco queda -> el raidero puede pasar/subir.
+		ExorCfgRaidEstructura p = new ExorCfgRaidEstructura;
+		p.tipo = "puerta";
+		p.classnames.Insert("BBP_BDoor");        // puerta grande
+		p.classnames.Insert("BBP_SDoor");        // puerta chica
+		p.classnames.Insert("BBP_Floor_Hatch");  // escotilla de piso (la de la escalera)
+		p.classnames.Insert("BBP_Roof_Hatch");   // escotilla de techo
+		p.destruir_pieza_completa = 0;
+		SeedTiersYExplosivos(p);
+		estructuras_raideables.Insert(p);
+
+		// PORTONES: se vuelan enteros (no dejan marco util).
+		ExorCfgRaidEstructura g = new ExorCfgRaidEstructura;
+		g.tipo = "porton";
+		g.classnames.Insert("BBP_DGate");        // porton doble
+		g.classnames.Insert("BBP_LGate");        // porton izquierdo
+		g.classnames.Insert("BBP_RGate");        // porton derecho
+		g.classnames.Insert("BBP_SGate");        // porton simple
+		g.classnames.Insert("BBP_Mesh_Gate");    // porton de reja
+		g.destruir_pieza_completa = 1;
+		SeedTiersYExplosivos(g);
+		estructuras_raideables.Insert(g);
+	}
+
+	// mismos numeros para puertas y portones; se separan por si algun dia se quiere
+	// que un porton cueste distinto que una puerta.
+	protected void SeedTiersYExplosivos(ExorCfgRaidEstructura e)
+	{
+		e.multiplicador_por_tier.Insert(1.0);    // tier 1
+		e.multiplicador_por_tier.Insert(2.0);    // tier 2 = el doble que T1
+		e.multiplicador_por_tier.Insert(3.0);    // tier 3 = 1,5 veces el T2
+		e.balas_cantidad = 450;
+		AddExplosivo(e, "Plastic_Explosive",   1);
+		AddExplosivo(e, "ClaymoreMine",        1);
+		AddExplosivo(e, "M67Grenade",          5);
+		AddExplosivo(e, "RGD5Grenade",         5);
+		AddExplosivo(e, "Ammo_40mm_Explosive", 5);
+		AddExplosivo(e, "LandMineTrap",        2);
+	}
+
+	protected void AddExplosivo(ExorCfgRaidEstructura e, string cls, float cant)
+	{
+		ExorCfgRaidExplosivo x = new ExorCfgRaidExplosivo;
+		x.classname = cls;
+		x.cantidad = cant;
+		e.explosivos.Insert(x);
+	}
+
+	// switches vigentes segun el momento
+	ExorCfgRaidSwitches Ahora(bool enRaid)
+	{
+		if (enRaid)
+			return durante_el_raid;
+		return fuera_del_raid;
+	}
+
+	// esta clase puede recibir un CodeLock?
+	bool AdmiteCodelock(string cls)
+	{
+		if (!no_admiten_codelock || no_admiten_codelock.Count() == 0)
+			return true;
+		return no_admiten_codelock.Find(cls) < 0;
+	}
+
+	ExorCfgRaidEstructura BuscarEstructura(string cls)
+	{
+		if (!estructuras_raideables || cls == "")
+			return null;
+		int i, k;
+		for (i = 0; i < estructuras_raideables.Count(); i++)
+		{
+			ExorCfgRaidEstructura e = estructuras_raideables.Get(i);
+			if (!e || !e.classnames)
+				continue;
+			for (k = 0; k < e.classnames.Count(); k++)
+				if (e.classnames.Get(k) == cls)
+					return e;
+		}
+		return null;
+	}
+}
+
 class ExorConfig
 {
 	ref ExorCfgStorage storage;
@@ -1743,6 +1938,7 @@ class ExorConfig
 	ref ExorCfgNoBuild nobuild;
 	ref ExorCfgCofre cofre;
 	ref ExorCfgCarLock carlock;	// candado de autos (codelock_autos.json)
+	ref ExorCfgRaid raid;	// CONFIG MAESTRA del horario de raid (raid.json)
 	bool m_Synced;	// cliente: true cuando ya recibio la config del server
 
 	void ExorConfig()
@@ -1765,6 +1961,7 @@ class ExorConfig
 		nobuild = new ExorCfgNoBuild;
 		cofre = new ExorCfgCofre;
 		carlock = new ExorCfgCarLock;
+		raid = new ExorCfgRaid;
 	}
 
 	// SERVER: serializa la config relevante al cliente a JSON
@@ -1937,6 +2134,7 @@ class ExorConfig
 		c.LoadNoBuild();
 		c.LoadCofre();
 		c.LoadCarLock();
+		c.LoadRaid();
 
 		return c;
 	}
@@ -2125,6 +2323,20 @@ class ExorConfig
 			bodycadaver.SetDefaults();
 		if (GuardarConfig(ExorStorageConstants.CFG_BODYCADAVER))
 			JsonFileLoader<ExorCfgBodyCadaver>.JsonSaveFile(ExorStorageConstants.CFG_BODYCADAVER, bodycadaver);
+	}
+
+	// CONFIG MAESTRA del horario de raid. Mismo criterio que KOTH y COFRE: si el archivo ya
+	// existe se carga y NO se re-guarda, para que lo que edito el admin quede exacto y no se
+	// reformatee. Solo se crea la 1ra vez, con la ventana real del server como default.
+	void LoadRaid()
+	{
+		if (FileExist(ExorStorageConstants.CFG_RAID))
+			JsonFileLoader<ExorCfgRaid>.JsonLoadFile(ExorStorageConstants.CFG_RAID, raid);
+		else
+		{
+			raid.SetDefaults();
+			JsonFileLoader<ExorCfgRaid>.JsonSaveFile(ExorStorageConstants.CFG_RAID, raid);
+		}
 	}
 
 	void LoadNoBuild()

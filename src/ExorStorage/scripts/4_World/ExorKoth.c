@@ -160,6 +160,15 @@ class ExorKothRun
 
 	void TickScheduled(int now)
 	{
+		// raid.json puede pausar el PROGRAMADO de koth nuevos. A proposito NO se toca el
+		// que ya esta corriendo: TickActive/TickOcupado siguen normales y el evento en
+		// curso termina como corresponde. Solo se congela la cuenta atras del proximo.
+		if (!ExorMuebleRules.PuedeProgramarKothAhora())
+		{
+			m_ScheduledAtMs = now;
+			m_SpawnAtMs = now + (m_ScheduleDelaySec * 1000);
+			return;
+		}
 		ExorCfgKoth g = GetExorConfig().koth;
 		ExorCfgKothColor c = Cfg();
 		int argb = ExorKoth.ColorArgb(c.color);

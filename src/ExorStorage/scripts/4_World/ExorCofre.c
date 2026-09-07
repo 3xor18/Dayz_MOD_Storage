@@ -980,6 +980,11 @@ class ExorCofre
 	// indice de la zona ACTIVA (abierta O en gracia) que contiene 'pos' (radio horizontal), o -1.
 	int ActiveZoneIndex(vector pos, ExorCfgCofre cfg, int minOfDay, string today, int nowMs)
 	{
+		// raid.json puede apagar la mesa de apertura de cajas segun el momento
+		// (durante_el_raid.mesa_apertura_cofres / fuera_del_raid.mesa_apertura_cofres).
+		// Con la mesa apagada NINGUNA zona cuenta como activa -> las cajas no se abren.
+		if (!ExorMuebleRules.MesaCofresOperativaAhora())
+			return -1;
 		int i;
 		for (i = 0; i < m_Zones.Count(); i++)
 		{

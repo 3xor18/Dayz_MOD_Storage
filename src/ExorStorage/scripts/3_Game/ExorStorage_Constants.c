@@ -4,12 +4,12 @@
 class ExorStorageConstants
 {
 	static const string MOD_NAME = "3xor_Vanilla_Optimization";
-	static const string MOD_VERSION = "2.16.6";
+	static const string MOD_VERSION = "2.17.0";
 	// Sello de build: SUBIRLO EN CADA EMPAQUE, aunque no cambie MOD_VERSION. Sirve para
 	// saber desde el RPT que PBO esta corriendo el server (el de version sola no alcanza:
 	// se desplego 2.9.1 con MOD_VERSION todavia en "2.8.0" y los logs pre/post deploy
 	// salieron identicos -> imposible confirmar si el deploy habia entrado).
-	static const string MOD_BUILD = "2026-09-06-v2166";
+	static const string MOD_BUILD = "2026-09-07-v2170";
 	static const string LOG = "[3xorVO]";
 	// DEBUG temporal del ciclo de vida del barril (setear/levantar/abrir/cerrar/item
 	// in-out/virtualizar/restaurar/load/save/shutdown). Poner en false (o borrar las
@@ -41,6 +41,9 @@ class ExorStorageConstants
 	static const string CFG_NOBUILD   = "$profile:3xorVanillaOptimization\\nobuild.json";
 	static const string CFG_COFRE     = "$profile:3xorVanillaOptimization\\evento_apertura_cofre.json";
 	static const string CFG_MENSAJES  = "$profile:3xorVanillaOptimization\\mensajes.json";
+	// CONFIG MAESTRA DEL HORARIO DE RAID. Es la UNICA fuente del horario en todo el mod:
+	// storage.horario_looteo_libre y storage.pausar_virt_en_raid fueron ELIMINADOS.
+	static const string CFG_RAID      = "$profile:3xorVanillaOptimization\\raid.json";
 	static const string CFG_AUTOS     = "$profile:3xorVanillaOptimization\\codelock_autos.json";
 	// candado de autos: 1 JSON de estado por auto (keyed por su id estable), como los lockers.
 	// NUNCA se toca el stream de persistencia del auto -> retro-compatible y no corrompe nada.

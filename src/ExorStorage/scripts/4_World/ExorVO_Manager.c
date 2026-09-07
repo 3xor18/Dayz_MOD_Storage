@@ -290,7 +290,7 @@ class ExorVO_Manager
 		// clientes cercanos. El costo de virtualizar es un pico acotado; el de no hacerlo
 		// crece sin techo. Por eso la pausa se levanta sola cuando la cola pasa el umbral.
 		bool pauseVirt = false;
-		if (cfg.storage.pausar_virt_en_raid && ExorMuebleRules.IsLootFreeNow())
+		if (ExorMuebleRules.PausarVirtualizacionAhora())
 		{
 			pauseVirt = m_PendientesPrev < EXOR_PAUSA_MAX_PENDIENTES;
 			if (!pauseVirt && m_PendientesPrev > 0)
@@ -785,7 +785,7 @@ class ExorVO_Manager
 		// cuando hay mas gente junta y mas presion; es exactamente el momento en que NO se
 		// quiere meter un barrido de disco. Se salta y se reintenta en 30 min. Mismo criterio
 		// que la pausa de virtualizacion.
-		if (GetExorConfig().storage.pausar_virt_en_raid && ExorMuebleRules.IsLootFreeNow())
+		if (ExorMuebleRules.PausarVirtualizacionAhora())
 		{
 			Print(string.Format("%1 SELF-HEAL: pase periodico SALTEADO (horario de raid) -> se reintenta en 5 min", ExorStorageConstants.LOG));
 			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(HealTick, EXOR_HEAL_RETRY_MS, false);

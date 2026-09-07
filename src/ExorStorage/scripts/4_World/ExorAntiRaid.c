@@ -154,6 +154,10 @@ class ExorAntiRaid
 			return false;
 		if (!GetExorConfig().party.territorio.habilitado)
 			return false;
+		// raid.json manda por encima: si en ESTE momento la config permite desmantelar en
+		// base ajena, no se bloquea. Por default esta en 0 dentro Y fuera del raid.
+		if (ExorMuebleRules.PuedeDesmantelarAjenoAhora())
+			return false;
 		if (exigirBaseVanilla && !obj.IsInherited(BaseBuildingBase))
 			return false;	// solo muros / portones / torres / partes de base
 		return ExorTerritoryManager.Get().FindEnemyTerritoryAt(player, obj.GetPosition()) != "";

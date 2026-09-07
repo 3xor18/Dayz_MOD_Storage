@@ -8,7 +8,8 @@
 //
 // Config en storage.json (ExorCfgStorage):
 //   setear_muebles_solo_cerca_mastil, cantidad_maxima_muebles_por_base,
-//   solo_miembros_lotean_muebles, offset_horas, horario_looteo_libre[].
+//   solo_miembros_lotean_muebles, bypass_lootear_steamids[].
+// El HORARIO y los switches del raid salen de raid.json (ExorCfgRaid), no de aca.
 // ============================================================================
 class ExorMuebleRules
 {
@@ -153,18 +154,74 @@ class ExorMuebleRules
 		return ExorLootWindow.IsRaidNow();
 	}
 
+	// Switches del momento (raid.json). El horario ya no decide SOLO: decide QUE cambia.
+	static ExorCfgRaidSwitches SwitchesAhora()
+	{
+		ExorCfgRaid r = GetExorConfig().raid;
+		if (!r)
+			return null;
+		return r.Ahora(IsLootFreeNow());
+	}
+
+	// puede un AJENO abrir muebles/barriles de otra base en este momento?
+	static bool PuedeLootearAjenoAhora()
+	{
+		ExorCfgRaidSwitches sw = SwitchesAhora();
+		if (!sw)
+			return false;
+		return sw.lootear_contenedores_ajenos != 0;
+	}
+
+	// puede un AJENO desmantelar partes de otra base en este momento?
+	static bool PuedeDesmantelarAjenoAhora()
+	{
+		ExorCfgRaidSwitches sw = SwitchesAhora();
+		if (!sw)
+			return false;
+		return sw.desmantelar_en_base_ajena != 0;
+	}
+
+	// hay que PAUSAR la auto-virtualizacion en este momento?
+	static bool PausarVirtualizacionAhora()
+	{
+		ExorCfgRaidSwitches sw = SwitchesAhora();
+		if (!sw)
+			return false;
+		return sw.pausar_virtualizacion != 0;
+	}
+
+	// se pueden PROGRAMAR koth nuevos? (el que ya esta corriendo termina igual)
+	static bool PuedeProgramarKothAhora()
+	{
+		ExorCfgRaidSwitches sw = SwitchesAhora();
+		if (!sw)
+			return true;
+		return sw.pausar_koth == 0;
+	}
+
+	// la mesa de apertura de cajas esta operativa en este momento?
+	static bool MesaCofresOperativaAhora()
+	{
+		ExorCfgRaidSwitches sw = SwitchesAhora();
+		if (!sw)
+			return true;
+		return sw.mesa_apertura_cofres != 0;
+	}
+
 	// Calculo real (sin cache). No llamarlo directo: usar IsLootFreeNow().
+	// FUENTE UNICA: raid.json. Antes esto leia storage.horario_looteo_libre, que ya no existe.
+	// Devuelve true si el reloj cae DENTRO de alguna ventana de raid.
 	static bool CalcularLootFree()
 	{
-		ExorCfgStorage s = GetExorConfig().storage;
-		if (!s || !s.horario_looteo_libre || s.horario_looteo_libre.Count() == 0)
+		ExorCfgRaid r = GetExorConfig().raid;
+		if (!r || !r.activado || !r.ventanas || r.ventanas.Count() == 0)
 			return false;
 		int minOfDay, weekday, dayKey;
-		ExorCofre.NowLocal(s.offset_horas, minOfDay, weekday, dayKey);
+		ExorCofre.NowLocal(r.offset_horas, minOfDay, weekday, dayKey);
 		int i;
-		for (i = 0; i < s.horario_looteo_libre.Count(); i++)
+		for (i = 0; i < r.ventanas.Count(); i++)
 		{
-			ExorHorarioLibre h = s.horario_looteo_libre.Get(i);
+			ExorHorarioLibre h = r.ventanas.Get(i);
 			if (!h)
 				continue;
 			if (!DayMatches(h.dia, weekday))
@@ -416,8 +473,8 @@ class ExorMuebleRules
 			return true;
 		if (s.bypass_lootear_steamids && s.bypass_lootear_steamids.Find(ExorGroupManager.SteamId(player)) != -1)
 			return true;
-		if (IsLootFreeNow())
-			return true;	// horario libre -> cualquiera
+		if (PuedeLootearAjenoAhora())
+			return true;	// la config del raid lo permite en este momento
 		ExorTerritoryManager tm = ExorTerritoryManager.Get();
 		if (tm && tm.IsInOwnGroupTerritory(player, pos))
 			return true;	// miembro de esta base
@@ -438,8 +495,8 @@ class ExorMuebleRules
 		// STAFF whitelist: estos steamids SIEMPRE pueden lotear (ignora miembro + horario)
 		if (s.bypass_lootear_steamids && s.bypass_lootear_steamids.Find(ExorGroupManager.SteamId(player)) != -1)
 			return true;
-		if (IsLootFreeNow())
-			return true;	// horario de raid -> cualquiera lootea
+		if (PuedeLootearAjenoAhora())
+			return true;	// la config del raid lo permite en este momento
 
 		vector pos = fur.GetPosition();
 		ExorTerritoryManager tm = ExorTerritoryManager.Get();
