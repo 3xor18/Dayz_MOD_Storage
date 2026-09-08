@@ -1,0 +1,170 @@
+<!-- ============================================================================
+  ARMAS DE COLOR 3xor EN LOS HELI CRASH  (v2.19.0, 8-sep-2026)
+
+  Esto NO viaja en el PBO: es config de la MISION. Va pegado dentro de
+  <spawnabletypes> del cfgspawnabletypes.xml del mpmission, antes del cierre.
+  Ya aplicado en el server online (backup remoto .bak_20260908_104046).
+
+  COMO FUNCIONA
+  - Las armas de color NO estan en el loot de los edificios: en types.xml tienen
+    nominal 5 pero SIN category/usage/value, y sin esos tres el CE no sabe en que
+    edificio ponerlas, asi que no las pone en ninguno.
+  - La UNICA fuente son los dos wrecks del heli crash. Se eligio cargo fijo en el
+    wreck y no el tier del mapa porque el tier no garantiza nada: los helis caen en
+    cualquier zona y podian pasar dias sin ver una.
+  - Dentro de un grupo <attachments> el motor elige UN item y las chances de los
+    items son PESOS (asi lo hace vanilla con los cargadores del M4A1). Por eso la
+    culata y el guardamano van en grupos separados: son slots distintos.
+  - El arma cae CON culata y guardamano de su color (chance 1.00 = siempre) y con
+    NADA MAS: sin cargador, sin mira, sin silenciador y sin camuflaje. Eso no se
+    logra "quitando" nada, sino definiendo SOLO lo que se quiere que traiga.
+  - El AUR, el DMR y el VS-89 no llevan entrada propia a proposito: sus culatas y
+    guardamanos son parte del modelo, no items sueltos, asi que caen desnudas.
+============================================================================ -->
+<!-- ===== armas de color 3xor en los heli crash (v2.19.0, 20260908_104046) ===== -->
+	<type name="Wreck_Mi8_Crashed">
+		<!-- 20 armas x 0.05 dentro de un grupo al 35%: ~1 arma de color cada 3 wrecks -->
+		<cargo chance="0.35">
+			<item name="Exor_M4A1_Rosa" chance="0.05" />
+			<item name="Exor_AKM_Rosa" chance="0.05" />
+			<item name="Exor_Aug_Rosa" chance="0.05" />
+			<item name="Exor_M14_Rosa" chance="0.05" />
+			<item name="Exor_SV98_Rosa" chance="0.05" />
+			<item name="Exor_M4A1_Azul" chance="0.05" />
+			<item name="Exor_AKM_Azul" chance="0.05" />
+			<item name="Exor_Aug_Azul" chance="0.05" />
+			<item name="Exor_M14_Azul" chance="0.05" />
+			<item name="Exor_SV98_Azul" chance="0.05" />
+			<item name="Exor_M4A1_Dorado" chance="0.05" />
+			<item name="Exor_AKM_Dorado" chance="0.05" />
+			<item name="Exor_Aug_Dorado" chance="0.05" />
+			<item name="Exor_M14_Dorado" chance="0.05" />
+			<item name="Exor_SV98_Dorado" chance="0.05" />
+			<item name="Exor_M4A1_Camo" chance="0.05" />
+			<item name="Exor_AKM_Camo" chance="0.05" />
+			<item name="Exor_Aug_Camo" chance="0.05" />
+			<item name="Exor_M14_Camo" chance="0.05" />
+			<item name="Exor_SV98_Camo" chance="0.05" />
+		</cargo>
+	</type>
+	<type name="Wreck_UH1Y">
+		<!-- 20 armas x 0.05 dentro de un grupo al 35%: ~1 arma de color cada 3 wrecks -->
+		<cargo chance="0.35">
+			<item name="Exor_M4A1_Rosa" chance="0.05" />
+			<item name="Exor_AKM_Rosa" chance="0.05" />
+			<item name="Exor_Aug_Rosa" chance="0.05" />
+			<item name="Exor_M14_Rosa" chance="0.05" />
+			<item name="Exor_SV98_Rosa" chance="0.05" />
+			<item name="Exor_M4A1_Azul" chance="0.05" />
+			<item name="Exor_AKM_Azul" chance="0.05" />
+			<item name="Exor_Aug_Azul" chance="0.05" />
+			<item name="Exor_M14_Azul" chance="0.05" />
+			<item name="Exor_SV98_Azul" chance="0.05" />
+			<item name="Exor_M4A1_Dorado" chance="0.05" />
+			<item name="Exor_AKM_Dorado" chance="0.05" />
+			<item name="Exor_Aug_Dorado" chance="0.05" />
+			<item name="Exor_M14_Dorado" chance="0.05" />
+			<item name="Exor_SV98_Dorado" chance="0.05" />
+			<item name="Exor_M4A1_Camo" chance="0.05" />
+			<item name="Exor_AKM_Camo" chance="0.05" />
+			<item name="Exor_Aug_Camo" chance="0.05" />
+			<item name="Exor_M14_Camo" chance="0.05" />
+			<item name="Exor_SV98_Camo" chance="0.05" />
+		</cargo>
+	</type>
+	<type name="Exor_M4A1_Rosa">
+		<attachments chance="1.00">
+			<item name="Exor_M4_OEBttstck_Rosa" chance="1.00" />
+			<item name="Exor_M4_MPBttstck_Rosa" chance="1.00" />
+			<item name="Exor_M4_CQBBttstck_Rosa" chance="1.00" />
+		</attachments>
+		<attachments chance="1.00">
+			<item name="Exor_M4_RISHndgrd_Rosa" chance="1.00" />
+			<item name="Exor_M4_MPHndgrd_Rosa" chance="1.00" />
+			<item name="Exor_M4_PlasticHndgrd_Rosa" chance="1.00" />
+		</attachments>
+	</type>
+	<type name="Exor_AKM_Rosa">
+		<attachments chance="1.00">
+			<item name="Exor_AK_WoodBttstck_Rosa" chance="1.00" />
+			<item name="Exor_AK_FoldingBttstck_Rosa" chance="1.00" />
+			<item name="Exor_AK_PlasticBttstck_Rosa" chance="1.00" />
+		</attachments>
+		<attachments chance="1.00">
+			<item name="Exor_AK_WoodHndgrd_Rosa" chance="1.00" />
+			<item name="Exor_AK_RailHndgrd_Rosa" chance="1.00" />
+			<item name="Exor_AK_PlasticHndgrd_Rosa" chance="1.00" />
+		</attachments>
+	</type>
+	<type name="Exor_M4A1_Azul">
+		<attachments chance="1.00">
+			<item name="Exor_M4_OEBttstck_Azul" chance="1.00" />
+			<item name="Exor_M4_MPBttstck_Azul" chance="1.00" />
+			<item name="Exor_M4_CQBBttstck_Azul" chance="1.00" />
+		</attachments>
+		<attachments chance="1.00">
+			<item name="Exor_M4_RISHndgrd_Azul" chance="1.00" />
+			<item name="Exor_M4_MPHndgrd_Azul" chance="1.00" />
+			<item name="Exor_M4_PlasticHndgrd_Azul" chance="1.00" />
+		</attachments>
+	</type>
+	<type name="Exor_AKM_Azul">
+		<attachments chance="1.00">
+			<item name="Exor_AK_WoodBttstck_Azul" chance="1.00" />
+			<item name="Exor_AK_FoldingBttstck_Azul" chance="1.00" />
+			<item name="Exor_AK_PlasticBttstck_Azul" chance="1.00" />
+		</attachments>
+		<attachments chance="1.00">
+			<item name="Exor_AK_WoodHndgrd_Azul" chance="1.00" />
+			<item name="Exor_AK_RailHndgrd_Azul" chance="1.00" />
+			<item name="Exor_AK_PlasticHndgrd_Azul" chance="1.00" />
+		</attachments>
+	</type>
+	<type name="Exor_M4A1_Dorado">
+		<attachments chance="1.00">
+			<item name="Exor_M4_OEBttstck_Dorado" chance="1.00" />
+			<item name="Exor_M4_MPBttstck_Dorado" chance="1.00" />
+			<item name="Exor_M4_CQBBttstck_Dorado" chance="1.00" />
+		</attachments>
+		<attachments chance="1.00">
+			<item name="Exor_M4_RISHndgrd_Dorado" chance="1.00" />
+			<item name="Exor_M4_MPHndgrd_Dorado" chance="1.00" />
+			<item name="Exor_M4_PlasticHndgrd_Dorado" chance="1.00" />
+		</attachments>
+	</type>
+	<type name="Exor_AKM_Dorado">
+		<attachments chance="1.00">
+			<item name="Exor_AK_WoodBttstck_Dorado" chance="1.00" />
+			<item name="Exor_AK_FoldingBttstck_Dorado" chance="1.00" />
+			<item name="Exor_AK_PlasticBttstck_Dorado" chance="1.00" />
+		</attachments>
+		<attachments chance="1.00">
+			<item name="Exor_AK_WoodHndgrd_Dorado" chance="1.00" />
+			<item name="Exor_AK_RailHndgrd_Dorado" chance="1.00" />
+			<item name="Exor_AK_PlasticHndgrd_Dorado" chance="1.00" />
+		</attachments>
+	</type>
+	<type name="Exor_M4A1_Camo">
+		<attachments chance="1.00">
+			<item name="Exor_M4_OEBttstck_Camo" chance="1.00" />
+			<item name="Exor_M4_MPBttstck_Camo" chance="1.00" />
+			<item name="Exor_M4_CQBBttstck_Camo" chance="1.00" />
+		</attachments>
+		<attachments chance="1.00">
+			<item name="Exor_M4_RISHndgrd_Camo" chance="1.00" />
+			<item name="Exor_M4_MPHndgrd_Camo" chance="1.00" />
+			<item name="Exor_M4_PlasticHndgrd_Camo" chance="1.00" />
+		</attachments>
+	</type>
+	<type name="Exor_AKM_Camo">
+		<attachments chance="1.00">
+			<item name="Exor_AK_WoodBttstck_Camo" chance="1.00" />
+			<item name="Exor_AK_FoldingBttstck_Camo" chance="1.00" />
+			<item name="Exor_AK_PlasticBttstck_Camo" chance="1.00" />
+		</attachments>
+		<attachments chance="1.00">
+			<item name="Exor_AK_WoodHndgrd_Camo" chance="1.00" />
+			<item name="Exor_AK_RailHndgrd_Camo" chance="1.00" />
+			<item name="Exor_AK_PlasticHndgrd_Camo" chance="1.00" />
+		</attachments>
+	</type>
