@@ -466,6 +466,10 @@ class ExorCfgSpawns
 	bool elegir_genero = true;
 	ref TStringArray personajes_hombre;
 	ref TStringArray personajes_mujer;
+	// Solo se usa si al cambiar de sexo NO se pudo mudar la ropa del cuerpo viejo al
+	// nuevo (caso raro). Es para que nunca aparezca desnudo, no es el spawn normal:
+	// lo normal es que se lleve puesta la ropa vanilla que ya tenia.
+	ref TStringArray ropa_respaldo;
 	ref array<ref ExorSpawnPunto> puntos;
 
 	void ExorCfgSpawns()
@@ -473,6 +477,7 @@ class ExorCfgSpawns
 		puntos = new array<ref ExorSpawnPunto>;
 		personajes_hombre = new TStringArray;
 		personajes_mujer = new TStringArray;
+		ropa_respaldo = new TStringArray;
 	}
 
 	// Tipos vanilla de cada sexo (los mismos que sortea el boton "Aleatorio" del juego).
@@ -511,6 +516,11 @@ class ExorCfgSpawns
 		personajes_mujer.Insert("SurvivorF_Linda");
 		personajes_mujer.Insert("SurvivorF_Maria");
 		personajes_mujer.Insert("SurvivorF_Naomi");
+
+		ropa_respaldo = new TStringArray;
+		ropa_respaldo.Insert("TShirt_Blue");
+		ropa_respaldo.Insert("Jeans_Blue");
+		ropa_respaldo.Insert("Sneakers_Blue");
 	}
 
 	// Un tipo de personaje al azar del sexo pedido, VALIDADO contra CfgVehicles (si el
@@ -2367,7 +2377,7 @@ class ExorConfig
 			spawns.SetDefaults();
 		// spawns.json de una build vieja no trae las listas de personajes -> se siembran
 		// (si no, elegir hombre/mujer no tendria de donde sortear el tipo).
-		if (!spawns.personajes_hombre || spawns.personajes_hombre.Count() == 0 || !spawns.personajes_mujer || spawns.personajes_mujer.Count() == 0)
+		if (!spawns.personajes_hombre || spawns.personajes_hombre.Count() == 0 || !spawns.personajes_mujer || spawns.personajes_mujer.Count() == 0 || !spawns.ropa_respaldo || spawns.ropa_respaldo.Count() == 0)
 			spawns.SetDefaultPersonajes();
 		if (GuardarConfig(ExorStorageConstants.CFG_SPAWNS))
 			JsonFileLoader<ExorCfgSpawns>.JsonSaveFile(ExorStorageConstants.CFG_SPAWNS, spawns);

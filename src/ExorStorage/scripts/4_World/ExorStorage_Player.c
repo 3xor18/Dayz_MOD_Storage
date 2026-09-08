@@ -1341,10 +1341,14 @@ modded class PlayerBase
 		if (js.ReadFromString(dto, full, err))
 		{
 			ExorSpawnClient.Set(dto);
+			m_ExorSpawnMenuTries = 0;	// llego lista nueva: se reinicia la espera del menu
 			Print("[3xorVO] cliente: SPAWN_OPEN recibido, abriendo menu");
 			GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(ExorOpenSpawnMenu, 800, false);
 		}
 	}
+
+	protected int m_ExorSpawnMenuTries;	// cliente: intentos de abrir el menu esperando estar vivo
+	static const int EXOR_SPAWN_MENU_MAX_TRIES = 30;	// ~30s de espera como mucho
 
 	void ExorOpenSpawnMenu()
 	{
@@ -1358,6 +1362,21 @@ modded class PlayerBase
 		UIScriptedMenu abierto = ui.FindMenu(ExorMenuIDs.SPAWN);
 		if (abierto)
 			return;
+
+		// NO abrir mientras el cliente sigue en la transicion de muerte. El menu toma el
+		// foco (ChangeGameFocus) y, abierto ahi, la pantalla "Has muerto" se queda pegada
+		// hasta que el motor termina de reaparecer: se ve negro y no se puede clickear.
+		// Se espera a tener personaje VIVO y recien ahi se abre.
+		PlayerBase yo = PlayerBase.Cast(GetGame().GetPlayer());
+		if (!yo || !yo.IsAlive())
+		{
+			m_ExorSpawnMenuTries++;
+			if (m_ExorSpawnMenuTries <= EXOR_SPAWN_MENU_MAX_TRIES)
+				GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(ExorOpenSpawnMenu, 1000, false);
+			return;
+		}
+
+		m_ExorSpawnMenuTries = 0;
 		ui.EnterScriptedMenu(ExorMenuIDs.SPAWN, null);
 	}
 

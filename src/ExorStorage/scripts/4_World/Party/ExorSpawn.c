@@ -465,10 +465,29 @@ class ExorSpawn
 
 		GetGame().SelectPlayer(id, nuevo);
 
-		// Equipo de freshie: el personaje nuevo viene con la ropa por default de su tipo,
-		// pero sin el vendaje/chemlight/fruta que reparte la mision. Se le corre el mismo
-		// StartingEquipSetup (via el puente: MissionServer no se ve desde 4_World).
-		ExorMissionBridge.Freshie(nuevo);
+		// ROPA. Ojo: CreatePlayer devuelve el personaje DESNUDO. En vanilla al freshie lo
+		// viste el equipamiento que manda el cliente al CREAR el personaje, y eso ya se
+		// gasto en el cuerpo anterior; StartingEquipSetup solo mete venda/chemlight/fruta
+		// DENTRO de la ropa, no la crea (por eso se aparecia en bolas al cambiar de sexo).
+		// Lo mas fiel es MUDAR la ropa del cuerpo viejo: se lleva la pinta vanilla exacta
+		// que le habia tocado, con lo que tenga adentro. La ropa de DayZ no tiene sexo.
+		int movidos = TrasladarEquipo(viejo, nuevo);
+		if (movidos == 0)
+		{
+			// no se pudo mudar nada -> ropa de respaldo (spawns.json) + el kit de la mision
+			TStringArray resp = GetExorConfig().spawns.ropa_respaldo;
+			if (resp)
+			{
+				int r;
+				for (r = 0; r < resp.Count(); r++)
+				{
+					if (resp.Get(r) != "")
+						nuevo.GetInventory().CreateInInventory(resp.Get(r));
+				}
+			}
+			ExorMissionBridge.Freshie(nuevo);
+			Print(string.Format("%1 SPAWN: no se pudo mudar la ropa al personaje nuevo -> ropa de respaldo", ExorStorageConstants.LOG));
+		}
 
 		// El personaje viejo quedo registrado en la mision y en los mods que llevan lista de
 		// jugadores (VPPAdminTools entre ellos). Se repite el mismo aviso que manda el
@@ -480,6 +499,38 @@ class ExorSpawn
 
 		Print(string.Format("%1 SPAWN: %2 cambio de sexo -> %3", ExorStorageConstants.LOG, sid, tipo));
 		return nuevo;
+	}
+
+	// Muda la ropa (y lo que tenga adentro) + lo que este en las manos del cuerpo viejo al
+	// nuevo. Devuelve cuantas prendas se pudieron mover. Se juntan primero en un array
+	// porque mover una prenda cambia la lista de attachments mientras se recorre.
+	static int TrasladarEquipo(PlayerBase viejo, PlayerBase nuevo)
+	{
+		if (!viejo || !nuevo || !viejo.GetInventory() || !nuevo.GetInventory())
+			return 0;
+
+		array<EntityAI> prendas = new array<EntityAI>;
+		int ac = viejo.GetInventory().AttachmentCount();
+		int i;
+		for (i = 0; i < ac; i++)
+		{
+			EntityAI att = viejo.GetInventory().GetAttachmentFromIndex(i);
+			if (att)
+				prendas.Insert(att);
+		}
+
+		int ok = 0;
+		for (i = 0; i < prendas.Count(); i++)
+		{
+			if (nuevo.GetInventory().TakeEntityAsAttachment(InventoryMode.SERVER, prendas.Get(i)))
+				ok++;
+		}
+
+		// Lo que tenga EN LAS MANOS no se muda: no hay una API de traslado a manos que sirva
+		// aca (HumanInventory.TakeEntityToHands no existe) y al reaparecer las manos estan
+		// vacias igual. Lo unico que se pierde es el cuchillo de test de spawns.json
+		// (dar_cuchillo_al_spawnear), que en produccion va apagado.
+		return ok;
 	}
 
 	// El jugador eligio (index >=0 = punto; -1 = base). 'equip' = pidio aparecer con el
