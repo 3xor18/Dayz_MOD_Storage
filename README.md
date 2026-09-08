@@ -48,6 +48,8 @@ Mide geometría y resultados con los eventos del motor para dar **indicios** (NU
 
 ### Spawns
 - Pantalla de selección al morir / primer login, con puntos configurables + "Mi base".
+- **Hombre / Mujer** elegible en la misma pantalla (para todos): el personaje se reemplaza por uno del sexo elegido en el punto que elijas.
+- El panel se ajusta solo a la cantidad de filas visibles y nunca tapa la hotbar.
 - **Cooldown por punto** y por base, con cuenta regresiva en vivo (gris + rojo cuando no disponible).
 - Respawn en base (cooldown configurable, requiere bandera arriba).
 
@@ -263,7 +265,14 @@ Herramientas por defecto: **Lockpick** 60% / 60s · **Screwdriver** 45% / 120s �
 | `habilitado` | `true` | bool | Activa la pantalla de selección de spawn. |
 | `dar_cuchillo_al_spawnear` | `true` | bool | **TEST**: da un cuchillo al personaje nuevo (suicidio fácil al probar). Poner `false` en prod. |
 | `equipar_npc_test` | `false` | bool | **TEST LOCAL**: equipa los NPC dummy del VPP para probar la tumba. Siempre `false` en prod. |
+| `elegir_genero` | `true` | bool | Botones **Hombre / Mujer** en la pantalla de spawn (para **todos**, no solo VIP). Al elegir el punto, si el sexo pedido no es el que tiene, el server le crea el personaje del otro sexo ahí mismo. |
+| `personajes_hombre[]` | 20 vanilla | lista | Tipos que se sortean al elegir "Hombre" (`SurvivorM_*`). Se validan contra `CfgVehicles`: los que no existan en el server se saltean. |
+| `personajes_mujer[]` | 10 vanilla | lista | Ídem para "Mujer" (`SurvivorF_*`). |
 | `puntos[]` | 1 ejemplo | lista | Cada punto: `nombre` (string), `x`/`z` (float mundo), `y` (float; `0`=al suelo), `cooldown_segundos` (int), `distancia_random` (float m; radio aleatorio alrededor del punto). |
+
+> **Hombre/mujer:** no existe API para "cambiar de sexo"; la única forma es **reemplazar la entidad** del jugador. Por eso solo se hace **en el spawn** (donde el personaje es un freshie y no hay inventario que perder) y solo si el sexo pedido es distinto al que tiene. Si el reemplazo falla, el spawn igual se hace con el personaje que tenía.
+>
+> **Requisito de la misión:** para que no salga el diálogo vanilla *Personaje / Aleatorio* antes de esta pantalla, poner `GeneralData.disableRespawnDialog: true` en el `cfggameplay.json` del mpmission. **No se puede hacer desde el mod**: el cliente lee ese valor de la misión, no de un RPC.
 
 ### `mapa.json`
 | Parámetro | Default | Valores | Descripción |

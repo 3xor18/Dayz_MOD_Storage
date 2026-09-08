@@ -44,8 +44,8 @@ PanelWidgetClass ExorSpawnRoot
 				ButtonWidgetClass ExorSpawnBtn0
 				{
 					visible 1
-					position 0.05 0.060
-					size 0.9 0.052
+					position 0.050 0.066
+					size 0.900 0.050
 					color 0.2 0.2 0.3 1
 					style rover_sim_colorable
 					text "punto 0"
@@ -54,8 +54,8 @@ PanelWidgetClass ExorSpawnRoot
 				ButtonWidgetClass ExorSpawnBtn1
 				{
 					visible 1
-					position 0.05 0.126
-					size 0.9 0.052
+					position 0.050 0.124
+					size 0.900 0.050
 					color 0.2 0.2 0.3 1
 					style rover_sim_colorable
 					text "punto 1"
@@ -64,8 +64,8 @@ PanelWidgetClass ExorSpawnRoot
 				ButtonWidgetClass ExorSpawnBtn2
 				{
 					visible 1
-					position 0.05 0.192
-					size 0.9 0.052
+					position 0.050 0.182
+					size 0.900 0.050
 					color 0.2 0.2 0.3 1
 					style rover_sim_colorable
 					text "punto 2"
@@ -74,8 +74,8 @@ PanelWidgetClass ExorSpawnRoot
 				ButtonWidgetClass ExorSpawnBtn3
 				{
 					visible 1
-					position 0.05 0.258
-					size 0.9 0.052
+					position 0.050 0.240
+					size 0.900 0.050
 					color 0.2 0.2 0.3 1
 					style rover_sim_colorable
 					text "punto 3"
@@ -84,8 +84,8 @@ PanelWidgetClass ExorSpawnRoot
 				ButtonWidgetClass ExorSpawnBtn4
 				{
 					visible 1
-					position 0.05 0.324
-					size 0.9 0.052
+					position 0.050 0.298
+					size 0.900 0.050
 					color 0.2 0.2 0.3 1
 					style rover_sim_colorable
 					text "punto 4"
@@ -94,8 +94,8 @@ PanelWidgetClass ExorSpawnRoot
 				ButtonWidgetClass ExorSpawnBtn5
 				{
 					visible 1
-					position 0.05 0.390
-					size 0.9 0.052
+					position 0.050 0.356
+					size 0.900 0.050
 					color 0.2 0.2 0.3 1
 					style rover_sim_colorable
 					text "punto 5"
@@ -104,8 +104,8 @@ PanelWidgetClass ExorSpawnRoot
 				ButtonWidgetClass ExorSpawnBtn6
 				{
 					visible 1
-					position 0.05 0.456
-					size 0.9 0.052
+					position 0.050 0.414
+					size 0.900 0.050
 					color 0.2 0.2 0.3 1
 					style rover_sim_colorable
 					text "punto 6"
@@ -114,8 +114,8 @@ PanelWidgetClass ExorSpawnRoot
 				ButtonWidgetClass ExorSpawnBtn7
 				{
 					visible 1
-					position 0.05 0.522
-					size 0.9 0.052
+					position 0.050 0.472
+					size 0.900 0.050
 					color 0.2 0.2 0.3 1
 					style rover_sim_colorable
 					text "punto 7"
@@ -124,8 +124,8 @@ PanelWidgetClass ExorSpawnRoot
 				ButtonWidgetClass ExorSpawnBtn8
 				{
 					visible 1
-					position 0.05 0.588
-					size 0.9 0.052
+					position 0.050 0.530
+					size 0.900 0.050
 					color 0.2 0.2 0.3 1
 					style rover_sim_colorable
 					text "punto 8"
@@ -134,8 +134,8 @@ PanelWidgetClass ExorSpawnRoot
 				ButtonWidgetClass ExorSpawnBtn9
 				{
 					visible 1
-					position 0.05 0.654
-					size 0.9 0.052
+					position 0.050 0.588
+					size 0.900 0.050
 					color 0.2 0.2 0.3 1
 					style rover_sim_colorable
 					text "punto 9"
@@ -144,8 +144,8 @@ PanelWidgetClass ExorSpawnRoot
 				ButtonWidgetClass ExorSpawnBtn10
 				{
 					visible 1
-					position 0.05 0.720
-					size 0.9 0.052
+					position 0.050 0.646
+					size 0.900 0.050
 					color 0.2 0.2 0.3 1
 					style rover_sim_colorable
 					text "punto 10"
@@ -154,18 +154,38 @@ PanelWidgetClass ExorSpawnRoot
 				ButtonWidgetClass ExorSpawnBtn11
 				{
 					visible 1
-					position 0.05 0.786
-					size 0.9 0.052
+					position 0.050 0.704
+					size 0.900 0.050
 					color 0.2 0.2 0.3 1
 					style rover_sim_colorable
 					text "punto 11"
 					font "gui/fonts/MetronBook16"
 				}
+				ButtonWidgetClass ExorSpawnBtnHombre
+				{
+					visible 1
+					position 0.050 0.774
+					size 0.440 0.050
+					color 0.2 0.2 0.3 1
+					style rover_sim_colorable
+					text "Hombre"
+					font "gui/fonts/MetronBook16"
+				}
+				ButtonWidgetClass ExorSpawnBtnMujer
+				{
+					visible 1
+					position 0.510 0.774
+					size 0.440 0.050
+					color 0.2 0.2 0.3 1
+					style rover_sim_colorable
+					text "Mujer"
+					font "gui/fonts/MetronBook16"
+				}
 				ButtonWidgetClass ExorSpawnBtnBase
 				{
 					visible 1
-					position 0.05 0.858
-					size 0.9 0.052
+					position 0.050 0.836
+					size 0.900 0.050
 					color 0.12 0.4 0.12 1
 					style rover_sim_colorable
 					text "Mi base"
@@ -174,11 +194,11 @@ PanelWidgetClass ExorSpawnRoot
 				ButtonWidgetClass ExorSpawnBtnBaseEquip
 				{
 					visible 1
-					position 0.05 0.924
-					size 0.9 0.052
+					position 0.050 0.894
+					size 0.900 0.050
 					color 0.35 0.27 0.58 1
 					style rover_sim_colorable
-					text "Spawn en base + Equipamiento"
+					text "Equipamiento VIP"
 					font "gui/fonts/MetronBook16"
 				}
 			}

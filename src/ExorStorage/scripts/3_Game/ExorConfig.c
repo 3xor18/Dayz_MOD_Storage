@@ -459,11 +459,80 @@ class ExorCfgSpawns
 	bool habilitado = true;
 	bool dar_cuchillo_al_spawnear = true;   // TEST: dar un cuchillo al personaje nuevo (suicidio facil al testear). Poner false en prod.
 	bool equipar_npc_test = false;          // TEST LOCAL: equipa los NPC dummy que spawnea VPP ("player") con ropa+mochila+armas, para probar la tumba. SIEMPRE false en prod (equiparia AI de otros mods).
+	// Elegir hombre/mujer en la pantalla de spawn. Es para TODOS, no solo VIP. Al elegir
+	// el punto, si el sexo pedido no es el que tiene, el server le crea el personaje del
+	// otro sexo ahi mismo (ver ExorSpawn.CambiarSexo). Las listas son los tipos de
+	// personaje que se sortean; se validan contra CfgVehicles antes de usarse.
+	bool elegir_genero = true;
+	ref TStringArray personajes_hombre;
+	ref TStringArray personajes_mujer;
 	ref array<ref ExorSpawnPunto> puntos;
 
 	void ExorCfgSpawns()
 	{
 		puntos = new array<ref ExorSpawnPunto>;
+		personajes_hombre = new TStringArray;
+		personajes_mujer = new TStringArray;
+	}
+
+	// Tipos vanilla de cada sexo (los mismos que sortea el boton "Aleatorio" del juego).
+	void SetDefaultPersonajes()
+	{
+		personajes_hombre = new TStringArray;
+		personajes_hombre.Insert("SurvivorM_Mirek");
+		personajes_hombre.Insert("SurvivorM_Boris");
+		personajes_hombre.Insert("SurvivorM_Cyril");
+		personajes_hombre.Insert("SurvivorM_Denis");
+		personajes_hombre.Insert("SurvivorM_Elias");
+		personajes_hombre.Insert("SurvivorM_Francis");
+		personajes_hombre.Insert("SurvivorM_Guo");
+		personajes_hombre.Insert("SurvivorM_Hassan");
+		personajes_hombre.Insert("SurvivorM_Indar");
+		personajes_hombre.Insert("SurvivorM_Jose");
+		personajes_hombre.Insert("SurvivorM_Kaito");
+		personajes_hombre.Insert("SurvivorM_Lewis");
+		personajes_hombre.Insert("SurvivorM_Manua");
+		personajes_hombre.Insert("SurvivorM_Niki");
+		personajes_hombre.Insert("SurvivorM_Oliver");
+		personajes_hombre.Insert("SurvivorM_Peter");
+		personajes_hombre.Insert("SurvivorM_Quinn");
+		personajes_hombre.Insert("SurvivorM_Rolf");
+		personajes_hombre.Insert("SurvivorM_Seth");
+		personajes_hombre.Insert("SurvivorM_Taiki");
+
+		personajes_mujer = new TStringArray;
+		personajes_mujer.Insert("SurvivorF_Eva");
+		personajes_mujer.Insert("SurvivorF_Frida");
+		personajes_mujer.Insert("SurvivorF_Gabi");
+		personajes_mujer.Insert("SurvivorF_Helga");
+		personajes_mujer.Insert("SurvivorF_Irena");
+		personajes_mujer.Insert("SurvivorF_Judy");
+		personajes_mujer.Insert("SurvivorF_Keiko");
+		personajes_mujer.Insert("SurvivorF_Linda");
+		personajes_mujer.Insert("SurvivorF_Maria");
+		personajes_mujer.Insert("SurvivorF_Naomi");
+	}
+
+	// Un tipo de personaje al azar del sexo pedido, VALIDADO contra CfgVehicles (si el
+	// tipo no existe en este server se saltea). "" si no quedo ninguno usable.
+	string TipoAlAzar(bool mujer)
+	{
+		TStringArray lista = personajes_hombre;
+		if (mujer)
+			lista = personajes_mujer;
+		if (!lista || lista.Count() == 0)
+			return "";
+		TStringArray ok = new TStringArray;
+		int i;
+		for (i = 0; i < lista.Count(); i++)
+		{
+			string t = lista.Get(i);
+			if (t != "" && GetGame().ConfigIsExisting("CfgVehicles " + t))
+				ok.Insert(t);
+		}
+		if (ok.Count() == 0)
+			return "";
+		return ok.Get(Math.RandomInt(0, ok.Count()));
 	}
 
 	void SetDefaults()
@@ -472,6 +541,8 @@ class ExorCfgSpawns
 		habilitado = true;
 		dar_cuchillo_al_spawnear = true;
 		equipar_npc_test = false;
+		elegir_genero = true;
+		SetDefaultPersonajes();
 		puntos.Clear();
 		// Punto de ejemplo (el admin define los suyos). Editar/reemplazar en spawns.json.
 		ExorSpawnPunto ej = new ExorSpawnPunto();
@@ -2292,6 +2363,10 @@ class ExorConfig
 			JsonFileLoader<ExorCfgSpawns>.JsonLoadFile(ExorStorageConstants.CFG_SPAWNS, spawns);
 		else
 			spawns.SetDefaults();
+		// spawns.json de una build vieja no trae las listas de personajes -> se siembran
+		// (si no, elegir hombre/mujer no tendria de donde sortear el tipo).
+		if (!spawns.personajes_hombre || spawns.personajes_hombre.Count() == 0 || !spawns.personajes_mujer || spawns.personajes_mujer.Count() == 0)
+			spawns.SetDefaultPersonajes();
 		if (GuardarConfig(ExorStorageConstants.CFG_SPAWNS))
 			JsonFileLoader<ExorCfgSpawns>.JsonSaveFile(ExorStorageConstants.CFG_SPAWNS, spawns);
 	}

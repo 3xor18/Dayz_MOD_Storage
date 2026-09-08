@@ -5,11 +5,26 @@
 //   detectadas en config (vanilla + mods), usando los defaults como relleno
 // - Arranca el manager (virtualizacion / auto-cierre / vehiculos)
 // ============================================================================
+// Implementacion real del puente de 4_World: aca si se ve MissionServer.
+class ExorMissionBridgeSrv extends ExorMissionBridge
+{
+	override void EquiparFreshie(PlayerBase player)
+	{
+		MissionServer ms = MissionServer.Cast(GetGame().GetMission());
+		if (ms && player)
+			ms.StartingEquipSetup(player, false);
+	}
+}
+
 modded class MissionServer
 {
 	override void OnInit()
 	{
 		super.OnInit();
+
+		// puente para que ExorSpawn (4_World) pueda equipar como freshie al personaje
+		// que se crea al cambiar de sexo en la pantalla de spawn
+		ExorMissionBridge.s_Inst = new ExorMissionBridgeSrv();
 
 		// PRIMERO DE TODO: auto-reparacion de la persistencia. OnInit corre ANTES de que el
 		// CE restaure los dynamic_*.bin, asi que este es el unico momento en que se puede

@@ -29,6 +29,11 @@ class ExorSpawnMenu extends UIScriptedMenu
 	protected string m_EquipPack;		// nombre del pack que le toca (vip.json)
 	protected bool m_EquipOn;			// arranca APAGADO: el VIP lo prende si quiere
 
+	protected ButtonWidget m_BtnHombre;	// hombre / mujer: es para TODOS, no solo VIP
+	protected ButtonWidget m_BtnMujer;
+	protected bool m_GeneroShown;
+	protected int m_GeneroSel;			// 0 = hombre, 1 = mujer (arranca en el que ya tiene)
+
 	override Widget Init()
 	{
 		layoutRoot = GetGame().GetWorkspace().CreateWidgets("ExorStorage/gui/exor_spawn_menu.layout");
@@ -45,6 +50,8 @@ class ExorSpawnMenu extends UIScriptedMenu
 		}
 		m_BtnBase = ButtonWidget.Cast(layoutRoot.FindAnyWidget("ExorSpawnBtnBase"));
 		m_BtnEquip = ButtonWidget.Cast(layoutRoot.FindAnyWidget("ExorSpawnBtnBaseEquip"));
+		m_BtnHombre = ButtonWidget.Cast(layoutRoot.FindAnyWidget("ExorSpawnBtnHombre"));
+		m_BtnMujer = ButtonWidget.Cast(layoutRoot.FindAnyWidget("ExorSpawnBtnMujer"));
 
 		m_Names = new TStringArray;
 		m_PointRemain = new array<float>;
@@ -57,6 +64,8 @@ class ExorSpawnMenu extends UIScriptedMenu
 		m_EquipRemaining = 0;
 		m_EquipPack = "";
 		m_EquipOn = false;
+		m_GeneroShown = false;
+		m_GeneroSel = 0;
 
 		ExorSpawnMenuDTO dto = ExorSpawnClient.s_DTO;
 		if (dto)
@@ -81,10 +90,109 @@ class ExorSpawnMenu extends UIScriptedMenu
 			m_EquipShown = dto.equip_enabled;
 			m_EquipRemaining = dto.equip_remaining;
 			m_EquipPack = dto.equip_pack;
+			m_GeneroShown = dto.genero_enabled;
+			m_GeneroSel = dto.genero_actual;	// arranca marcado el sexo que ya tiene
 		}
 
+		Relayout();
 		Refresh();
 		return layoutRoot;
+	}
+
+	// ------------------------- alto del panel a medida -------------------------
+	// El .layout trae 12 slots de punto: con 3 puntos configurados quedaba medio panel
+	// vacio y el ultimo boton se metia ABAJO, encima de la hotbar (los items 1/2/3/4).
+	// Aca se recalcula todo segun las filas que REALMENTE se muestran y se corta el panel
+	// antes de LIMITE_ABAJO, asi nunca pisa la hotbar. Adentro del panel las posiciones son
+	// relativas a SU alto, por eso todo va dividido por panelH.
+	void Relayout()
+	{
+		if (!layoutRoot)
+			return;
+		Widget panel = layoutRoot.FindAnyWidget("ExorSpawnPanel");
+		if (!panel)
+			return;
+
+		int filas = m_Count;
+		if (m_GeneroShown)
+			filas = filas + 1;	// hombre/mujer van en UNA fila (mitad y mitad)
+		if (m_BaseShown)
+			filas = filas + 1;
+		if (m_EquipShown)
+			filas = filas + 1;
+		if (filas < 1)
+			filas = 1;
+
+		float pad = 0.012;
+		float titleH = 0.048;
+		float rowH = 0.040;
+		float gap = 0.009;
+		float top = 0.055;
+		float LIMITE_ABAJO = 0.86;	// la hotbar vive de ~0.88 para abajo
+
+		float fijo = pad * 3 + titleH;
+		float panelH = fijo + filas * rowH + (filas - 1) * gap;
+		float maxH = LIMITE_ABAJO - top;
+		if (panelH > maxH)
+		{
+			// muchos puntos configurados: se achican las filas para que entren igual
+			float k = (maxH - fijo) / (filas * rowH + (filas - 1) * gap);
+			if (k < 0.35)
+				k = 0.35;
+			rowH = rowH * k;
+			gap = gap * k;
+			panelH = fijo + filas * rowH + (filas - 1) * gap;
+			if (panelH > maxH)
+				panelH = maxH;
+		}
+
+		panel.SetPos(0.34, top);
+		panel.SetSize(0.32, panelH);
+
+		float hRel = rowH / panelH;
+		Widget title = layoutRoot.FindAnyWidget("ExorSpawnTitle");
+		if (title)
+		{
+			title.SetPos(0.02, pad / panelH);
+			title.SetSize(0.96, titleH / panelH);
+		}
+
+		float y = pad + titleH + pad;
+		int i;
+		for (i = 0; i < m_Buttons.Count() && i < m_Count; i++)
+		{
+			ButtonWidget b = m_Buttons.Get(i);
+			if (!b)
+				continue;
+			b.SetPos(0.05, y / panelH);
+			b.SetSize(0.9, hRel);
+			y = y + rowH + gap;
+		}
+		if (m_GeneroShown)
+		{
+			if (m_BtnHombre)
+			{
+				m_BtnHombre.SetPos(0.05, y / panelH);
+				m_BtnHombre.SetSize(0.44, hRel);
+			}
+			if (m_BtnMujer)
+			{
+				m_BtnMujer.SetPos(0.51, y / panelH);
+				m_BtnMujer.SetSize(0.44, hRel);
+			}
+			y = y + rowH + gap;
+		}
+		if (m_BaseShown && m_BtnBase)
+		{
+			m_BtnBase.SetPos(0.05, y / panelH);
+			m_BtnBase.SetSize(0.9, hRel);
+			y = y + rowH + gap;
+		}
+		if (m_EquipShown && m_BtnEquip)
+		{
+			m_BtnEquip.SetPos(0.05, y / panelH);
+			m_BtnEquip.SetSize(0.9, hRel);
+		}
 	}
 
 	// mm:ss a partir de segundos
@@ -188,6 +296,45 @@ class ExorSpawnMenu extends UIScriptedMenu
 				}
 			}
 		}
+
+		RefreshGenero();
+	}
+
+	// Hombre / mujer: el elegido va en verde, el otro gris. Se pinta siempre igual (no
+	// tiene cooldown ni condiciones): el cambio se aplica al elegir el punto de spawn.
+	void RefreshGenero()
+	{
+		int colTxt = ARGB(255, 235, 235, 235);
+		int colOn = ARGB(255, 31, 102, 31);
+		int colOff = ARGB(255, 40, 40, 46);
+		if (m_BtnHombre)
+		{
+			m_BtnHombre.Show(m_GeneroShown);
+			m_BtnHombre.SetText("Hombre");
+			m_BtnHombre.SetTextColor(colTxt);
+			if (m_GeneroSel == 0)
+				m_BtnHombre.SetColor(colOn);
+			else
+				m_BtnHombre.SetColor(colOff);
+		}
+		if (m_BtnMujer)
+		{
+			m_BtnMujer.Show(m_GeneroShown);
+			m_BtnMujer.SetText("Mujer");
+			m_BtnMujer.SetTextColor(colTxt);
+			if (m_GeneroSel == 1)
+				m_BtnMujer.SetColor(colOn);
+			else
+				m_BtnMujer.SetColor(colOff);
+		}
+	}
+
+	// Sexo que se le manda al server con la eleccion (-1 = no tocar, feature apagada).
+	int GeneroPedido()
+	{
+		if (!m_GeneroShown)
+			return -1;
+		return m_GeneroSel;
 	}
 
 	// El interruptor se puede tocar si es VIP y le quedan usos (ya no depende de la base).
@@ -268,7 +415,7 @@ class ExorSpawnMenu extends UIScriptedMenu
 				if (!PointAvailable(i))
 					return true;	// en cooldown: ignora el click (no cierra)
 				// se manda el indice REAL de spawns.json, no la posicion en la lista
-				p.ExorReqSpawnPick(m_PointIdx.Get(i), EquipPedido());
+				p.ExorReqSpawnPick(m_PointIdx.Get(i), EquipPedido(), GeneroPedido());
 				Close();
 				return true;
 			}
@@ -277,7 +424,7 @@ class ExorSpawnMenu extends UIScriptedMenu
 		{
 			if (!BaseAvailable())
 				return true;	// base no disponible: ignora el click
-			p.ExorReqSpawnPick(-1, EquipPedido());
+			p.ExorReqSpawnPick(-1, EquipPedido(), GeneroPedido());
 			Close();
 			return true;
 		}
@@ -287,6 +434,18 @@ class ExorSpawnMenu extends UIScriptedMenu
 				return true;	// sin usos: ignora el click
 			m_EquipOn = !m_EquipOn;	// interruptor: NO cierra el menu, solo se pinta
 			Refresh();
+			return true;
+		}
+		if (w == m_BtnHombre || w == m_BtnMujer)
+		{
+			// Solo marca la eleccion: el personaje se cambia recien al elegir el punto.
+			if (!m_GeneroShown)
+				return true;
+			if (w == m_BtnHombre)
+				m_GeneroSel = 0;
+			else
+				m_GeneroSel = 1;
+			RefreshGenero();
 			return true;
 		}
 		return super.OnClick(w, x, y, button);

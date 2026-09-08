@@ -903,10 +903,11 @@ modded class PlayerBase
 	}
 
 	// index: >=0 punto de spawns.json, -1 = base. equip = pidio el equipamiento VIP
-	// (el interruptor de la pantalla de spawn). El server lo re-valida, no confia.
-	void ExorReqSpawnPick(int index, bool equip)
+	// (el interruptor de la pantalla de spawn). genero = 0 hombre / 1 mujer / -1 no tocar.
+	// El server re-valida los tres, no confia en el cliente.
+	void ExorReqSpawnPick(int index, bool equip, int genero)
 	{
-		RPCSingleParam(ExorRPC.SPAWN_PICK, new Param2<int, bool>(index, equip), true, null);
+		RPCSingleParam(ExorRPC.SPAWN_PICK, new Param3<int, bool, int>(index, equip, genero), true, null);
 	}
 
 	void ExorReqMarkerAdd(vector pos)
@@ -1108,9 +1109,9 @@ modded class PlayerBase
 			case ExorRPC.SPAWN_PICK:
 				if (GetGame().IsServer())
 				{
-					Param2<int, bool> sp = new Param2<int, bool>(0, false);
+					Param3<int, bool, int> sp = new Param3<int, bool, int>(0, false, -1);
 					if (ctx.Read(sp))
-						ExorSpawn.ApplyPick(this, sp.param1, sp.param2);
+						ExorSpawn.ApplyPick(this, sp.param1, sp.param2, sp.param3);
 				}
 				break;
 			case ExorRPC.MARKER_ADD:
