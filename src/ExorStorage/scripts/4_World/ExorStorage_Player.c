@@ -902,9 +902,11 @@ modded class PlayerBase
 		RPCSingleParam(ExorRPC.KICK, new Param1<string>(steamid), true, null);
 	}
 
-	void ExorReqSpawnPick(int index)
+	// index: >=0 punto de spawns.json, -1 = base. equip = pidio el equipamiento VIP
+	// (el interruptor de la pantalla de spawn). El server lo re-valida, no confia.
+	void ExorReqSpawnPick(int index, bool equip)
 	{
-		RPCSingleParam(ExorRPC.SPAWN_PICK, new Param1<int>(index), true, null);
+		RPCSingleParam(ExorRPC.SPAWN_PICK, new Param2<int, bool>(index, equip), true, null);
 	}
 
 	void ExorReqMarkerAdd(vector pos)
@@ -1009,9 +1011,12 @@ modded class PlayerBase
 			}
 			case ExorRPC.VIP_STATUS:
 			{
-				Param1<bool> vp = new Param1<bool>(false);
+				Param2<bool, bool> vp = new Param2<bool, bool>(false, false);
 				if (ctx.Read(vp))
+				{
 					ExorVipClient.s_IsVip = vp.param1;
+					ExorVipClient.s_DistEnMarcas = vp.param2;
+				}
 				break;
 			}
 			case ExorRPC.AUTORUN_SET:
@@ -1103,9 +1108,9 @@ modded class PlayerBase
 			case ExorRPC.SPAWN_PICK:
 				if (GetGame().IsServer())
 				{
-					Param1<int> sp = new Param1<int>(0);
+					Param2<int, bool> sp = new Param2<int, bool>(0, false);
 					if (ctx.Read(sp))
-						ExorSpawn.ApplyPick(this, sp.param1);
+						ExorSpawn.ApplyPick(this, sp.param1, sp.param2);
 				}
 				break;
 			case ExorRPC.MARKER_ADD:

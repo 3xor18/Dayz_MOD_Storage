@@ -185,7 +185,7 @@ modded class MissionServer
 			// del cliente puede no estar listo y el 1er envio se pierde -> la distancia VIP en las
 			// marcas dejaba de verse. Los reenvios diferidos aseguran que el flag llegue.
 			bool isVip = GetExorConfig().vip.IsVip(identity.GetPlainId());
-			player.RPCSingleParam(ExorRPC.VIP_STATUS, new Param1<bool>(isVip), true, identity);
+			player.RPCSingleParam(ExorRPC.VIP_STATUS, new Param2<bool, bool>(isVip, GetExorConfig().vip.marcar_distancia_en_marcas), true, identity);
 			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorResendVip, 3000, false, player, isVip);
 			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorResendVip, 8000, false, player, isVip);
 
@@ -227,7 +227,7 @@ modded class MissionServer
 	void ExorResendVip(PlayerBase player, bool isVip)
 	{
 		if (player && player.GetIdentity())
-			player.RPCSingleParam(ExorRPC.VIP_STATUS, new Param1<bool>(isVip), true, player.GetIdentity());
+			player.RPCSingleParam(ExorRPC.VIP_STATUS, new Param2<bool, bool>(isVip, GetExorConfig().vip.marcar_distancia_en_marcas), true, player.GetIdentity());
 	}
 
 	// #4a: al desconectarse, si esta dentro de territorio ajeno, dejar rastro forense.

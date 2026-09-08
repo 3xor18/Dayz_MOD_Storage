@@ -271,12 +271,13 @@ class ExorMarkersHud
 				tw.SetPos(screen[0] - 100, screen[1] - triSize - 20);
 				tw.Show(true);
 
-				// distancia en verde, pegada despues del nombre. SOLO VIP; el resto
-				// ve la marca igual que hoy (sin distancia).
+				// distancia en verde, pegada despues del nombre. SOLO VIP y SOLO si
+				// vip.json tiene marcar_distancia_en_marcas prendido (off por default);
+				// el resto ve la marca sin distancia.
 				TextWidget dw = m_Dists.Get(shown);
 				if (dw)
 				{
-					if (ExorVipClient.s_IsVip)
+					if (ExorVipClient.s_IsVip && ExorVipClient.s_DistEnMarcas)
 					{
 						int nw, nh;
 						tw.GetTextSize(nw, nh);	// ancho del nombre para pegar la distancia al lado

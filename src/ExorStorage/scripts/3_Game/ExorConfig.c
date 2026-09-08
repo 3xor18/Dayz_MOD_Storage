@@ -981,29 +981,48 @@ class ExorClientCfgDTO
 }
 
 // ----------------------------------------------------------------------------
-// vip.json (lista de SteamIDs VIP). Hoy se usa para permitir spawn en el mastil;
-// queda listo para colgarle mas beneficios a futuro.
+// vip.json (quien es VIP, desde cuando, cuantos usos de equipamiento le tocan y
+// que PACK de equipamiento usa). Ademas prende/apaga la distancia en las marcas.
 // ----------------------------------------------------------------------------
-// Loadout VIP (mismo para todos los VIP): ropa que REEMPLAZA la de spawn +
-// items extra que se ponen en el cargo de la camisa/pantalon. Vacio = no tocar.
+// Un PACK de equipamiento VIP: ropa que REEMPLAZA la de spawn + items extra que van
+// al cargo de la camisa/pantalon. Cada pack tiene un "nombre" y es lo que se escribe
+// en vips[].equip_loadout para asignarselo a un player. Campo vacio = ese slot no se toca.
 class ExorCfgVipLoadout
 {
+	string nombre = "";              // nombre del pack ("pack-negro"): esto es lo que se pone en vips[].equip_loadout
 	string pantalon = "";
 	string camisa = "";
 	string zapato = "";
 	string bolso = "";
 	string guantes = "";
 	string mascara = "";
-	bool full_comida_bebida = true;   // al equipar, dejar al VIP con 100% comida (energia) y bebida (agua)
-	ref TStringArray items_extra;   // comida/cuchillo/etc -> cargo de camisa o pantalon
+	string casco = "";               // vacio = no se le da casco (por default los packs vienen sin casco)
+	string chaleco = "";             // vacio = no se le da chaleco (por default los packs vienen sin chaleco)
+	bool full_comida_bebida = true;  // al equipar, dejar al VIP con 100% comida (energia) y bebida (agua)
+	ref TStringArray items_extra;    // comida/cuchillo/etc -> cargo de camisa o pantalon
 
 	void ExorCfgVipLoadout()
 	{
 		items_extra = new TStringArray;
 	}
+
+	// true si el pack viste algo (si esta todo vacio no tiene sentido gastar un uso)
+	bool TienePiezas()
+	{
+		if (pantalon != "") return true;
+		if (camisa != "") return true;
+		if (zapato != "") return true;
+		if (bolso != "") return true;
+		if (guantes != "") return true;
+		if (mascara != "") return true;
+		if (casco != "") return true;
+		if (chaleco != "") return true;
+		if (items_extra && items_extra.Count() > 0) return true;
+		return false;
+	}
 }
 
-// Una entrada VIP: steamid + fecha de ingreso + usos de equipamiento.
+// Una entrada VIP: steamid + fecha de ingreso + usos de equipamiento + pack asignado.
 // fecha_ingreso vacia = el server la sella con HOY al arrancar. El VIP vence a los
 // dias_vip (def 30) dias de fecha_ingreso (ver ExorCfgVip.IsVip). Los usos NO se
 // reponen solos. RENOVAR = editar fecha_ingreso a mano (reinicia los 30 dias y
@@ -1013,6 +1032,7 @@ class ExorCfgVipEntry
 	string steamid = "";
 	string fecha_ingreso = "";   // "AAAA-MM-DD" (vacio = el server la sella con hoy)
 	int usos_por_mes = 0;        // usos de equipamiento totales para ESTE player hasta renovar (0 = usar el default global)
+	string equip_loadout = "";   // nombre del pack de equip_loadouts[] que le toca (vacio o inexistente = el primero de la lista)
 }
 
 // Lista vieja (solo steamids) para migrar al formato nuevo automaticamente.
@@ -1025,41 +1045,68 @@ class ExorCfgVipLegacy
 class ExorCfgVip
 {
 	ref array<ref ExorCfgVipEntry> vips;
-	bool equip_habilitado = true;        // perk: opcion "Spawn en base + Equipamiento"
-	int equip_usos_por_mes = 7;          // DEFAULT global de usos de equipamiento (si la entrada del player tiene 0). NO se reponen solos: ver dias_vip.
+	bool equip_habilitado = true;        // perk: opcion "Equipamiento VIP" en la pantalla de spawn
+	int equip_usos_por_mes = 8;          // DEFAULT global de usos de equipamiento (si la entrada del player tiene 0). NO se reponen solos: ver dias_vip.
 	int dias_vip = 30;                   // dias que dura el VIP desde fecha_ingreso. Pasados, IsVip = false (ya no cuenta como VIP). Renovacion = editar fecha_ingreso a mano.
-	ref ExorCfgVipLoadout equip_loadout;
+	bool marcar_distancia_en_marcas = false;  // OFF por default: mostrar los metros al lado de las marcas del party (marcar con T). Prenderlo = 1.
+	ref array<ref ExorCfgVipLoadout> equip_loadouts;   // packs disponibles (uno por color de equipamiento del mod)
 
 	void ExorCfgVip()
 	{
 		vips = new array<ref ExorCfgVipEntry>;
-		equip_loadout = new ExorCfgVipLoadout();
+		equip_loadouts = new array<ref ExorCfgVipLoadout>;
 	}
 
 	void SetDefaults()
 	{
 		vips = new array<ref ExorCfgVipEntry>;
 		// Entrada de EJEMPLO (asi se ve como agregar otros players): steamid +
-		// fecha_ingreso (vacio = se sella al arrancar) + usos_por_mes propio.
+		// fecha_ingreso (vacio = se sella al arrancar) + usos_por_mes propio + pack.
 		ExorCfgVipEntry ej = new ExorCfgVipEntry();
 		ej.steamid = "76561198722396813";
 		ej.fecha_ingreso = "";
 		ej.usos_por_mes = 20;
+		ej.equip_loadout = "pack-negro";
 		vips.Insert(ej);
 
 		equip_habilitado = true;
-		equip_usos_por_mes = 7;
+		equip_usos_por_mes = 8;
 		dias_vip = 30;
-		equip_loadout = new ExorCfgVipLoadout();
-		equip_loadout.pantalon = "CargoPants_Black";
-		equip_loadout.camisa = "TacticalShirt_Black";
-		equip_loadout.zapato = "MilitaryBoots_Black";
-		equip_loadout.bolso = "TortillaBag";
-		equip_loadout.guantes = "TacticalGloves_Green";
-		equip_loadout.mascara = "BalaclavaMask_Blackskull";
-		equip_loadout.full_comida_bebida = true;
-		equip_loadout.items_extra.Insert("CombatKnife");
-		equip_loadout.items_extra.Insert("TacticalBaconCan");
+		marcar_distancia_en_marcas = false;
+		SetDefaultPacks();
+	}
+
+	// Arma el pack de un color con las piezas retexturadas del mod (Exor_*_<Color>).
+	// casco y chaleco quedan VACIOS a proposito: el pack viste lo mismo que vestia el
+	// loadout viejo (ropa, sin proteccion). Para darlos, escribir la clase en el JSON
+	// (ej. "casco": "Exor_Mich2001Helmet_Negro", "chaleco": "Exor_PressVest_Negro").
+	static ExorCfgVipLoadout PackColor(string nombre, string color)
+	{
+		ExorCfgVipLoadout p = new ExorCfgVipLoadout();
+		p.nombre = nombre;
+		p.camisa = "Exor_GorkaJacket_" + color;
+		p.pantalon = "Exor_GorkaPants_" + color;
+		p.zapato = "Exor_CombatBoots_" + color;
+		p.bolso = "Exor_TortillaBag_" + color;
+		p.guantes = "Exor_TacticalGloves_" + color;
+		p.mascara = "Exor_BalaclavaMask_" + color;
+		p.casco = "";
+		p.chaleco = "";
+		p.full_comida_bebida = true;
+		p.items_extra.Insert("CombatKnife");
+		p.items_extra.Insert("TacticalBaconCan");
+		return p;
+	}
+
+	// Un pack por cada color de equipamiento que tiene el mod (config.cpp: Exor_*_<Color>).
+	void SetDefaultPacks()
+	{
+		equip_loadouts = new array<ref ExorCfgVipLoadout>;
+		equip_loadouts.Insert(PackColor("pack-negro", "Negro"));
+		equip_loadouts.Insert(PackColor("pack-arido", "Arido"));
+		equip_loadouts.Insert(PackColor("pack-urbano", "Urbano"));
+		equip_loadouts.Insert(PackColor("pack-nieve", "Nieve"));
+		equip_loadouts.Insert(PackColor("pack-rosa", "Rosa"));
 	}
 
 	// Usos de equipamiento para este player (hasta renovar): el propio de la entrada,
@@ -1090,6 +1137,55 @@ class ExorCfgVip
 				return vips.Get(i);
 		}
 		return null;
+	}
+
+	// Pack por nombre. null si no existe (o si el nombre viene vacio).
+	ExorCfgVipLoadout FindPack(string nombre)
+	{
+		if (!equip_loadouts || nombre == "")
+			return null;
+		int i;
+		for (i = 0; i < equip_loadouts.Count(); i++)
+		{
+			ExorCfgVipLoadout p = equip_loadouts.Get(i);
+			if (p && p.nombre == nombre)
+				return p;
+		}
+		return null;
+	}
+
+	// El pack que le toca a este player: el que dice su entrada; si no eligio (o el
+	// nombre no existe) cae al PRIMERO de la lista. null si no hay packs cargados.
+	ExorCfgVipLoadout PackFor(string sid)
+	{
+		ExorCfgVipEntry e = FindEntry(sid);
+		if (e)
+		{
+			ExorCfgVipLoadout p = FindPack(e.equip_loadout);
+			if (p)
+				return p;
+		}
+		if (equip_loadouts && equip_loadouts.Count() > 0)
+			return equip_loadouts.Get(0);
+		return null;
+	}
+
+	// Nombre del pack que le toca ("" si no hay).
+	string NombrePack(string sid)
+	{
+		ExorCfgVipLoadout p = PackFor(sid);
+		if (p)
+			return p.nombre;
+		return "";
+	}
+
+	// true si a este player le toca un pack que efectivamente viste algo.
+	bool TieneLoadout(string sid)
+	{
+		ExorCfgVipLoadout p = PackFor(sid);
+		if (!p)
+			return false;
+		return p.TienePiezas();
 	}
 
 	// Dias civiles exactos desde una fecha (algoritmo days-from-civil; exacto para y>=0).
@@ -1161,8 +1257,9 @@ class ExorCfgVip
 		return "";
 	}
 
-	// Migra el formato viejo (vip_steamids[]) y sella con la fecha de hoy las
-	// entradas que esten sin fecha. Devuelve true si cambio algo (para re-guardar).
+	// Migra el formato viejo (vip_steamids[]), rellena los packs si el vip.json venia
+	// del formato de UN solo loadout, y sella con la fecha de hoy las entradas sin
+	// fecha. Devuelve true si cambio algo (para re-guardar).
 	bool MigrateAndStamp()
 	{
 		bool changed = false;
@@ -1186,7 +1283,16 @@ class ExorCfgVip
 			}
 		}
 
-		// 2) Sellar con hoy las entradas sin fecha
+		// 2) vip.json viejo (tenia "equip_loadout" como UN solo objeto, no la lista
+		//    "equip_loadouts") -> queda sin packs. Se cargan los packs por color y se re-guarda.
+		if (!equip_loadouts || equip_loadouts.Count() == 0)
+		{
+			SetDefaultPacks();
+			changed = true;
+			Print(string.Format("%1 VIP: vip.json sin equip_loadouts -> se cargan los packs por color", ExorStorageConstants.LOG));
+		}
+
+		// 3) Sellar con hoy las entradas sin fecha
 		int y, m, d;
 		GetYearMonthDay(y, m, d);
 		string hoy = string.Format("%1-%2-%3", y, Pad2(m), Pad2(d));
@@ -1201,21 +1307,6 @@ class ExorCfgVip
 			}
 		}
 		return changed;
-	}
-
-	// true si hay al menos una pieza/item configurado en el loadout
-	bool TieneLoadout()
-	{
-		if (!equip_loadout)
-			return false;
-		if (equip_loadout.pantalon != "") return true;
-		if (equip_loadout.camisa != "") return true;
-		if (equip_loadout.zapato != "") return true;
-		if (equip_loadout.bolso != "") return true;
-		if (equip_loadout.guantes != "") return true;
-		if (equip_loadout.mascara != "") return true;
-		if (equip_loadout.items_extra && equip_loadout.items_extra.Count() > 0) return true;
-		return false;
 	}
 }
 

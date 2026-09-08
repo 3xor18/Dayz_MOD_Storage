@@ -167,13 +167,13 @@ class ExorVipState
 	}
 
 	// ------------------------- aplicar el loadout VIP -------------------------
-	// Reemplaza la ropa del jugador por la del loadout y mete los items extra en
-	// el cargo de la camisa/pantalon. Server-side.
-	static void ApplyLoadout(PlayerBase player)
+	// Reemplaza la ropa del jugador por la del PACK recibido (equip_loadouts[] de
+	// vip.json; cual le toca lo decide ExorCfgVip.PackFor) y mete los items extra
+	// en el cargo de la camisa/pantalon. Server-side.
+	static void ApplyLoadout(PlayerBase player, ExorCfgVipLoadout lo)
 	{
 		if (!GetGame() || !GetGame().IsServer() || !player)
 			return;
-		ExorCfgVipLoadout lo = GetExorConfig().vip.equip_loadout;
 		if (!lo)
 			return;
 
@@ -194,6 +194,8 @@ class ExorVipState
 		ExorCreatePiece(player, lo.bolso);
 		ExorCreatePiece(player, lo.guantes);
 		ExorCreatePiece(player, lo.mascara);
+		ExorCreatePiece(player, lo.casco);
+		ExorCreatePiece(player, lo.chaleco);
 
 		// 3) items extra: al cargo de camisa, si no de pantalon, si no donde haya
 		if (lo.items_extra)

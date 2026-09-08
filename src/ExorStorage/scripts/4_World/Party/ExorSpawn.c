@@ -22,8 +22,12 @@ class ExorSpawnMenuDTO
 	bool base_enabled;            // mostrar el boton "Mi base" (permitido + tiene mastil)
 	int base_cd_seg;              // segundos restantes de cooldown de base (0 = disponible)
 	bool base_flag_down;          // bandera abajo y eso bloquea el respawn en base
-	bool equip_enabled;           // mostrar "Spawn en base + Equipamiento" (VIP + loadout + base)
-	int equip_remaining;          // usos de equipamiento restantes en el ciclo
+	// Equipamiento VIP: ya NO es un boton de "spawn en base + equipo", es un INTERRUPTOR
+	// de la pantalla de spawn (el VIP lo prende si quiere y despues elige el punto que
+	// sea). Por eso no depende de la base: sirve con la base apagada en party.json.
+	bool equip_enabled;           // mostrar el interruptor (es VIP + equip_habilitado + su pack viste algo)
+	int equip_remaining;          // usos de equipamiento que le quedan (se muestran en el boton)
+	string equip_pack;            // nombre del pack que le toca (para mostrarlo en el boton)
 	void ExorSpawnMenuDTO()
 	{
 		nombres = new TStringArray;
@@ -312,16 +316,19 @@ class ExorSpawn
 			}
 		}
 
-		// Opcion VIP "Spawn en base + Equipamiento": requiere ser VIP, tener loadout
-		// configurado y que la base se pueda mostrar. La disponibilidad final (base
-		// arriba/sin cd + usos > 0) la combina el cliente.
+		// Interruptor "Equipamiento VIP": requiere ser VIP y que su pack (equip_loadouts[]
+		// de vip.json) vista algo. NO depende de la base: el VIP lo prende y aparece con
+		// el equipo en el punto que elija. El cliente lo muestra apagado por default y
+		// con los usos que le quedan.
 		dto.equip_enabled = false;
 		dto.equip_remaining = 0;
+		dto.equip_pack = "";
 		ExorCfgVip vipcfg = GetExorConfig().vip;
-		if (vipcfg.equip_habilitado && vipcfg.IsVip(sidBase) && vipcfg.TieneLoadout() && dto.base_enabled)
+		if (vipcfg.equip_habilitado && vipcfg.IsVip(sidBase) && vipcfg.TieneLoadout(sidBase))
 		{
 			dto.equip_enabled = true;
 			dto.equip_remaining = ExorVipState.Get().RemainingUses(sidBase);
+			dto.equip_pack = vipcfg.NombrePack(sidBase);
 		}
 
 		JsonSerializer js = new JsonSerializer();
@@ -382,8 +389,9 @@ class ExorSpawn
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(RetryOpen, OPEN_RETRY_MS, false, player);
 	}
 
-	// El jugador eligio (index >=0 = punto; -1 = base). Teleporta si corresponde.
-	static void ApplyPick(PlayerBase player, int index)
+	// El jugador eligio (index >=0 = punto; -1 = base). 'equip' = pidio aparecer con el
+	// equipamiento VIP (el interruptor de la pantalla). Teleporta si corresponde.
+	static void ApplyPick(PlayerBase player, int index, bool equip)
 	{
 		if (!GetGame().IsServer() || !player || !player.GetIdentity())
 			return;
@@ -394,32 +402,28 @@ class ExorSpawn
 			s_OpenTries.Remove(sid);
 		vector pos = vector.Zero;
 
-		if (index == -2)
+		// GATE VIP AUTORITATIVO del equipamiento. El interruptor del cliente es cortesia
+		// visual: esto es lo que de verdad decide, porque el flag llega por RPC y un
+		// cliente modificado puede mandar lo que quiera. Si no califica, el spawn SIGUE
+		// (aparece igual, sin equipo) y se le avisa por que.
+		ExorCfgVipLoadout pack = null;
+		if (equip)
 		{
-			// Spawn en base + Equipamiento VIP (gasta 1 uso del ciclo).
 			ExorCfgVip vip = GetExorConfig().vip;
-			if (!vip.equip_habilitado || !vip.IsVip(sid) || !vip.TieneLoadout())
+			if (!vip.equip_habilitado || !vip.IsVip(sid) || !vip.TieneLoadout(sid))
 			{
 				ExorAviso.Enviar(player, "El equipamiento VIP no está disponible.");
-				return;
+				equip = false;
 			}
-			if (ExorVipState.Get().RemainingUses(sid) <= 0)
+			else if (ExorVipState.Get().RemainingUses(sid) <= 0)
 			{
 				ExorAviso.Enviar(player, "No te quedan usos de equipamiento VIP (avisá al admin para renovar).");
-				return;
+				equip = false;
 			}
-			pos = ChooseBase(sid, player);	// respeta bandera + cooldown (y consume cd de base)
-			if (pos == vector.Zero)
+			else
 			{
-				ExorAviso.Enviar(player, "No podés aparecer en tu base ahora (bandera abajo o en cooldown).");
-				return;
+				pack = vip.PackFor(sid);
 			}
-			player.SetPosition(pos);
-			ExorVipState.Get().ConsumeUse(sid);
-			ExorVipState.ApplyLoadout(player);
-			int rem = ExorVipState.Get().RemainingUses(sid);
-			ExorAviso.Enviar(player, string.Format("Apareciste en tu base con equipamiento VIP. Usos restantes: %1", rem));
-			return;
 		}
 
 		if (index < 0)
@@ -465,10 +469,21 @@ class ExorSpawn
 			pos = PuntoToPos(pt);
 		}
 
-		if (pos != vector.Zero)
+		if (pos == vector.Zero)
+			return;
+
+		player.SetPosition(pos);
+
+		// Equipamiento VIP: recien ACA se gasta el uso (ya esta puesto en el mundo).
+		if (equip && pack)
 		{
-			player.SetPosition(pos);
-			ExorAviso.Enviar(player, "Apareciste en el punto elegido.");
+			ExorVipState.Get().ConsumeUse(sid);
+			ExorVipState.ApplyLoadout(player, pack);
+			int rem = ExorVipState.Get().RemainingUses(sid);
+			ExorAviso.Enviar(player, string.Format("Apareciste con el equipamiento VIP (%1). Usos restantes: %2", pack.nombre, rem));
+			return;
 		}
+
+		ExorAviso.Enviar(player, "Apareciste en el punto elegido.");
 	}
 }

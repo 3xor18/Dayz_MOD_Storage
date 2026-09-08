@@ -5,6 +5,9 @@
 // estan en cooldown (o la base con la bandera abajo) salen GRISES, con el tiempo
 // restante al lado y NO se pueden clickear. El contador baja en vivo y se habilita
 // solo cuando llega a 0. Al elegir, manda la eleccion al server (SPAWN_PICK).
+// El boton de abajo NO es un punto: es el INTERRUPTOR "Equipamiento VIP". Arranca
+// APAGADO; el VIP lo prende si quiere aparecer con su pack de ropa (gasta 1 uso) y
+// recien despues elige el punto. Por eso no cierra el menu al clickearlo.
 // ============================================================================
 class ExorSpawnMenu extends UIScriptedMenu
 {
@@ -20,9 +23,11 @@ class ExorSpawnMenu extends UIScriptedMenu
 	protected float m_BaseRemain;	// seg restantes de cooldown de base
 	protected bool m_BaseFlagDown;	// bandera abajo bloquea base
 
-	protected ButtonWidget m_BtnEquip;	// "Spawn en base + Equipamiento" (VIP)
+	protected ButtonWidget m_BtnEquip;	// interruptor "Equipamiento VIP"
 	protected bool m_EquipShown;
-	protected int m_EquipRemaining;		// usos VIP restantes en el ciclo
+	protected int m_EquipRemaining;		// usos VIP que le quedan
+	protected string m_EquipPack;		// nombre del pack que le toca (vip.json)
+	protected bool m_EquipOn;			// arranca APAGADO: el VIP lo prende si quiere
 
 	override Widget Init()
 	{
@@ -50,6 +55,8 @@ class ExorSpawnMenu extends UIScriptedMenu
 		m_BaseFlagDown = false;
 		m_EquipShown = false;
 		m_EquipRemaining = 0;
+		m_EquipPack = "";
+		m_EquipOn = false;
 
 		ExorSpawnMenuDTO dto = ExorSpawnClient.s_DTO;
 		if (dto)
@@ -73,6 +80,7 @@ class ExorSpawnMenu extends UIScriptedMenu
 			m_BaseFlagDown = dto.base_flag_down;
 			m_EquipShown = dto.equip_enabled;
 			m_EquipRemaining = dto.equip_remaining;
+			m_EquipPack = dto.equip_pack;
 		}
 
 		Refresh();
@@ -153,44 +161,45 @@ class ExorSpawnMenu extends UIScriptedMenu
 			}
 		}
 
-		// Boton VIP "Spawn en base + Equipamiento (usos)" + timer de la base.
+		// Interruptor VIP "Equipamiento": prendido = morado, apagado = gris. Muestra el
+		// pack que le toca y cuantos usos le quedan. Sin usos queda muerto (rojo).
 		if (m_BtnEquip)
 		{
 			m_BtnEquip.Show(m_EquipShown);
 			if (m_EquipShown)
 			{
-				string baseTxt = string.Format("Spawn en base + Equipamiento (%1)", m_EquipRemaining);
 				if (m_EquipRemaining <= 0)
 				{
-					m_BtnEquip.SetText("Spawn en base + Equipamiento (0 - sin usos)");
+					m_BtnEquip.SetText("Equipamiento VIP   (0 - sin usos)");
 					m_BtnEquip.SetColor(colGrey);
 					m_BtnEquip.SetTextColor(colRed);
 				}
-				else if (m_BaseFlagDown)
+				else if (m_EquipOn)
 				{
-					m_BtnEquip.SetText(baseTxt + "   (bandera abajo)");
-					m_BtnEquip.SetColor(colGrey);
-					m_BtnEquip.SetTextColor(colRed);
-				}
-				else if (m_BaseRemain > 0.5)
-				{
-					m_BtnEquip.SetText(baseTxt + "   (" + FormatMMSS(m_BaseRemain) + ")");
-					m_BtnEquip.SetColor(colGrey);
-					m_BtnEquip.SetTextColor(colRed);
+					m_BtnEquip.SetText(string.Format("Equipamiento VIP: SI - %1   (quedan %2)", m_EquipPack, m_EquipRemaining));
+					m_BtnEquip.SetColor(ARGB(255, 90, 70, 150));	// morado VIP = prendido
+					m_BtnEquip.SetTextColor(colTxt);
 				}
 				else
 				{
-					m_BtnEquip.SetText(baseTxt);
-					m_BtnEquip.SetColor(ARGB(255, 90, 70, 150));	// morado VIP disponible
+					m_BtnEquip.SetText(string.Format("Equipamiento VIP: NO - %1   (quedan %2)", m_EquipPack, m_EquipRemaining));
+					m_BtnEquip.SetColor(colGrey);
 					m_BtnEquip.SetTextColor(colTxt);
 				}
 			}
 		}
 	}
 
+	// El interruptor se puede tocar si es VIP y le quedan usos (ya no depende de la base).
 	bool EquipAvailable()
 	{
-		return m_EquipShown && m_EquipRemaining > 0 && BaseAvailable();
+		return m_EquipShown && m_EquipRemaining > 0;
+	}
+
+	// true = el spawn que se mande tiene que venir con el equipamiento VIP puesto
+	bool EquipPedido()
+	{
+		return m_EquipOn && EquipAvailable();
 	}
 
 	bool PointAvailable(int i)
@@ -259,7 +268,7 @@ class ExorSpawnMenu extends UIScriptedMenu
 				if (!PointAvailable(i))
 					return true;	// en cooldown: ignora el click (no cierra)
 				// se manda el indice REAL de spawns.json, no la posicion en la lista
-				p.ExorReqSpawnPick(m_PointIdx.Get(i));
+				p.ExorReqSpawnPick(m_PointIdx.Get(i), EquipPedido());
 				Close();
 				return true;
 			}
@@ -268,16 +277,16 @@ class ExorSpawnMenu extends UIScriptedMenu
 		{
 			if (!BaseAvailable())
 				return true;	// base no disponible: ignora el click
-			p.ExorReqSpawnPick(-1);
+			p.ExorReqSpawnPick(-1, EquipPedido());
 			Close();
 			return true;
 		}
 		if (w == m_BtnEquip)
 		{
 			if (!EquipAvailable())
-				return true;	// sin usos o base no disponible: ignora el click
-			p.ExorReqSpawnPick(-2);
-			Close();
+				return true;	// sin usos: ignora el click
+			m_EquipOn = !m_EquipOn;	// interruptor: NO cierra el menu, solo se pinta
+			Refresh();
 			return true;
 		}
 		return super.OnClick(w, x, y, button);

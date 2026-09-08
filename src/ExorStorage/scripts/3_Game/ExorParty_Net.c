@@ -23,7 +23,7 @@ class ExorRPC
 	static const int MEMBER_SYNC    = 49224;	// S -> C: posicion+vida de los miembros (HUD/distancia)
 	static const int MARKER_SYNC    = 49225;	// S -> C: marcas del party
 	static const int SPAWN_OPEN     = 49226;	// S -> C: abrir pantalla de seleccion de spawn (+lista JSON)
-	static const int SPAWN_PICK     = 49227;	// C -> S: el jugador eligio un punto (indice; -1 = base)
+	static const int SPAWN_PICK     = 49227;	// C -> S: el jugador eligio (indice; -1 = base) + si quiere el equipamiento VIP
 	static const int MARKER_ADD     = 49228;	// C -> S: poner marca en una posicion del mundo (x,y,z)
 	static const int MARKER_CLEAR   = 49229;	// C -> S: limpiar mis marcas
 	static const int CONFIG_SYNC    = 49230;	// S -> C: config relevante al cliente (toggles party/mapa/items)
@@ -229,9 +229,12 @@ class ExorKothClient
 
 // Estado VIP del jugador LOCAL en el cliente (lo setea el server por RPC VIP_STATUS).
 // Lo usan features VIP client-side (ej. mostrar la distancia en las marcas del party).
+// s_DistEnMarcas viaja aparte porque es un toggle de vip.json (marcar_distancia_en_marcas):
+// el cliente no lee vip.json, asi que la decision la manda el server ya resuelta.
 class ExorVipClient
 {
 	static bool s_IsVip;
+	static bool s_DistEnMarcas;   // vip.json: marcar_distancia_en_marcas (off por default)
 }
 
 // Mensaje de chat: el server lo serializa y lo manda a los destinatarios (todos =

@@ -52,13 +52,13 @@ Mide geometría y resultados con los eventos del motor para dar **indicios** (NU
 - Respawn en base (cooldown configurable, requiere bandera arriba).
 
 ### VIP
-- **Spawn en base + Equipamiento**: reemplaza la ropa por un loadout (pantalón/camisa/zapato/bolso + items extra) y gasta 1 uso.
+- **Equipamiento VIP**: interruptor en la pantalla de spawn (arranca **apagado**). Si lo prende, aparece con su **pack** de ropa (`equip_loadouts[]` de `vip.json`, uno por color del mod) y gasta 1 uso. Funciona con **cualquier** punto de spawn: ya no depende del respawn en base.
 - **Vencimiento a los 30 días** (`dias_vip`) desde la `fecha_ingreso`: pasados, deja de contar como VIP automáticamente.
 - **Los usos NO se reponen solos.** La única forma de renovar es **editar a mano** en `vip.json` la `fecha_ingreso` (reinicia los 30 días y repone los usos) y/o subir `usos_por_mes`. Pensado para que el jugador avise cuando se le venció y vos controles.
-- **Distancia en marcas** (ver HUD): solo los VIP ven la distancia a las marcas del party.
+- **Distancia en marcas** (ver HUD): solo los VIP ven la distancia a las marcas del party, y solo si `marcar_distancia_en_marcas` está en `true` (**apagado por default**).
 
 ### HUD / UI
-- HUD de party (barra de vida + nombre + distancia), **nameplates 3D**, **mapa** (M) con tu posición + la de tu grupo, **marcas** (T pone / Y limpia). Las marcas muestran la **distancia en verde** solo a los jugadores **VIP**.
+- HUD de party (barra de vida + nombre + distancia), **nameplates 3D**, **mapa** (M) con tu posición + la de tu grupo, **marcas** (T pone / Y limpia). Las marcas pueden mostrar la **distancia en verde** a los jugadores **VIP** (`vip.json` → `marcar_distancia_en_marcas`, apagado por default).
 - **Killfeed** (arriba-derecha) PvP/suicidio.
 - **Panel de info del server** (ESC → "Server Info"): tabs General / Reglas (texto editable) y **Score** (ranking kills/deaths/suicidios/distancia).
 - **Tooltip de items**: pastilla de rareza por tier + barra de durabilidad.
@@ -283,11 +283,12 @@ Herramientas por defecto: **Lockpick** 60% / 60s · **Screwdriver** 45% / 120s �
 ### `vip.json`
 | Parámetro | Default | Valores | Descripción |
 |---|---|---|---|
-| `vips[]` | 1 ejemplo | lista | Cada VIP: `steamid` (string SteamID64), `fecha_ingreso` (`"AAAA-MM-DD"`; vacío = se sella con hoy al arrancar), `usos_por_mes` (int; `0` = usar el default global). |
-| `equip_habilitado` | `true` | bool | Activa el perk "Spawn en base + Equipamiento". |
-| `equip_usos_por_mes` | `7` | int | Default global de usos de equipamiento (si la entrada del player tiene 0). **No se reponen solos.** |
+| `vips[]` | 1 ejemplo | lista | Cada VIP: `steamid` (string SteamID64), `fecha_ingreso` (`"AAAA-MM-DD"`; vacío = se sella con hoy al arrancar), `usos_por_mes` (int; `0` = usar el default global) y `equip_loadout` (string: **nombre** del pack de `equip_loadouts[]`; vacío o inexistente = el primero de la lista). |
+| `equip_habilitado` | `true` | bool | Activa el interruptor "Equipamiento VIP" en la pantalla de spawn. |
+| `equip_usos_por_mes` | `8` | int | Default global de usos de equipamiento, **solo si** la entrada del player tiene `usos_por_mes` en 0. **No se reponen solos.** |
 | `dias_vip` | `30` | int días | Días que dura el VIP desde `fecha_ingreso`. Pasados, deja de contar como VIP. |
-| `equip_loadout` | ejemplo | objeto | `pantalon`/`camisa`/`zapato`/`bolso`/`guantes`/`mascara` (string classname, `""`=no tocar) + `full_comida_bebida` (bool; deja al VIP con 100% comida/bebida) + `items_extra[]` (classnames al cargo de camisa/pantalón). |
+| `marcar_distancia_en_marcas` | `false` | bool | Mostrar los metros al lado de las marcas del party (marcar con **T**). Apagado por default. |
+| `equip_loadouts[]` | 5 packs | lista | **Un pack por color** de equipamiento del mod (`pack-negro`, `pack-arido`, `pack-urbano`, `pack-nieve`, `pack-rosa`). Cada pack: `nombre` (lo que se pone en `vips[].equip_loadout`), `pantalon`/`camisa`/`zapato`/`bolso`/`guantes`/`mascara`/`casco`/`chaleco` (classname, `""`=no tocar) + `full_comida_bebida` (bool) + `items_extra[]` (classnames al cargo de camisa/pantalón). `casco` y `chaleco` vienen vacíos. |
 
 > **Renovar un VIP:** editar su `fecha_ingreso` (reinicia los `dias_vip` **y** repone los usos) y/o subir `usos_por_mes`. Los usos no se reponen automáticamente.
 

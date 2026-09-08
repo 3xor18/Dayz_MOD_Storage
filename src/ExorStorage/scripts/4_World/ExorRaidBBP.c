@@ -47,13 +47,18 @@ class ExorRaidBBP
 		BBP_BASE b = BBP_BASE.Cast(obj);
 		if (b)
 		{
-			// el candado se va con la puerta que cerraba
+			// El candado se va con la puerta que cerraba. GetCodeLock() NO es de BBP: lo
+			// agrega el mod CodeLock (BBP lo llama tambien bajo #ifdef CodeLock). Sin ese
+			// guard, un server con BBP pero SIN CodeLock no compila el modulo World y no
+			// arranca ("Undefined function 'BBP_BASE.GetCodeLock'").
+			#ifdef CodeLock
 			if (GetExorConfig().raid && GetExorConfig().raid.borrar_candado_al_destruir && b.BBP_HasLock())
 			{
 				EntityAI lock_ = EntityAI.Cast(b.GetCodeLock());
 				if (lock_)
 					GetGame().ObjectDelete(lock_);
 			}
+			#endif
 
 			if (!piezaCompleta)
 			{
