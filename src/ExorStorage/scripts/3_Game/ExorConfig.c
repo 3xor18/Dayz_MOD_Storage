@@ -1166,6 +1166,8 @@ class ExorCfgVip
 		p.full_comida_bebida = true;
 		p.items_extra.Insert("CombatKnife");
 		p.items_extra.Insert("TacticalBaconCan");
+		p.items_extra.Insert("BandageDressing");
+		p.items_extra.Insert("BandageDressing");
 		return p;
 	}
 

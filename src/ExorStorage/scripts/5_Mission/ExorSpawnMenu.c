@@ -91,7 +91,10 @@ class ExorSpawnMenu extends UIScriptedMenu
 			m_EquipRemaining = dto.equip_remaining;
 			m_EquipPack = dto.equip_pack;
 			m_GeneroShown = dto.genero_enabled;
-			m_GeneroSel = dto.genero_actual;	// arranca marcado el sexo que ya tiene
+			// Arranca SIEMPRE en Hombre (pedido del admin). Ojo: como lo que se manda es lo
+			// que esta marcado, una jugadora que quiera seguir mujer tiene que tocar "Mujer"
+			// en cada respawn; si no toca nada, aparece hombre.
+			m_GeneroSel = 0;
 		}
 
 		Relayout();
@@ -304,28 +307,32 @@ class ExorSpawnMenu extends UIScriptedMenu
 	// tiene cooldown ni condiciones): el cambio se aplica al elegir el punto de spawn.
 	void RefreshGenero()
 	{
-		int colTxt = ARGB(255, 235, 235, 235);
-		int colOn = ARGB(255, 31, 102, 31);
-		int colOff = ARGB(255, 40, 40, 46);
-		if (m_BtnHombre)
+		PintarGenero(m_BtnHombre, "Hombre", m_GeneroSel == 0);
+		PintarGenero(m_BtnMujer, "Mujer", m_GeneroSel == 1);
+	}
+
+	// El elegido queda MORADO con letra clara (igual que el interruptor VIP prendido) y
+	// con una marca delante; el otro, gris con letra apagada. Se cambia el fondo Y la
+	// letra a proposito: si el estilo del boton no pinta el fondo, el texto igual delata
+	// cual esta elegido.
+	void PintarGenero(ButtonWidget b, string txt, bool elegido)
+	{
+		if (!b)
+			return;
+		b.Show(m_GeneroShown);
+		if (!m_GeneroShown)
+			return;
+		if (elegido)
 		{
-			m_BtnHombre.Show(m_GeneroShown);
-			m_BtnHombre.SetText("Hombre");
-			m_BtnHombre.SetTextColor(colTxt);
-			if (m_GeneroSel == 0)
-				m_BtnHombre.SetColor(colOn);
-			else
-				m_BtnHombre.SetColor(colOff);
+			b.SetText("> " + txt + " <");
+			b.SetColor(ARGB(255, 90, 70, 150));	// mismo morado que el equipamiento VIP prendido
+			b.SetTextColor(ARGB(255, 245, 245, 245));
 		}
-		if (m_BtnMujer)
+		else
 		{
-			m_BtnMujer.Show(m_GeneroShown);
-			m_BtnMujer.SetText("Mujer");
-			m_BtnMujer.SetTextColor(colTxt);
-			if (m_GeneroSel == 1)
-				m_BtnMujer.SetColor(colOn);
-			else
-				m_BtnMujer.SetColor(colOff);
+			b.SetText(txt);
+			b.SetColor(ARGB(255, 40, 40, 46));
+			b.SetTextColor(ARGB(255, 130, 130, 140));
 		}
 	}
 
