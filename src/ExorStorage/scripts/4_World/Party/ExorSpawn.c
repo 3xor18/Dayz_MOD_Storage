@@ -17,11 +17,21 @@ class ExorMissionBridge
 {
 	static ref ExorMissionBridge s_Inst;
 	void EquiparFreshie(PlayerBase player) { }
+	void ReRegistrarJugador(PlayerBase player, PlayerIdentity identity) { }
 
 	static void Freshie(PlayerBase player)
 	{
 		if (s_Inst && player)
 			s_Inst.EquiparFreshie(player);
+	}
+
+	// Avisar a la mision (y con ella a los otros mods) que este identity ahora maneja OTRA
+	// entidad. Sin esto, todo lo que se registro contra el personaje viejo queda colgado:
+	// el menu de VPPAdminTools salia VACIO despues de cambiar de sexo.
+	static void ReRegistrar(PlayerBase player, PlayerIdentity identity)
+	{
+		if (s_Inst && player && identity)
+			s_Inst.ReRegistrarJugador(player, identity);
 	}
 }
 
@@ -459,6 +469,11 @@ class ExorSpawn
 		// pero sin el vendaje/chemlight/fruta que reparte la mision. Se le corre el mismo
 		// StartingEquipSetup (via el puente: MissionServer no se ve desde 4_World).
 		ExorMissionBridge.Freshie(nuevo);
+
+		// El personaje viejo quedo registrado en la mision y en los mods que llevan lista de
+		// jugadores (VPPAdminTools entre ellos). Se repite el mismo aviso que manda el
+		// respawn normal para que todos apunten al personaje NUEVO.
+		ExorMissionBridge.ReRegistrar(nuevo, id);
 
 		// el cuerpo viejo ya no lo maneja nadie -> se va (si no, queda parado en el mapa)
 		GetGame().ObjectDelete(viejo);

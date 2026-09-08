@@ -14,6 +14,17 @@ class ExorMissionBridgeSrv extends ExorMissionBridge
 		if (ms && player)
 			ms.StartingEquipSetup(player, false);
 	}
+
+	// Mismo aviso que manda el respawn vanilla (MissionServer.OnClientRespawnEvent ->
+	// InvokeOnConnect): re-registra al jugador con su entidad NUEVA en la mision y en los
+	// mods que escuchan ahi. Es lo que devuelve el menu de VPPAdminTools tras el cambio
+	// de sexo; sin esto quedaban apuntando al personaje borrado y el menu salia vacio.
+	override void ReRegistrarJugador(PlayerBase player, PlayerIdentity identity)
+	{
+		MissionServer ms = MissionServer.Cast(GetGame().GetMission());
+		if (ms && player && identity)
+			ms.InvokeOnConnect(player, identity);
+	}
 }
 
 modded class MissionServer

@@ -41,6 +41,30 @@ PanelWidgetClass ExorSpawnRoot
 					"text halign" center
 					"text valign" center
 				}
+				PanelWidgetClass ExorSpawnBgHombre
+				{
+					visible 0
+					position 0.050 0.774
+					size 0.440 0.050
+					color 0.16 0.16 0.18 1
+					style rover_sim_colorable
+				}
+				PanelWidgetClass ExorSpawnBgMujer
+				{
+					visible 0
+					position 0.510 0.774
+					size 0.440 0.050
+					color 0.16 0.16 0.18 1
+					style rover_sim_colorable
+				}
+				PanelWidgetClass ExorSpawnBgEquip
+				{
+					visible 0
+					position 0.050 0.894
+					size 0.900 0.050
+					color 0.16 0.16 0.18 1
+					style rover_sim_colorable
+				}
 				ButtonWidgetClass ExorSpawnBtn0
 				{
 					visible 1

@@ -11,6 +11,9 @@
 // ============================================================================
 class ExorSpawnMenu extends UIScriptedMenu
 {
+	// morado de "esto esta elegido" (lo comparten hombre/mujer y el interruptor VIP)
+	static const int MORADO = 0xFF5A4696;   // ARGB opaco = (90, 70, 150)
+
 	protected ref array<ButtonWidget> m_Buttons;
 	protected ButtonWidget m_BtnBase;
 
@@ -31,6 +34,12 @@ class ExorSpawnMenu extends UIScriptedMenu
 
 	protected ButtonWidget m_BtnHombre;	// hombre / mujer: es para TODOS, no solo VIP
 	protected ButtonWidget m_BtnMujer;
+	// Paneles de fondo de los botones CON ESTADO. SetColor sobre un ButtonWidget no pinta
+	// el estado normal: lo unico que se veia era el hover del motor, que se va al sacar el
+	// mouse. Un PanelWidget si respeta SetColor, asi que el "elegido" se pinta aca.
+	protected Widget m_BgHombre;
+	protected Widget m_BgMujer;
+	protected Widget m_BgEquip;
 	protected bool m_GeneroShown;
 	protected int m_GeneroSel;			// 0 = hombre, 1 = mujer (arranca en el que ya tiene)
 
@@ -52,6 +61,9 @@ class ExorSpawnMenu extends UIScriptedMenu
 		m_BtnEquip = ButtonWidget.Cast(layoutRoot.FindAnyWidget("ExorSpawnBtnBaseEquip"));
 		m_BtnHombre = ButtonWidget.Cast(layoutRoot.FindAnyWidget("ExorSpawnBtnHombre"));
 		m_BtnMujer = ButtonWidget.Cast(layoutRoot.FindAnyWidget("ExorSpawnBtnMujer"));
+		m_BgHombre = layoutRoot.FindAnyWidget("ExorSpawnBgHombre");
+		m_BgMujer = layoutRoot.FindAnyWidget("ExorSpawnBgMujer");
+		m_BgEquip = layoutRoot.FindAnyWidget("ExorSpawnBgEquip");
 
 		m_Names = new TStringArray;
 		m_PointRemain = new array<float>;
@@ -173,15 +185,26 @@ class ExorSpawnMenu extends UIScriptedMenu
 		}
 		if (m_GeneroShown)
 		{
+			// el panel de fondo va EXACTAMENTE donde su boton (es lo que se ve pintado)
 			if (m_BtnHombre)
 			{
 				m_BtnHombre.SetPos(0.05, y / panelH);
 				m_BtnHombre.SetSize(0.44, hRel);
 			}
+			if (m_BgHombre)
+			{
+				m_BgHombre.SetPos(0.05, y / panelH);
+				m_BgHombre.SetSize(0.44, hRel);
+			}
 			if (m_BtnMujer)
 			{
 				m_BtnMujer.SetPos(0.51, y / panelH);
 				m_BtnMujer.SetSize(0.44, hRel);
+			}
+			if (m_BgMujer)
+			{
+				m_BgMujer.SetPos(0.51, y / panelH);
+				m_BgMujer.SetSize(0.44, hRel);
 			}
 			y = y + rowH + gap;
 		}
@@ -191,10 +214,18 @@ class ExorSpawnMenu extends UIScriptedMenu
 			m_BtnBase.SetSize(0.9, hRel);
 			y = y + rowH + gap;
 		}
-		if (m_EquipShown && m_BtnEquip)
+		if (m_EquipShown)
 		{
-			m_BtnEquip.SetPos(0.05, y / panelH);
-			m_BtnEquip.SetSize(0.9, hRel);
+			if (m_BtnEquip)
+			{
+				m_BtnEquip.SetPos(0.05, y / panelH);
+				m_BtnEquip.SetSize(0.9, hRel);
+			}
+			if (m_BgEquip)
+			{
+				m_BgEquip.SetPos(0.05, y / panelH);
+				m_BgEquip.SetSize(0.9, hRel);
+			}
 		}
 	}
 
@@ -288,16 +319,20 @@ class ExorSpawnMenu extends UIScriptedMenu
 				else if (m_EquipOn)
 				{
 					m_BtnEquip.SetText(string.Format("Equipamiento VIP: SI - %1   (quedan %2)", m_EquipPack, m_EquipRemaining));
-					m_BtnEquip.SetColor(ARGB(255, 90, 70, 150));	// morado VIP = prendido
-					m_BtnEquip.SetTextColor(colTxt);
+					m_BtnEquip.SetTextColor(ARGB(255, 245, 245, 245));
 				}
 				else
 				{
 					m_BtnEquip.SetText(string.Format("Equipamiento VIP: NO - %1   (quedan %2)", m_EquipPack, m_EquipRemaining));
-					m_BtnEquip.SetColor(colGrey);
-					m_BtnEquip.SetTextColor(colTxt);
+					m_BtnEquip.SetTextColor(ARGB(255, 130, 130, 140));
 				}
 			}
+		}
+		// prendido = panel morado detras del boton (el boton solo no lo pinta)
+		if (m_BgEquip)
+		{
+			m_BgEquip.Show(m_EquipShown && m_EquipOn && m_EquipRemaining > 0);
+			m_BgEquip.SetColor(MORADO);
 		}
 
 		RefreshGenero();
@@ -307,32 +342,30 @@ class ExorSpawnMenu extends UIScriptedMenu
 	// tiene cooldown ni condiciones): el cambio se aplica al elegir el punto de spawn.
 	void RefreshGenero()
 	{
-		PintarGenero(m_BtnHombre, "Hombre", m_GeneroSel == 0);
-		PintarGenero(m_BtnMujer, "Mujer", m_GeneroSel == 1);
+		PintarGenero(m_BtnHombre, m_BgHombre, "Hombre", m_GeneroSel == 0);
+		PintarGenero(m_BtnMujer, m_BgMujer, "Mujer", m_GeneroSel == 1);
 	}
 
 	// El elegido queda MORADO con letra clara (igual que el interruptor VIP prendido) y
 	// con una marca delante; el otro, gris con letra apagada. Se cambia el fondo Y la
 	// letra a proposito: si el estilo del boton no pinta el fondo, el texto igual delata
 	// cual esta elegido.
-	void PintarGenero(ButtonWidget b, string txt, bool elegido)
+	void PintarGenero(ButtonWidget b, Widget bg, string txt, bool elegido)
 	{
-		if (!b)
-			return;
-		b.Show(m_GeneroShown);
-		if (!m_GeneroShown)
-			return;
-		if (elegido)
+		if (b)
 		{
-			b.SetText("> " + txt + " <");
-			b.SetColor(ARGB(255, 90, 70, 150));	// mismo morado que el equipamiento VIP prendido
-			b.SetTextColor(ARGB(255, 245, 245, 245));
-		}
-		else
-		{
+			b.Show(m_GeneroShown);
 			b.SetText(txt);
-			b.SetColor(ARGB(255, 40, 40, 46));
-			b.SetTextColor(ARGB(255, 130, 130, 140));
+			if (m_GeneroShown && elegido)
+				b.SetTextColor(ARGB(255, 245, 245, 245));
+			else
+				b.SetTextColor(ARGB(255, 130, 130, 140));
+		}
+		// el morado del elegido vive en el panel de atras (ver arriba: el boton no lo pinta)
+		if (bg)
+		{
+			bg.Show(m_GeneroShown && elegido);
+			bg.SetColor(MORADO);
 		}
 	}
 
