@@ -1,0 +1,1163 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<types>
+  <!-- ================= set Rosa ================= -->
+  <type name="Exor_M4A1_Rosa">
+    <nominal>0</nominal>
+    <lifetime>14400</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AKM_Rosa">
+    <nominal>0</nominal>
+    <lifetime>14400</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_Aug_Rosa">
+    <nominal>0</nominal>
+    <lifetime>14400</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M14_Rosa">
+    <nominal>0</nominal>
+    <lifetime>14400</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_SV98_Rosa">
+    <nominal>0</nominal>
+    <lifetime>14400</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_OEBttstck_Rosa">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_MPBttstck_Rosa">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_CQBBttstck_Rosa">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_RISHndgrd_Rosa">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_MPHndgrd_Rosa">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_PlasticHndgrd_Rosa">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_WoodBttstck_Rosa">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_WoodHndgrd_Rosa">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_FoldingBttstck_Rosa">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_RailHndgrd_Rosa">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_PlasticBttstck_Rosa">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_PlasticHndgrd_Rosa">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <!-- ================= set Azul ================= -->
+  <type name="Exor_M4A1_Azul">
+    <nominal>0</nominal>
+    <lifetime>14400</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AKM_Azul">
+    <nominal>0</nominal>
+    <lifetime>14400</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_Aug_Azul">
+    <nominal>0</nominal>
+    <lifetime>14400</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M14_Azul">
+    <nominal>0</nominal>
+    <lifetime>14400</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_SV98_Azul">
+    <nominal>0</nominal>
+    <lifetime>14400</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_OEBttstck_Azul">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_MPBttstck_Azul">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_CQBBttstck_Azul">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_RISHndgrd_Azul">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_MPHndgrd_Azul">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_PlasticHndgrd_Azul">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_WoodBttstck_Azul">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_WoodHndgrd_Azul">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_FoldingBttstck_Azul">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_RailHndgrd_Azul">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_PlasticBttstck_Azul">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_PlasticHndgrd_Azul">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <!-- ================= set Dorado ================= -->
+  <type name="Exor_M4A1_Dorado">
+    <nominal>0</nominal>
+    <lifetime>14400</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AKM_Dorado">
+    <nominal>0</nominal>
+    <lifetime>14400</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_Aug_Dorado">
+    <nominal>0</nominal>
+    <lifetime>14400</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M14_Dorado">
+    <nominal>0</nominal>
+    <lifetime>14400</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_SV98_Dorado">
+    <nominal>0</nominal>
+    <lifetime>14400</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_OEBttstck_Dorado">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_MPBttstck_Dorado">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_CQBBttstck_Dorado">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_RISHndgrd_Dorado">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_MPHndgrd_Dorado">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_PlasticHndgrd_Dorado">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_WoodBttstck_Dorado">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_WoodHndgrd_Dorado">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_FoldingBttstck_Dorado">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_RailHndgrd_Dorado">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_PlasticBttstck_Dorado">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_PlasticHndgrd_Dorado">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <!-- ================= set Camo ================= -->
+  <type name="Exor_M4A1_Camo">
+    <nominal>0</nominal>
+    <lifetime>14400</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AKM_Camo">
+    <nominal>0</nominal>
+    <lifetime>14400</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_Aug_Camo">
+    <nominal>0</nominal>
+    <lifetime>14400</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M14_Camo">
+    <nominal>0</nominal>
+    <lifetime>14400</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_SV98_Camo">
+    <nominal>0</nominal>
+    <lifetime>14400</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_OEBttstck_Camo">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_MPBttstck_Camo">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_CQBBttstck_Camo">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_RISHndgrd_Camo">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_MPHndgrd_Camo">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_M4_PlasticHndgrd_Camo">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_WoodBttstck_Camo">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_WoodHndgrd_Camo">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_FoldingBttstck_Camo">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_RailHndgrd_Camo">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_PlasticBttstck_Camo">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+  <type name="Exor_AK_PlasticHndgrd_Camo">
+    <nominal>0</nominal>
+    <lifetime>7200</lifetime>
+    <restock>0</restock>
+    <min>0</min>
+    <quantmin>-1</quantmin>
+    <quantmax>-1</quantmax>
+    <cost>100</cost>
+    <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
+    <!-- para que entren al loot del mundo: subir nominal/min y descomentar estas tres
+         lineas (sin category+usage+value el CE nunca las spawnea, por mas nominal que tengan)
+    <category name="weapons" />
+    <usage name="Military" />
+    <value name="Tier3" />
+    <value name="Tier4" />
+    -->
+  </type>
+</types>

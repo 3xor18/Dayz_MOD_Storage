@@ -9,15 +9,15 @@ class CfgPatches
 {
 	class ExorStorage
 	{
-		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_OpenableStorage", "Exor_Fridge", "Exor_Refrigerador_Packed", "Exor_Refrigerador_Ghost", "Exor_Locker", "Exor_Locker_Packed", "Exor_Locker_Ghost", "Exor_LockerRojo", "Exor_LockerRojo_Packed", "Exor_LockerRojo_Ghost", "Exor_MuebleArmas", "Exor_MuebleArmas_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight", "Exor_Parking", "Exor_Parking_Packed", "Exor_Parking_Ghost", "Exor_GorkaJacket_Rosa", "Exor_GorkaPants_Rosa", "Exor_BallisticHelmet_Rosa", "Exor_Mich2001Helmet_Rosa", "Exor_GorkaHelmet_Rosa", "Exor_BalaclavaMask_Rosa", "Exor_CombatBoots_Rosa", "Exor_TacticalGloves_Rosa", "Exor_PressVest_Rosa", "Exor_PlateCarrierVest_Rosa", "Exor_PlateCarrierHolster_Rosa", "Exor_PlateCarrierPouches_Rosa", "Exor_TortillaBag_Rosa", "Exor_GorkaJacket_Arido", "Exor_GorkaPants_Arido", "Exor_BallisticHelmet_Arido", "Exor_Mich2001Helmet_Arido", "Exor_GorkaHelmet_Arido", "Exor_BalaclavaMask_Arido", "Exor_CombatBoots_Arido", "Exor_TacticalGloves_Arido", "Exor_PressVest_Arido", "Exor_PlateCarrierVest_Arido", "Exor_PlateCarrierHolster_Arido", "Exor_PlateCarrierPouches_Arido", "Exor_TortillaBag_Arido", "Exor_GorkaJacket_Urbano", "Exor_GorkaPants_Urbano", "Exor_BallisticHelmet_Urbano", "Exor_Mich2001Helmet_Urbano", "Exor_GorkaHelmet_Urbano", "Exor_BalaclavaMask_Urbano", "Exor_CombatBoots_Urbano", "Exor_TacticalGloves_Urbano", "Exor_PressVest_Urbano", "Exor_PlateCarrierVest_Urbano", "Exor_PlateCarrierHolster_Urbano", "Exor_PlateCarrierPouches_Urbano", "Exor_TortillaBag_Urbano", "Exor_GorkaJacket_Nieve", "Exor_GorkaPants_Nieve", "Exor_BallisticHelmet_Nieve", "Exor_Mich2001Helmet_Nieve", "Exor_GorkaHelmet_Nieve", "Exor_BalaclavaMask_Nieve", "Exor_CombatBoots_Nieve", "Exor_TacticalGloves_Nieve", "Exor_PressVest_Nieve", "Exor_PlateCarrierVest_Nieve", "Exor_PlateCarrierHolster_Nieve", "Exor_PlateCarrierPouches_Nieve", "Exor_TortillaBag_Nieve", "Exor_GorkaJacket_Negro", "Exor_GorkaPants_Negro", "Exor_BallisticHelmet_Negro", "Exor_Mich2001Helmet_Negro", "Exor_GorkaHelmet_Negro", "Exor_BalaclavaMask_Negro", "Exor_CombatBoots_Negro", "Exor_TacticalGloves_Negro", "Exor_PressVest_Negro", "Exor_PlateCarrierVest_Negro", "Exor_PlateCarrierHolster_Negro", "Exor_PlateCarrierPouches_Negro", "Exor_TortillaBag_Negro"};
-		weapons[] = {};
+		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_OpenableStorage", "Exor_Fridge", "Exor_Refrigerador_Packed", "Exor_Refrigerador_Ghost", "Exor_Locker", "Exor_Locker_Packed", "Exor_Locker_Ghost", "Exor_LockerRojo", "Exor_LockerRojo_Packed", "Exor_LockerRojo_Ghost", "Exor_MuebleArmas", "Exor_MuebleArmas_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight", "Exor_Parking", "Exor_Parking_Packed", "Exor_Parking_Ghost", "Exor_GorkaJacket_Rosa", "Exor_GorkaPants_Rosa", "Exor_BallisticHelmet_Rosa", "Exor_Mich2001Helmet_Rosa", "Exor_GorkaHelmet_Rosa", "Exor_BalaclavaMask_Rosa", "Exor_CombatBoots_Rosa", "Exor_TacticalGloves_Rosa", "Exor_PressVest_Rosa", "Exor_PlateCarrierVest_Rosa", "Exor_PlateCarrierHolster_Rosa", "Exor_PlateCarrierPouches_Rosa", "Exor_TortillaBag_Rosa", "Exor_GorkaJacket_Arido", "Exor_GorkaPants_Arido", "Exor_BallisticHelmet_Arido", "Exor_Mich2001Helmet_Arido", "Exor_GorkaHelmet_Arido", "Exor_BalaclavaMask_Arido", "Exor_CombatBoots_Arido", "Exor_TacticalGloves_Arido", "Exor_PressVest_Arido", "Exor_PlateCarrierVest_Arido", "Exor_PlateCarrierHolster_Arido", "Exor_PlateCarrierPouches_Arido", "Exor_TortillaBag_Arido", "Exor_GorkaJacket_Urbano", "Exor_GorkaPants_Urbano", "Exor_BallisticHelmet_Urbano", "Exor_Mich2001Helmet_Urbano", "Exor_GorkaHelmet_Urbano", "Exor_BalaclavaMask_Urbano", "Exor_CombatBoots_Urbano", "Exor_TacticalGloves_Urbano", "Exor_PressVest_Urbano", "Exor_PlateCarrierVest_Urbano", "Exor_PlateCarrierHolster_Urbano", "Exor_PlateCarrierPouches_Urbano", "Exor_TortillaBag_Urbano", "Exor_GorkaJacket_Nieve", "Exor_GorkaPants_Nieve", "Exor_BallisticHelmet_Nieve", "Exor_Mich2001Helmet_Nieve", "Exor_GorkaHelmet_Nieve", "Exor_BalaclavaMask_Nieve", "Exor_CombatBoots_Nieve", "Exor_TacticalGloves_Nieve", "Exor_PressVest_Nieve", "Exor_PlateCarrierVest_Nieve", "Exor_PlateCarrierHolster_Nieve", "Exor_PlateCarrierPouches_Nieve", "Exor_TortillaBag_Nieve", "Exor_GorkaJacket_Negro", "Exor_GorkaPants_Negro", "Exor_BallisticHelmet_Negro", "Exor_Mich2001Helmet_Negro", "Exor_GorkaHelmet_Negro", "Exor_BalaclavaMask_Negro", "Exor_CombatBoots_Negro", "Exor_TacticalGloves_Negro", "Exor_PressVest_Negro", "Exor_PlateCarrierVest_Negro", "Exor_PlateCarrierHolster_Negro", "Exor_PlateCarrierPouches_Negro", "Exor_TortillaBag_Negro", "Exor_M4_OEBttstck_Rosa", "Exor_M4_MPBttstck_Rosa", "Exor_M4_CQBBttstck_Rosa", "Exor_M4_RISHndgrd_Rosa", "Exor_M4_MPHndgrd_Rosa", "Exor_M4_PlasticHndgrd_Rosa", "Exor_AK_WoodBttstck_Rosa", "Exor_AK_WoodHndgrd_Rosa", "Exor_AK_FoldingBttstck_Rosa", "Exor_AK_RailHndgrd_Rosa", "Exor_AK_PlasticBttstck_Rosa", "Exor_AK_PlasticHndgrd_Rosa", "Exor_M4_OEBttstck_Azul", "Exor_M4_MPBttstck_Azul", "Exor_M4_CQBBttstck_Azul", "Exor_M4_RISHndgrd_Azul", "Exor_M4_MPHndgrd_Azul", "Exor_M4_PlasticHndgrd_Azul", "Exor_AK_WoodBttstck_Azul", "Exor_AK_WoodHndgrd_Azul", "Exor_AK_FoldingBttstck_Azul", "Exor_AK_RailHndgrd_Azul", "Exor_AK_PlasticBttstck_Azul", "Exor_AK_PlasticHndgrd_Azul", "Exor_M4_OEBttstck_Dorado", "Exor_M4_MPBttstck_Dorado", "Exor_M4_CQBBttstck_Dorado", "Exor_M4_RISHndgrd_Dorado", "Exor_M4_MPHndgrd_Dorado", "Exor_M4_PlasticHndgrd_Dorado", "Exor_AK_WoodBttstck_Dorado", "Exor_AK_WoodHndgrd_Dorado", "Exor_AK_FoldingBttstck_Dorado", "Exor_AK_RailHndgrd_Dorado", "Exor_AK_PlasticBttstck_Dorado", "Exor_AK_PlasticHndgrd_Dorado", "Exor_M4_OEBttstck_Camo", "Exor_M4_MPBttstck_Camo", "Exor_M4_CQBBttstck_Camo", "Exor_M4_RISHndgrd_Camo", "Exor_M4_MPHndgrd_Camo", "Exor_M4_PlasticHndgrd_Camo", "Exor_AK_WoodBttstck_Camo", "Exor_AK_WoodHndgrd_Camo", "Exor_AK_FoldingBttstck_Camo", "Exor_AK_RailHndgrd_Camo", "Exor_AK_PlasticBttstck_Camo", "Exor_AK_PlasticHndgrd_Camo"};
+		weapons[] = {"Exor_M4A1_Rosa", "Exor_AKM_Rosa", "Exor_Aug_Rosa", "Exor_M14_Rosa", "Exor_SV98_Rosa", "Exor_M4A1_Azul", "Exor_AKM_Azul", "Exor_Aug_Azul", "Exor_M14_Azul", "Exor_SV98_Azul", "Exor_M4A1_Dorado", "Exor_AKM_Dorado", "Exor_Aug_Dorado", "Exor_M14_Dorado", "Exor_SV98_Dorado", "Exor_M4A1_Camo", "Exor_AKM_Camo", "Exor_Aug_Camo", "Exor_M14_Camo", "Exor_SV98_Camo"};
 		requiredVersion = 0.1;
 		// DZ_Gear_Camping = TerritoryFlag/Kit + SeaChest. DZ_Characters_Backpacks =
 		// GhillieSuit vanilla. DZ_Characters = modelo del cuerpo (bolsa de cadaver).
 		// Los DZ_Characters_* de abajo son los que traen las bases de los sets de ropa
 		// retexturizados (tops/pants/headgear/shoes/gloves/vests): sin ellos las clases
 		// nuevas no encuentran su padre y el juego las descarta en silencio.
-		requiredAddons[] = {"DZ_Data", "DZ_Scripts", "DZ_Gear_Containers", "DZ_Weapons_Ammunition", "DZ_Gear_Camping", "DZ_Characters_Backpacks", "DZ_Characters", "DZ_Gear_Consumables", "DZ_Structures_Furniture", "DZ_Characters_Tops", "DZ_Characters_Pants", "DZ_Characters_Headgear", "DZ_Characters_Shoes", "DZ_Characters_Gloves", "DZ_Characters_Vests", "DZ_Characters_Masks"};
+		requiredAddons[] = {"DZ_Data", "DZ_Scripts", "DZ_Gear_Containers", "DZ_Weapons_Ammunition", "DZ_Gear_Camping", "DZ_Characters_Backpacks", "DZ_Characters", "DZ_Gear_Consumables", "DZ_Structures_Furniture", "DZ_Characters_Tops", "DZ_Characters_Pants", "DZ_Characters_Headgear", "DZ_Characters_Shoes", "DZ_Characters_Gloves", "DZ_Characters_Vests", "DZ_Characters_Masks", "DZ_Weapons_Firearms_M4", "DZ_Weapons_Firearms_AKM", "DZ_Weapons_Firearms_aug", "DZ_Weapons_Firearms_M14", "DZ_Weapons_Firearms_SV98", "DZ_Weapons_Supports"};
 	};
 };
 
@@ -1640,6 +1640,395 @@ class CfgVehicles
 		class Cargo { itemsCargoSize[] = {10, 60}; };
 	};
 
+	// ---------------- ARMAS_INI_V (generado por tools/gen_armas_config.py) ----------------
+
+	// Culatas y guardamanos de color. Generado por tools/gen_armas_config.py.
+	class M4_OEBttstck;	// externa (DZ_Weapons_Supports)
+	class M4_MPBttstck;	// externa (DZ_Weapons_Supports)
+	class M4_CQBBttstck;	// externa (DZ_Weapons_Supports)
+	class M4_RISHndgrd;	// externa (DZ_Weapons_Supports)
+	class M4_MPHndgrd;	// externa (DZ_Weapons_Supports)
+	class M4_PlasticHndgrd;	// externa (DZ_Weapons_Supports)
+	class AK_WoodBttstck;	// externa (DZ_Weapons_Supports)
+	class AK_WoodHndgrd;	// externa (DZ_Weapons_Supports)
+	class AK_FoldingBttstck;	// externa (DZ_Weapons_Supports)
+	class AK_RailHndgrd;	// externa (DZ_Weapons_Supports)
+	class AK_PlasticBttstck;	// externa (DZ_Weapons_Supports)
+	class AK_PlasticHndgrd;	// externa (DZ_Weapons_Supports)
+
+	// ---- culatas y guardamanos Rosa ----
+	class Exor_M4_OEBttstck_Rosa: M4_OEBttstck
+	{
+		scope = 2;
+		displayName = "Culata M4 OE Rosa";
+		descriptionShort = "Culata M4 OE del set Rosa de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.62,0.20,0.34,1.0,CO)"};
+	};
+	class Exor_M4_MPBttstck_Rosa: M4_MPBttstck
+	{
+		scope = 2;
+		displayName = "Culata M4 MP Rosa";
+		descriptionShort = "Culata M4 MP del set Rosa de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.62,0.20,0.34,1.0,CO)"};
+	};
+	class Exor_M4_CQBBttstck_Rosa: M4_CQBBttstck
+	{
+		scope = 2;
+		displayName = "Culata M4 CQB Rosa";
+		descriptionShort = "Culata M4 CQB del set Rosa de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.62,0.20,0.34,1.0,CO)"};
+	};
+	class Exor_M4_RISHndgrd_Rosa: M4_RISHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano M4 RIS Rosa";
+		descriptionShort = "Guardamano M4 RIS del set Rosa de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.62,0.20,0.34,1.0,CO)"};
+	};
+	class Exor_M4_MPHndgrd_Rosa: M4_MPHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano M4 MP Rosa";
+		descriptionShort = "Guardamano M4 MP del set Rosa de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.62,0.20,0.34,1.0,CO)"};
+	};
+	class Exor_M4_PlasticHndgrd_Rosa: M4_PlasticHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano M4 plastico Rosa";
+		descriptionShort = "Guardamano M4 plastico del set Rosa de 3xor.";
+		hiddenSelectionsTextures[] = {"ExorStorage\data\armas\exor_rosa_m4_handguard_co.paa"};
+	};
+	class Exor_AK_WoodBttstck_Rosa: AK_WoodBttstck
+	{
+		scope = 2;
+		displayName = "Culata KA-M madera Rosa";
+		descriptionShort = "Culata KA-M madera del set Rosa de 3xor.";
+		hiddenSelectionsTextures[] = {"ExorStorage\data\armas\exor_rosa_akm_wood_co.paa"};
+	};
+	class Exor_AK_WoodHndgrd_Rosa: AK_WoodHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano KA-M madera Rosa";
+		descriptionShort = "Guardamano KA-M madera del set Rosa de 3xor.";
+		hiddenSelectionsTextures[] = {"ExorStorage\data\armas\exor_rosa_akm_wood_co.paa"};
+	};
+	class Exor_AK_FoldingBttstck_Rosa: AK_FoldingBttstck
+	{
+		scope = 2;
+		displayName = "Culata KA-M plegable Rosa";
+		descriptionShort = "Culata KA-M plegable del set Rosa de 3xor.";
+		hiddenSelectionsTextures[] = {"ExorStorage\data\armas\exor_rosa_akm_acc_co.paa"};
+	};
+	class Exor_AK_RailHndgrd_Rosa: AK_RailHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano KA-M riel Rosa";
+		descriptionShort = "Guardamano KA-M riel del set Rosa de 3xor.";
+		hiddenSelectionsTextures[] = {"ExorStorage\data\armas\exor_rosa_akm_acc_co.paa"};
+	};
+	class Exor_AK_PlasticBttstck_Rosa: AK_PlasticBttstck
+	{
+		scope = 2;
+		displayName = "Culata KA-M plastica Rosa";
+		descriptionShort = "Culata KA-M plastica del set Rosa de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.62,0.20,0.34,1.0,CO)"};
+	};
+	class Exor_AK_PlasticHndgrd_Rosa: AK_PlasticHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano KA-M plastico Rosa";
+		descriptionShort = "Guardamano KA-M plastico del set Rosa de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.62,0.20,0.34,1.0,CO)"};
+	};
+
+	// ---- culatas y guardamanos Azul ----
+	class Exor_M4_OEBttstck_Azul: M4_OEBttstck
+	{
+		scope = 2;
+		displayName = "Culata M4 OE Azul";
+		descriptionShort = "Culata M4 OE del set Azul de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.14,0.26,0.52,1.0,CO)"};
+	};
+	class Exor_M4_MPBttstck_Azul: M4_MPBttstck
+	{
+		scope = 2;
+		displayName = "Culata M4 MP Azul";
+		descriptionShort = "Culata M4 MP del set Azul de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.14,0.26,0.52,1.0,CO)"};
+	};
+	class Exor_M4_CQBBttstck_Azul: M4_CQBBttstck
+	{
+		scope = 2;
+		displayName = "Culata M4 CQB Azul";
+		descriptionShort = "Culata M4 CQB del set Azul de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.14,0.26,0.52,1.0,CO)"};
+	};
+	class Exor_M4_RISHndgrd_Azul: M4_RISHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano M4 RIS Azul";
+		descriptionShort = "Guardamano M4 RIS del set Azul de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.14,0.26,0.52,1.0,CO)"};
+	};
+	class Exor_M4_MPHndgrd_Azul: M4_MPHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano M4 MP Azul";
+		descriptionShort = "Guardamano M4 MP del set Azul de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.14,0.26,0.52,1.0,CO)"};
+	};
+	class Exor_M4_PlasticHndgrd_Azul: M4_PlasticHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano M4 plastico Azul";
+		descriptionShort = "Guardamano M4 plastico del set Azul de 3xor.";
+		hiddenSelectionsTextures[] = {"ExorStorage\data\armas\exor_azul_m4_handguard_co.paa"};
+	};
+	class Exor_AK_WoodBttstck_Azul: AK_WoodBttstck
+	{
+		scope = 2;
+		displayName = "Culata KA-M madera Azul";
+		descriptionShort = "Culata KA-M madera del set Azul de 3xor.";
+		hiddenSelectionsTextures[] = {"ExorStorage\data\armas\exor_azul_akm_wood_co.paa"};
+	};
+	class Exor_AK_WoodHndgrd_Azul: AK_WoodHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano KA-M madera Azul";
+		descriptionShort = "Guardamano KA-M madera del set Azul de 3xor.";
+		hiddenSelectionsTextures[] = {"ExorStorage\data\armas\exor_azul_akm_wood_co.paa"};
+	};
+	class Exor_AK_FoldingBttstck_Azul: AK_FoldingBttstck
+	{
+		scope = 2;
+		displayName = "Culata KA-M plegable Azul";
+		descriptionShort = "Culata KA-M plegable del set Azul de 3xor.";
+		hiddenSelectionsTextures[] = {"ExorStorage\data\armas\exor_azul_akm_acc_co.paa"};
+	};
+	class Exor_AK_RailHndgrd_Azul: AK_RailHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano KA-M riel Azul";
+		descriptionShort = "Guardamano KA-M riel del set Azul de 3xor.";
+		hiddenSelectionsTextures[] = {"ExorStorage\data\armas\exor_azul_akm_acc_co.paa"};
+	};
+	class Exor_AK_PlasticBttstck_Azul: AK_PlasticBttstck
+	{
+		scope = 2;
+		displayName = "Culata KA-M plastica Azul";
+		descriptionShort = "Culata KA-M plastica del set Azul de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.14,0.26,0.52,1.0,CO)"};
+	};
+	class Exor_AK_PlasticHndgrd_Azul: AK_PlasticHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano KA-M plastico Azul";
+		descriptionShort = "Guardamano KA-M plastico del set Azul de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.14,0.26,0.52,1.0,CO)"};
+	};
+
+	// ---- culatas y guardamanos Dorado ----
+	class Exor_M4_OEBttstck_Dorado: M4_OEBttstck
+	{
+		scope = 2;
+		displayName = "Culata M4 OE Dorado";
+		descriptionShort = "Culata M4 OE del set Dorado de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.74,0.56,0.16,1.0,CO)"};
+	};
+	class Exor_M4_MPBttstck_Dorado: M4_MPBttstck
+	{
+		scope = 2;
+		displayName = "Culata M4 MP Dorado";
+		descriptionShort = "Culata M4 MP del set Dorado de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.74,0.56,0.16,1.0,CO)"};
+	};
+	class Exor_M4_CQBBttstck_Dorado: M4_CQBBttstck
+	{
+		scope = 2;
+		displayName = "Culata M4 CQB Dorado";
+		descriptionShort = "Culata M4 CQB del set Dorado de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.74,0.56,0.16,1.0,CO)"};
+	};
+	class Exor_M4_RISHndgrd_Dorado: M4_RISHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano M4 RIS Dorado";
+		descriptionShort = "Guardamano M4 RIS del set Dorado de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.74,0.56,0.16,1.0,CO)"};
+	};
+	class Exor_M4_MPHndgrd_Dorado: M4_MPHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano M4 MP Dorado";
+		descriptionShort = "Guardamano M4 MP del set Dorado de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.74,0.56,0.16,1.0,CO)"};
+	};
+	class Exor_M4_PlasticHndgrd_Dorado: M4_PlasticHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano M4 plastico Dorado";
+		descriptionShort = "Guardamano M4 plastico del set Dorado de 3xor.";
+		hiddenSelectionsTextures[] = {"ExorStorage\data\armas\exor_dorado_m4_handguard_co.paa"};
+	};
+	class Exor_AK_WoodBttstck_Dorado: AK_WoodBttstck
+	{
+		scope = 2;
+		displayName = "Culata KA-M madera Dorado";
+		descriptionShort = "Culata KA-M madera del set Dorado de 3xor.";
+		hiddenSelectionsTextures[] = {"ExorStorage\data\armas\exor_dorado_akm_wood_co.paa"};
+	};
+	class Exor_AK_WoodHndgrd_Dorado: AK_WoodHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano KA-M madera Dorado";
+		descriptionShort = "Guardamano KA-M madera del set Dorado de 3xor.";
+		hiddenSelectionsTextures[] = {"ExorStorage\data\armas\exor_dorado_akm_wood_co.paa"};
+	};
+	class Exor_AK_FoldingBttstck_Dorado: AK_FoldingBttstck
+	{
+		scope = 2;
+		displayName = "Culata KA-M plegable Dorado";
+		descriptionShort = "Culata KA-M plegable del set Dorado de 3xor.";
+		hiddenSelectionsTextures[] = {"ExorStorage\data\armas\exor_dorado_akm_acc_co.paa"};
+	};
+	class Exor_AK_RailHndgrd_Dorado: AK_RailHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano KA-M riel Dorado";
+		descriptionShort = "Guardamano KA-M riel del set Dorado de 3xor.";
+		hiddenSelectionsTextures[] = {"ExorStorage\data\armas\exor_dorado_akm_acc_co.paa"};
+	};
+	class Exor_AK_PlasticBttstck_Dorado: AK_PlasticBttstck
+	{
+		scope = 2;
+		displayName = "Culata KA-M plastica Dorado";
+		descriptionShort = "Culata KA-M plastica del set Dorado de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.74,0.56,0.16,1.0,CO)"};
+	};
+	class Exor_AK_PlasticHndgrd_Dorado: AK_PlasticHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano KA-M plastico Dorado";
+		descriptionShort = "Guardamano KA-M plastico del set Dorado de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.74,0.56,0.16,1.0,CO)"};
+	};
+
+	// ---- culatas y guardamanos Camo ----
+	class Exor_M4_OEBttstck_Camo: M4_OEBttstck
+	{
+		scope = 2;
+		displayName = "Culata M4 OE Camo";
+		descriptionShort = "Culata M4 OE del set Camo de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.29,0.31,0.20,1.0,CO)"};
+	};
+	class Exor_M4_MPBttstck_Camo: M4_MPBttstck
+	{
+		scope = 2;
+		displayName = "Culata M4 MP Camo";
+		descriptionShort = "Culata M4 MP del set Camo de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.29,0.31,0.20,1.0,CO)"};
+	};
+	class Exor_M4_CQBBttstck_Camo: M4_CQBBttstck
+	{
+		scope = 2;
+		displayName = "Culata M4 CQB Camo";
+		descriptionShort = "Culata M4 CQB del set Camo de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.29,0.31,0.20,1.0,CO)"};
+	};
+	class Exor_M4_RISHndgrd_Camo: M4_RISHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano M4 RIS Camo";
+		descriptionShort = "Guardamano M4 RIS del set Camo de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.29,0.31,0.20,1.0,CO)"};
+	};
+	class Exor_M4_MPHndgrd_Camo: M4_MPHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano M4 MP Camo";
+		descriptionShort = "Guardamano M4 MP del set Camo de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.29,0.31,0.20,1.0,CO)"};
+	};
+	class Exor_M4_PlasticHndgrd_Camo: M4_PlasticHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano M4 plastico Camo";
+		descriptionShort = "Guardamano M4 plastico del set Camo de 3xor.";
+		hiddenSelectionsTextures[] = {"ExorStorage\data\armas\exor_camo_m4_handguard_co.paa"};
+	};
+	class Exor_AK_WoodBttstck_Camo: AK_WoodBttstck
+	{
+		scope = 2;
+		displayName = "Culata KA-M madera Camo";
+		descriptionShort = "Culata KA-M madera del set Camo de 3xor.";
+		hiddenSelectionsTextures[] = {"ExorStorage\data\armas\exor_camo_akm_wood_co.paa"};
+	};
+	class Exor_AK_WoodHndgrd_Camo: AK_WoodHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano KA-M madera Camo";
+		descriptionShort = "Guardamano KA-M madera del set Camo de 3xor.";
+		hiddenSelectionsTextures[] = {"ExorStorage\data\armas\exor_camo_akm_wood_co.paa"};
+	};
+	class Exor_AK_FoldingBttstck_Camo: AK_FoldingBttstck
+	{
+		scope = 2;
+		displayName = "Culata KA-M plegable Camo";
+		descriptionShort = "Culata KA-M plegable del set Camo de 3xor.";
+		hiddenSelectionsTextures[] = {"ExorStorage\data\armas\exor_camo_akm_acc_co.paa"};
+	};
+	class Exor_AK_RailHndgrd_Camo: AK_RailHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano KA-M riel Camo";
+		descriptionShort = "Guardamano KA-M riel del set Camo de 3xor.";
+		hiddenSelectionsTextures[] = {"ExorStorage\data\armas\exor_camo_akm_acc_co.paa"};
+	};
+	class Exor_AK_PlasticBttstck_Camo: AK_PlasticBttstck
+	{
+		scope = 2;
+		displayName = "Culata KA-M plastica Camo";
+		descriptionShort = "Culata KA-M plastica del set Camo de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.29,0.31,0.20,1.0,CO)"};
+	};
+	class Exor_AK_PlasticHndgrd_Camo: AK_PlasticHndgrd
+	{
+		scope = 2;
+		displayName = "Guardamano KA-M plastico Camo";
+		descriptionShort = "Guardamano KA-M plastico del set Camo de 3xor.";
+		// color plano, igual que la variante verde de vanilla: el relieve lo pone el normal map
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0.29,0.31,0.20,1.0,CO)"};
+	};
+
+	// ---------------- ARMAS_FIN_V ----------------
 };
 
 // ============================================================================
@@ -1720,6 +2109,227 @@ class CfgWeapons
 	{
 		inventorySlot[] += {"Exor_Gun1", "Exor_Gun2", "Exor_Gun3", "Exor_Gun4", "Exor_Gun5", "Exor_Gun6", "Exor_Gun7", "Exor_Gun8", "Exor_Gun9", "Exor_Gun10", "Exor_Gun11"};
 	};
+
+	// ---------------- ARMAS_INI_W (generado por tools/gen_armas_config.py) ----------------
+
+	// Variantes de color de las armas. Se HEREDA de la clase vanilla y solo se pisa
+	// la textura: mismo modelo, mismo danio, mismas balas, mismos cargadores.
+	// Generado por tools/gen_armas_config.py - no editar a mano.
+	class M4A1;	// externa (vanilla): forward declaration, NO la modifica
+	class AKM;	// externa (vanilla): forward declaration, NO la modifica
+	class Aug;	// externa (vanilla): forward declaration, NO la modifica
+	class M14;	// externa (vanilla): forward declaration, NO la modifica
+	class SV98;	// externa (vanilla): forward declaration, NO la modifica
+
+	// ---- armas Rosa ----
+	class Exor_M4A1_Rosa: M4A1
+	{
+		scope = 2;
+		displayName = "M4-A1 Rosa";
+		descriptionShort = "M4-A1 del set Rosa de 3xor. Igual que la vanilla, solo cambia el color.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\armas\exor_rosa_m4_body_co.paa"
+		};
+	};
+	class Exor_AKM_Rosa: AKM
+	{
+		scope = 2;
+		displayName = "KA-M Rosa";
+		descriptionShort = "KA-M del set Rosa de 3xor. Igual que la vanilla, solo cambia el color.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\armas\exor_rosa_akm_co.paa"
+		};
+	};
+	class Exor_Aug_Rosa: Aug
+	{
+		scope = 2;
+		displayName = "AUR AX Rosa";
+		descriptionShort = "AUR AX del set Rosa de 3xor. Igual que la vanilla, solo cambia el color.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\armas\exor_rosa_aug_stock_co.paa",
+			"ExorStorage\data\armas\exor_rosa_aug_rail_co.paa",
+			"ExorStorage\data\armas\exor_rosa_aug_barrel_co.paa"
+		};
+	};
+	class Exor_M14_Rosa: M14
+	{
+		scope = 2;
+		displayName = "DMR Rosa";
+		descriptionShort = "DMR del set Rosa de 3xor. Igual que la vanilla, solo cambia el color.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\armas\exor_rosa_m14_metal_co.paa",
+			"ExorStorage\data\armas\exor_rosa_m14_synth_co.paa"
+		};
+	};
+	class Exor_SV98_Rosa: SV98
+	{
+		scope = 2;
+		displayName = "VS-89 Rosa";
+		descriptionShort = "VS-89 del set Rosa de 3xor. Igual que la vanilla, solo cambia el color.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\armas\exor_rosa_sv98_wood_co.paa",
+			"ExorStorage\data\armas\exor_rosa_sv98_metal_co.paa",
+			""
+		};
+	};
+
+	// ---- armas Azul ----
+	class Exor_M4A1_Azul: M4A1
+	{
+		scope = 2;
+		displayName = "M4-A1 Azul";
+		descriptionShort = "M4-A1 del set Azul de 3xor. Igual que la vanilla, solo cambia el color.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\armas\exor_azul_m4_body_co.paa"
+		};
+	};
+	class Exor_AKM_Azul: AKM
+	{
+		scope = 2;
+		displayName = "KA-M Azul";
+		descriptionShort = "KA-M del set Azul de 3xor. Igual que la vanilla, solo cambia el color.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\armas\exor_azul_akm_co.paa"
+		};
+	};
+	class Exor_Aug_Azul: Aug
+	{
+		scope = 2;
+		displayName = "AUR AX Azul";
+		descriptionShort = "AUR AX del set Azul de 3xor. Igual que la vanilla, solo cambia el color.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\armas\exor_azul_aug_stock_co.paa",
+			"ExorStorage\data\armas\exor_azul_aug_rail_co.paa",
+			"ExorStorage\data\armas\exor_azul_aug_barrel_co.paa"
+		};
+	};
+	class Exor_M14_Azul: M14
+	{
+		scope = 2;
+		displayName = "DMR Azul";
+		descriptionShort = "DMR del set Azul de 3xor. Igual que la vanilla, solo cambia el color.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\armas\exor_azul_m14_metal_co.paa",
+			"ExorStorage\data\armas\exor_azul_m14_synth_co.paa"
+		};
+	};
+	class Exor_SV98_Azul: SV98
+	{
+		scope = 2;
+		displayName = "VS-89 Azul";
+		descriptionShort = "VS-89 del set Azul de 3xor. Igual que la vanilla, solo cambia el color.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\armas\exor_azul_sv98_wood_co.paa",
+			"ExorStorage\data\armas\exor_azul_sv98_metal_co.paa",
+			""
+		};
+	};
+
+	// ---- armas Dorado ----
+	class Exor_M4A1_Dorado: M4A1
+	{
+		scope = 2;
+		displayName = "M4-A1 Dorado";
+		descriptionShort = "M4-A1 del set Dorado de 3xor. Igual que la vanilla, solo cambia el color.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\armas\exor_dorado_m4_body_co.paa"
+		};
+	};
+	class Exor_AKM_Dorado: AKM
+	{
+		scope = 2;
+		displayName = "KA-M Dorado";
+		descriptionShort = "KA-M del set Dorado de 3xor. Igual que la vanilla, solo cambia el color.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\armas\exor_dorado_akm_co.paa"
+		};
+	};
+	class Exor_Aug_Dorado: Aug
+	{
+		scope = 2;
+		displayName = "AUR AX Dorado";
+		descriptionShort = "AUR AX del set Dorado de 3xor. Igual que la vanilla, solo cambia el color.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\armas\exor_dorado_aug_stock_co.paa",
+			"ExorStorage\data\armas\exor_dorado_aug_rail_co.paa",
+			"ExorStorage\data\armas\exor_dorado_aug_barrel_co.paa"
+		};
+	};
+	class Exor_M14_Dorado: M14
+	{
+		scope = 2;
+		displayName = "DMR Dorado";
+		descriptionShort = "DMR del set Dorado de 3xor. Igual que la vanilla, solo cambia el color.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\armas\exor_dorado_m14_metal_co.paa",
+			"ExorStorage\data\armas\exor_dorado_m14_synth_co.paa"
+		};
+	};
+	class Exor_SV98_Dorado: SV98
+	{
+		scope = 2;
+		displayName = "VS-89 Dorado";
+		descriptionShort = "VS-89 del set Dorado de 3xor. Igual que la vanilla, solo cambia el color.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\armas\exor_dorado_sv98_wood_co.paa",
+			"ExorStorage\data\armas\exor_dorado_sv98_metal_co.paa",
+			""
+		};
+	};
+
+	// ---- armas Camo ----
+	class Exor_M4A1_Camo: M4A1
+	{
+		scope = 2;
+		displayName = "M4-A1 Camo";
+		descriptionShort = "M4-A1 del set Camo de 3xor. Igual que la vanilla, solo cambia el color.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\armas\exor_camo_m4_body_co.paa"
+		};
+	};
+	class Exor_AKM_Camo: AKM
+	{
+		scope = 2;
+		displayName = "KA-M Camo";
+		descriptionShort = "KA-M del set Camo de 3xor. Igual que la vanilla, solo cambia el color.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\armas\exor_camo_akm_co.paa"
+		};
+	};
+	class Exor_Aug_Camo: Aug
+	{
+		scope = 2;
+		displayName = "AUR AX Camo";
+		descriptionShort = "AUR AX del set Camo de 3xor. Igual que la vanilla, solo cambia el color.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\armas\exor_camo_aug_stock_co.paa",
+			"ExorStorage\data\armas\exor_camo_aug_rail_co.paa",
+			"ExorStorage\data\armas\exor_camo_aug_barrel_co.paa"
+		};
+	};
+	class Exor_M14_Camo: M14
+	{
+		scope = 2;
+		displayName = "DMR Camo";
+		descriptionShort = "DMR del set Camo de 3xor. Igual que la vanilla, solo cambia el color.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\armas\exor_camo_m14_metal_co.paa",
+			"ExorStorage\data\armas\exor_camo_m14_synth_co.paa"
+		};
+	};
+	class Exor_SV98_Camo: SV98
+	{
+		scope = 2;
+		displayName = "VS-89 Camo";
+		descriptionShort = "VS-89 del set Camo de 3xor. Igual que la vanilla, solo cambia el color.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\armas\exor_camo_sv98_wood_co.paa",
+			"ExorStorage\data\armas\exor_camo_sv98_metal_co.paa",
+			""
+		};
+	};
+
+	// ---------------- ARMAS_FIN_W ----------------
 };
 
 // PROXIES de las armas del mueble: DESACTIVADO (mueble entero en scope=0 por ahora; el display

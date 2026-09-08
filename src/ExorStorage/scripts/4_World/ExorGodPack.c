@@ -63,6 +63,15 @@ class ExorGodPack
 		if (cmd == "/nieve")      { SetRopa(p, "Nieve");  return true; }
 		if (cmd == "/negro")      { SetRopa(p, "Negro");  return true; }
 		if (cmd == "/test_ropa")  { TestRopa(p);          return true; }
+		if (cmd == "/arma_color")
+		{
+			// sin argumento = los CUATRO sets; con argumento = solo ese color
+			string col = "";
+			if (arg.Count() > 1)
+				col = arg.Get(1);
+			ArmasColor(p, col);
+			return true;
+		}
 		if (cmd == "/explosivos2") { Explosivos2(p); return true; }
 		if (cmd == "/explosivos")  { Explosivos(p);  return true; }
 		if (cmd == "/bambi")       { Bambi(p);       return true; }
@@ -263,6 +272,67 @@ class ExorGodPack
 	// Set de ropa 3xor completo (una sola pieza de cada cosa) tirado al piso.
 	// Los bolsillos y la pistolera van ENGANCHADOS al chaleco, como en /ropa: sueltos en el
 	// piso confunden, porque son attachments y no se pueden vestir por si solos.
+	// -----------------------------------------------------------------------
+	//  /arma_color [rosa|azul|dorado|camo]
+	//  Tira al piso las armas retexturizadas del mod, cada una con su cargador y
+	//  -donde el arma tiene esos slots- con la culata y el guardamano del MISMO color
+	//  YA PUESTOS, para no tener que armarlas a mano pieza por pieza.
+	//  Sin argumento saca los cuatro sets de una.
+	// -----------------------------------------------------------------------
+	static void ArmasColor(PlayerBase p, string color)
+	{
+		vector b = p.GetPosition();
+		s_slot = 0;
+		color.ToLower();
+
+		if (color == "rosa" || color == "azul" || color == "dorado" || color == "camo")
+		{
+			SetArmas(b, Sufijo(color));
+			ExorAviso.Enviar(p, "Armas " + Sufijo(color) + " en el piso.");
+			return;
+		}
+
+		SetArmas(b, "Rosa");
+		SetArmas(b, "Azul");
+		SetArmas(b, "Dorado");
+		SetArmas(b, "Camo");
+		ExorAviso.Enviar(p, "Los 4 sets de armas de color en el piso (20 armas).");
+	}
+
+	// "rosa" -> "Rosa": las clases del mod llevan el sufijo con la primera en mayuscula
+	static string Sufijo(string c)
+	{
+		if (c == "rosa")   return "Rosa";
+		if (c == "azul")   return "Azul";
+		if (c == "dorado") return "Dorado";
+		if (c == "camo")   return "Camo";
+		return "";
+	}
+
+	// Un set completo. El AUR, el DMR y el VS-89 no tienen culata/guardamano como items
+	// aparte (van integrados en el modelo), asi que solo llevan cargador.
+	static void SetArmas(vector b, string v)
+	{
+		Weapon_Base m4 = ArmaPiso(b, "Exor_M4A1_" + v);
+		Att(m4, "Exor_M4_OEBttstck_" + v);
+		Att(m4, "Exor_M4_RISHndgrd_" + v);
+		Att(m4, "Mag_STANAG_30Rnd");
+
+		Weapon_Base ak = ArmaPiso(b, "Exor_AKM_" + v);
+		Att(ak, "Exor_AK_WoodBttstck_" + v);
+		Att(ak, "Exor_AK_WoodHndgrd_" + v);
+		Att(ak, "Mag_AKM_30Rnd");
+
+		Weapon_Base aur = ArmaPiso(b, "Exor_Aug_" + v);
+		Att(aur, "Mag_Aug_30Rnd");
+
+		Weapon_Base dmr = ArmaPiso(b, "Exor_M14_" + v);
+		Att(dmr, "Mag_M14_20Rnd");
+
+		Weapon_Base vs = ArmaPiso(b, "Exor_SV98_" + v);
+		Att(vs, "Mag_SV98_10rnd");
+	}
+
 	static void SetRopa(PlayerBase p, string variante)
 	{
 		vector b = p.GetPosition();
