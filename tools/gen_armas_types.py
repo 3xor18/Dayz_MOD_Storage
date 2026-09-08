@@ -4,19 +4,23 @@
 # DISENIO (decidido el 8-sep-2026): las armas de color aparecen SOLO EN LOS HELI CRASH,
 # nunca en el loot de los edificios. Eso se logra con dos cosas a la vez:
 #
-#   1) ACA: nominal > 0 pero SIN category/usage/value. Sin esos tres el CE no sabe en que
-#      edificio ponerlas, asi que no las pone en NINGUNO. El nominal igual tiene que ser
-#      > 0 para que el tipo este disponible en la economia cuando el wreck lo pida de
-#      cargo, y la entrada es ademas la que le da el LIFETIME al arma tirada en el piso.
-#      count_in_cargo="0" -> las que estan dentro del wreck no cuentan contra el nominal.
+#   1) ACA: nominal 0 y min 0. Lo que decide si un item se reparte por el mundo es el
+#      NOMINAL, no los tags. CORREGIDO el 8-sep: primero se puso nominal 5 "sin
+#      category/usage/value para que no fuera a ningun edificio" y resulto ser al reves:
+#      usage y value son FILTROS, y un tipo con nominal > 0 y sin ninguno de los dos no
+#      queda restringido a nada -> el CE lo puede poner en CUALQUIER punto de loot del
+#      mapa, zonas de spawn incluidas (aparecieron un M14 dorado y un AUG en la costa).
+#      Con nominal 0 la unica fuente queda siendo el cargo del wreck, que se crea junto
+#      con el objeto y no consulta el nominal. La entrada sigue haciendo falta igual:
+#      es la que le da el LIFETIME al arma tirada en el piso.
 #
 #   2) En cfgspawnabletypes.xml de la mision: un <type> para Wreck_Mi8_Crashed y otro para
 #      Wreck_UH1Y con las armas como <cargo>. Ese es el unico camino que GARANTIZA que
 #      aparezcan ahi; el tier del mapa solo no alcanza, porque los helis caen en cualquier
 #      zona. Ver el script de deploy en la sesion / el playbook de retexturas.
 #
-# Si algun dia se las quiere TAMBIEN en el mapa, hay que agregarles category + usage +
-# value (los tres, o el CE no las spawnea nunca por mas nominal que tengan).
+# Si algun dia se las quiere TAMBIEN en el mapa: subir el nominal Y darles category +
+# usage + value, para que caigan donde uno quiere y no en todos lados.
 import io
 import os
 
@@ -33,7 +37,7 @@ ATTACHS = ["M4_OEBttstck", "M4_MPBttstck", "M4_CQBBttstck", "M4_RISHndgrd", "M4_
 
 def entrada(nombre, lifetime):
     return """  <type name="%s">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>%d</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -41,8 +45,9 @@ def entrada(nombre, lifetime):
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
 """ % (nombre, lifetime)
 

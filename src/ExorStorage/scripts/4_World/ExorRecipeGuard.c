@@ -60,13 +60,43 @@ modded class RecipeBase
 		if (tipo.IndexOf("Exor_") != 0)
 			return false;
 
-		// EXCEPCION: la ropa 3xor. No es un contenedor ni guarda nada en disco -es una
-		// retextura de una prenda vanilla-, asi que no hay loot que perder y puede entrar
-		// en las recetas normales de ropa.
-		// Si la comprobacion fallara, el resultado es bloquear, que es el lado seguro.
+		// EXCEPCION: las RETEXTURAS 3xor (ropa y armas de color). No son contenedores ni
+		// guardan nada en disco -son la misma prenda/arma vanilla pintada de otro color-,
+		// asi que no hay loot que perder y tienen que comportarse EXACTAMENTE igual que su
+		// original: repararse con el kit de limpieza (receta CleanWeapon, ingrediente
+		// "DefaultWeapon") o con la masilla epoxi (RepairEpoxy, ingrediente
+		// "Inventory_Base", que es la que cubre culatas y guardamanos).
+		//
+		// La ropa se reconoce por herencia. Las armas y sus partes NO: del lado del script
+		// una culata es un Inventory_Base pelado, igual que medio juego, asi que no hay tipo
+		// propio contra el cual preguntar y van por prefijo de classname.
+		//
+		// OJO - AL AGREGAR UNA RETEXTURA NUEVA hay que sumar su prefijo abajo. Si se olvida,
+		// el sintoma es "esta arma no se puede reparar con el kit": la receta directamente no
+		// se ofrece. El default sigue siendo BLOQUEAR porque es el lado seguro -olvidarse de
+		// exceptuar una retextura molesta; olvidarse de bloquear un contenedor evapora loot-.
 		if (it.IsInherited(Clothing))
+			return false;
+		if (ExorEsRetexturaDeArma(tipo))
 			return false;
 
 		return true;
+	}
+
+	// Las 20 armas de color (Exor_M4A1_/AKM_/Aug_/M14_/SV98_ + Rosa|Azul|Dorado|Camo) y sus
+	// 48 culatas y guardamanos (Exor_M4_*, Exor_AK_*). Ningun contenedor 3xor empieza con
+	// estos prefijos: los muebles son Exor_Barrel_, Exor_Locker, Exor_LockerRojo,
+	// Exor_MuebleArmas, Exor_Fridge, Exor_Refrigerador_, Exor_Cofre, Exor_KothCrate_,
+	// Exor_Parking, Exor_BodyBag y Exor_CarCodeLock.
+	static bool ExorEsRetexturaDeArma(string tipo)
+	{
+		if (tipo.IndexOf("Exor_M4A1_") == 0) return true;
+		if (tipo.IndexOf("Exor_AKM_")  == 0) return true;
+		if (tipo.IndexOf("Exor_Aug_")  == 0) return true;
+		if (tipo.IndexOf("Exor_M14_")  == 0) return true;
+		if (tipo.IndexOf("Exor_SV98_") == 0) return true;
+		if (tipo.IndexOf("Exor_M4_")   == 0) return true;
+		if (tipo.IndexOf("Exor_AK_")   == 0) return true;
+		return false;
 	}
 }

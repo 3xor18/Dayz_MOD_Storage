@@ -2,7 +2,7 @@
 <types>
   <!-- ================= set Rosa ================= -->
   <type name="Exor_M4A1_Rosa">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>14400</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -10,11 +10,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AKM_Rosa">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>14400</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -22,11 +23,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_Aug_Rosa">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>14400</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -34,11 +36,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M14_Rosa">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>14400</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -46,11 +49,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_SV98_Rosa">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>14400</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -58,11 +62,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_OEBttstck_Rosa">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -70,11 +75,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_MPBttstck_Rosa">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -82,11 +88,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_CQBBttstck_Rosa">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -94,11 +101,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_RISHndgrd_Rosa">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -106,11 +114,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_MPHndgrd_Rosa">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -118,11 +127,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_PlasticHndgrd_Rosa">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -130,11 +140,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_WoodBttstck_Rosa">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -142,11 +153,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_WoodHndgrd_Rosa">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -154,11 +166,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_FoldingBttstck_Rosa">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -166,11 +179,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_RailHndgrd_Rosa">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -178,11 +192,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_PlasticBttstck_Rosa">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -190,11 +205,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_PlasticHndgrd_Rosa">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -202,12 +218,13 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <!-- ================= set Azul ================= -->
   <type name="Exor_M4A1_Azul">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>14400</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -215,11 +232,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AKM_Azul">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>14400</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -227,11 +245,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_Aug_Azul">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>14400</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -239,11 +258,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M14_Azul">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>14400</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -251,11 +271,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_SV98_Azul">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>14400</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -263,11 +284,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_OEBttstck_Azul">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -275,11 +297,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_MPBttstck_Azul">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -287,11 +310,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_CQBBttstck_Azul">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -299,11 +323,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_RISHndgrd_Azul">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -311,11 +336,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_MPHndgrd_Azul">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -323,11 +349,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_PlasticHndgrd_Azul">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -335,11 +362,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_WoodBttstck_Azul">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -347,11 +375,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_WoodHndgrd_Azul">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -359,11 +388,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_FoldingBttstck_Azul">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -371,11 +401,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_RailHndgrd_Azul">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -383,11 +414,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_PlasticBttstck_Azul">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -395,11 +427,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_PlasticHndgrd_Azul">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -407,12 +440,13 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <!-- ================= set Dorado ================= -->
   <type name="Exor_M4A1_Dorado">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>14400</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -420,11 +454,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AKM_Dorado">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>14400</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -432,11 +467,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_Aug_Dorado">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>14400</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -444,11 +480,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M14_Dorado">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>14400</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -456,11 +493,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_SV98_Dorado">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>14400</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -468,11 +506,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_OEBttstck_Dorado">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -480,11 +519,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_MPBttstck_Dorado">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -492,11 +532,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_CQBBttstck_Dorado">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -504,11 +545,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_RISHndgrd_Dorado">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -516,11 +558,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_MPHndgrd_Dorado">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -528,11 +571,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_PlasticHndgrd_Dorado">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -540,11 +584,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_WoodBttstck_Dorado">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -552,11 +597,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_WoodHndgrd_Dorado">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -564,11 +610,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_FoldingBttstck_Dorado">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -576,11 +623,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_RailHndgrd_Dorado">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -588,11 +636,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_PlasticBttstck_Dorado">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -600,11 +649,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_PlasticHndgrd_Dorado">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -612,12 +662,13 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <!-- ================= set Camo ================= -->
   <type name="Exor_M4A1_Camo">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>14400</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -625,11 +676,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AKM_Camo">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>14400</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -637,11 +689,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_Aug_Camo">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>14400</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -649,11 +702,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M14_Camo">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>14400</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -661,11 +715,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_SV98_Camo">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>14400</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -673,11 +728,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_OEBttstck_Camo">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -685,11 +741,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_MPBttstck_Camo">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -697,11 +754,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_CQBBttstck_Camo">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -709,11 +767,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_RISHndgrd_Camo">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -721,11 +780,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_MPHndgrd_Camo">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -733,11 +793,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_M4_PlasticHndgrd_Camo">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -745,11 +806,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_WoodBttstck_Camo">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -757,11 +819,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_WoodHndgrd_Camo">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -769,11 +832,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_FoldingBttstck_Camo">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -781,11 +845,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_RailHndgrd_Camo">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -793,11 +858,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_PlasticBttstck_Camo">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -805,11 +871,12 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
   <type name="Exor_AK_PlasticHndgrd_Camo">
-    <nominal>5</nominal>
+    <nominal>0</nominal>
     <lifetime>7200</lifetime>
     <restock>0</restock>
     <min>0</min>
@@ -817,7 +884,8 @@
     <quantmax>-1</quantmax>
     <cost>100</cost>
     <flags count_in_cargo="0" count_in_hoarder="0" count_in_map="1" count_in_player="0" crafted="0" deloot="0" />
-    <!-- SIN category/usage/value a proposito: es lo que las mantiene fuera del loot de
-         los edificios. Salen solo del cargo de los wrecks del heli crash. -->
+    <!-- nominal 0 = el CE no la reparte por el mapa. Sale solo del cargo de los wrecks
+         del heli crash (cfgspawnabletypes.xml). NO subir el nominal: eso es lo que las
+         hacia aparecer en las zonas de spawn. -->
   </type>
 </types>
