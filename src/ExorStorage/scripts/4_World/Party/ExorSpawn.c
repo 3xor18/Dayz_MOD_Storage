@@ -443,7 +443,9 @@ class ExorSpawn
 	// reemplazar la entidad. Se hace SOLO en el spawn -donde el personaje es un freshie
 	// y no hay inventario que perder- y solo si el sexo pedido es distinto al que tiene.
 	// Devuelve el personaje nuevo, o null si no se pudo (en ese caso se sigue con el viejo).
-	static PlayerBase CambiarSexo(PlayerBase viejo, vector pos, bool mujer)
+	// 'vestirVanilla' = false cuando despues se le va a aplicar el pack VIP (seria crear
+	// ropa para borrarla en el acto).
+	static PlayerBase CambiarSexo(PlayerBase viejo, vector pos, bool mujer, bool vestirVanilla)
 	{
 		if (!viejo || !viejo.GetIdentity())
 			return null;
@@ -456,6 +458,8 @@ class ExorSpawn
 
 		PlayerIdentity id = viejo.GetIdentity();
 		string sid = id.GetPlainId();
+		// se lee ANTES de crear nada: es la pinta vanilla que el motor le habia dado
+		TStringArray ropaVieja = LeerRopa(viejo);
 		PlayerBase nuevo = PlayerBase.Cast(GetGame().CreatePlayer(id, tipo, pos, 0, "NONE"));
 		if (!nuevo)
 		{
@@ -469,24 +473,13 @@ class ExorSpawn
 		// viste el equipamiento que manda el cliente al CREAR el personaje, y eso ya se
 		// gasto en el cuerpo anterior; StartingEquipSetup solo mete venda/chemlight/fruta
 		// DENTRO de la ropa, no la crea (por eso se aparecia en bolas al cambiar de sexo).
-		// Lo mas fiel es MUDAR la ropa del cuerpo viejo: se lleva la pinta vanilla exacta
-		// que le habia tocado, con lo que tenga adentro. La ropa de DayZ no tiene sexo.
-		int movidos = TrasladarEquipo(viejo, nuevo);
-		if (movidos == 0)
+		// Se le re-crea la MISMA ropa que traia y despues el kit de la mision, asi queda
+		// igual que cualquier freshie: ropa + venda + chemlight + fruta.
+		if (vestirVanilla)
 		{
-			// no se pudo mudar nada -> ropa de respaldo (spawns.json) + el kit de la mision
-			TStringArray resp = GetExorConfig().spawns.ropa_respaldo;
-			if (resp)
-			{
-				int r;
-				for (r = 0; r < resp.Count(); r++)
-				{
-					if (resp.Get(r) != "")
-						nuevo.GetInventory().CreateInInventory(resp.Get(r));
-				}
-			}
+			int puestas = VestirVanilla(nuevo, ropaVieja);
 			ExorMissionBridge.Freshie(nuevo);
-			Print(string.Format("%1 SPAWN: no se pudo mudar la ropa al personaje nuevo -> ropa de respaldo", ExorStorageConstants.LOG));
+			Print(string.Format("%1 SPAWN: %2 vestido con %3 prenda(s)", ExorStorageConstants.LOG, sid, puestas));
 		}
 
 		// El personaje viejo quedo registrado en la mision y en los mods que llevan lista de
@@ -494,43 +487,74 @@ class ExorSpawn
 		// respawn normal para que todos apunten al personaje NUEVO.
 		ExorMissionBridge.ReRegistrar(nuevo, id);
 
-		// el cuerpo viejo ya no lo maneja nadie -> se va (si no, queda parado en el mapa)
-		GetGame().ObjectDelete(viejo);
+		// El cuerpo viejo ya no lo maneja nadie -> se va. DIFERIDO 1s a proposito: borrarlo
+		// en el mismo frame del SelectPlayer le saca la entidad al cliente cuando todavia
+		// puede estar cambiando de personaje, y ahi es donde reaparece la pantalla
+		// "Has muerto". Un segundo alcanza para que el cliente ya este en el nuevo.
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(BorrarCuerpoViejo, 1000, false, viejo);
 
 		Print(string.Format("%1 SPAWN: %2 cambio de sexo -> %3", ExorStorageConstants.LOG, sid, tipo));
 		return nuevo;
 	}
 
-	// Muda la ropa (y lo que tenga adentro) + lo que este en las manos del cuerpo viejo al
-	// nuevo. Devuelve cuantas prendas se pudieron mover. Se juntan primero en un array
-	// porque mover una prenda cambia la lista de attachments mientras se recorre.
-	static int TrasladarEquipo(PlayerBase viejo, PlayerBase nuevo)
+	// Lee los CLASSNAMES de la ropa que tiene puesta un personaje. Se leen y despues se
+	// RE-CREAN en el personaje nuevo, en vez de mover las prendas de un cuerpo al otro:
+	// las operaciones de inventario de DayZ son asincronas, asi que TakeEntityAsAttachment
+	// devolvia true pero el movimiento todavia no habia terminado cuando se borraba el
+	// cuerpo viejo -> las prendas se iban con el y se aparecia desnudo. Re-crear es
+	// sincronico y siempre queda vestido.
+	static TStringArray LeerRopa(PlayerBase player)
 	{
-		if (!viejo || !nuevo || !viejo.GetInventory() || !nuevo.GetInventory())
-			return 0;
-
-		array<EntityAI> prendas = new array<EntityAI>;
-		int ac = viejo.GetInventory().AttachmentCount();
+		TStringArray tipos = new TStringArray;
+		if (!player || !player.GetInventory())
+			return tipos;
+		int ac = player.GetInventory().AttachmentCount();
 		int i;
 		for (i = 0; i < ac; i++)
 		{
-			EntityAI att = viejo.GetInventory().GetAttachmentFromIndex(i);
-			if (att)
-				prendas.Insert(att);
+			EntityAI att = player.GetInventory().GetAttachmentFromIndex(i);
+			if (att && att.GetType() != "")
+				tipos.Insert(att.GetType());
 		}
+		return tipos;
+	}
 
-		int ok = 0;
-		for (i = 0; i < prendas.Count(); i++)
+	// Viste al personaje nuevo con esos tipos. Si no quedo nada puesto, cae a la
+	// ropa_respaldo de spawns.json. Devuelve cuantas prendas quedaron puestas.
+	static int VestirVanilla(PlayerBase nuevo, TStringArray tipos)
+	{
+		if (!nuevo || !nuevo.GetInventory())
+			return 0;
+		int i;
+		if (tipos)
 		{
-			if (nuevo.GetInventory().TakeEntityAsAttachment(InventoryMode.SERVER, prendas.Get(i)))
-				ok++;
+			for (i = 0; i < tipos.Count(); i++)
+			{
+				if (tipos.Get(i) != "")
+					nuevo.GetInventory().CreateInInventory(tipos.Get(i));
+			}
 		}
+		if (nuevo.GetInventory().AttachmentCount() == 0)
+		{
+			TStringArray resp = GetExorConfig().spawns.ropa_respaldo;
+			if (resp)
+			{
+				for (i = 0; i < resp.Count(); i++)
+				{
+					if (resp.Get(i) != "")
+						nuevo.GetInventory().CreateInInventory(resp.Get(i));
+				}
+			}
+			Print(string.Format("%1 SPAWN: la ropa del cuerpo viejo no se pudo replicar -> ropa_respaldo", ExorStorageConstants.LOG));
+		}
+		return nuevo.GetInventory().AttachmentCount();
+	}
 
-		// Lo que tenga EN LAS MANOS no se muda: no hay una API de traslado a manos que sirva
-		// aca (HumanInventory.TakeEntityToHands no existe) y al reaparecer las manos estan
-		// vacias igual. Lo unico que se pierde es el cuchillo de test de spawns.json
-		// (dar_cuchillo_al_spawnear), que en produccion va apagado.
-		return ok;
+	// Borra el cuerpo que quedo del cambio de sexo (diferido: ver CambiarSexo).
+	static void BorrarCuerpoViejo(PlayerBase viejo)
+	{
+		if (viejo)
+			GetGame().ObjectDelete(viejo);
 	}
 
 	// El jugador eligio (index >=0 = punto; -1 = base). 'equip' = pidio aparecer con el
@@ -623,7 +647,8 @@ class ExorSpawn
 		bool cambio = false;
 		if (genero >= 0 && GetExorConfig().spawns.elegir_genero && genero != GeneroDe(player))
 		{
-			PlayerBase nuevo = CambiarSexo(player, pos, genero == 1);
+			// si viene con pack VIP no se lo viste de vanilla: se lo pisaria enseguida
+			PlayerBase nuevo = CambiarSexo(player, pos, genero == 1, !(equip && pack));
 			if (nuevo)
 			{
 				player = nuevo;
