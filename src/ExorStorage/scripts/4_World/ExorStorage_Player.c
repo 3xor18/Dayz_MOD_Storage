@@ -1377,6 +1377,15 @@ modded class PlayerBase
 		}
 
 		m_ExorSpawnMenuTries = 0;
+
+		// Apagar la pantalla negra "Has muerto" antes de abrir el hub. Vanilla la prende con
+		// un ScreenFadeIn (DayZPlayerImplement.ShowDeadScreen) y la apaga en
+		// MissionGameplay.OnPlayerRespawned -> ShowDeadScreen(false, 0), pero esa llamada
+		// puede llegar TARDE: el personaje ya esta vivo (se ve la hotbar y los stats debajo)
+		// y el fade negro sigue puesto 10-20s. Se hace la misma llamada de vanilla, y solo
+		// con el personaje VIVO, asi que si el jugador esta muerto de verdad no se toca nada.
+		yo.ShowDeadScreen(false, 0);
+
 		ui.EnterScriptedMenu(ExorMenuIDs.SPAWN, null);
 	}
 
