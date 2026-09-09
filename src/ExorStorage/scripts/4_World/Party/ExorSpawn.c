@@ -8,33 +8,6 @@
 // NOTA: la PANTALLA de seleccion de punto necesita UI (keybind/menu); por ahora
 // se elige automaticamente un punto valido. Queda como mejora in-game.
 // ============================================================================
-// PUENTE a la mision. MissionServer vive en 5_Mission y desde 4_World no se ve, pero
-// para dejar a un personaje recien creado como un freshie vanilla hace falta su
-// StartingEquipSetup (vendaje + chemlight + fruta). La implementacion real la registra
-// ExorStorage_Mission.c al arrancar; si no hay nadie registrado, no pasa nada malo: el
-// personaje igual viene con la ropa por default de su tipo.
-class ExorMissionBridge
-{
-	static ref ExorMissionBridge s_Inst;
-	void EquiparFreshie(PlayerBase player) { }
-	void ReRegistrarJugador(PlayerBase player, PlayerIdentity identity) { }
-
-	static void Freshie(PlayerBase player)
-	{
-		if (s_Inst && player)
-			s_Inst.EquiparFreshie(player);
-	}
-
-	// Avisar a la mision (y con ella a los otros mods) que este identity ahora maneja OTRA
-	// entidad. Sin esto, todo lo que se registro contra el personaje viejo queda colgado:
-	// el menu de VPPAdminTools salia VACIO despues de cambiar de sexo.
-	static void ReRegistrar(PlayerBase player, PlayerIdentity identity)
-	{
-		if (s_Inst && player && identity)
-			s_Inst.ReRegistrarJugador(player, identity);
-	}
-}
-
 // DTO que el server manda al cliente para armar la pantalla de seleccion.
 class ExorSpawnMenuDTO
 {
@@ -57,7 +30,7 @@ class ExorSpawnMenuDTO
 	string equip_pack;            // nombre del pack que le toca (para mostrarlo en el boton)
 	// Hombre/mujer: es para TODOS, no solo VIP (spawns.json -> elegir_genero).
 	bool genero_enabled;          // mostrar los dos botones
-	int genero_actual;            // 0 = hombre, 1 = mujer (el sexo del personaje que tiene AHORA)
+	int genero_actual;            // 0 = hombre, 1 = mujer: el boton que sale ya marcado (la preferencia guardada, o el personaje que tiene si nunca eligio)
 	void ExorSpawnMenuDTO()
 	{
 		nombres = new TStringArray;
@@ -361,10 +334,16 @@ class ExorSpawn
 			dto.equip_pack = vipcfg.NombrePack(sidBase);
 		}
 
-		// Hombre/mujer (para todos). Se manda el sexo que tiene AHORA para pintar el
-		// boton que corresponde ya seleccionado.
+		// Hombre/mujer (para todos). Se manda el boton que tiene que salir ya marcado: su
+		// preferencia guardada si tiene una, y si no el sexo del personaje que tiene AHORA.
+		// Importante que sea la PREFERENCIA y no el personaje actual: la eleccion se aplica
+		// recien en la proxima aparicion, asi que entre medio los dos no coinciden, y si se
+		// pintara el actual el jugador que no toca nada re-guardaria el viejo y se anularia
+		// solo el cambio que pidio.
 		dto.genero_enabled = spawns.elegir_genero;
-		dto.genero_actual = GeneroDe(player);
+		dto.genero_actual = ExorGeneroPref.Leer(sidBase);
+		if (dto.genero_actual < 0)
+			dto.genero_actual = GeneroDe(player);
 
 		JsonSerializer js = new JsonSerializer();
 		string data;
@@ -427,139 +406,24 @@ class ExorSpawn
 	// ------------------------- hombre / mujer -------------------------
 	// El sexo se deduce del TIPO del personaje: los femeninos vanilla son "SurvivorF_*".
 	// 0 = hombre, 1 = mujer.
-	static int GeneroDe(PlayerBase player)
+	static int GeneroDeTipo(string tipo)
 	{
-		if (!player)
-			return 0;
-		string tipo = player.GetType();
 		tipo.ToLower();
 		if (tipo.IndexOf("survivorf_") == 0)
 			return 1;
 		return 0;
 	}
 
-	// Cambia el sexo del personaje CREANDO uno nuevo del otro sexo en 'pos' y pasandole
-	// el control (SelectPlayer). No hay API de "cambiar sexo": la unica forma es
-	// reemplazar la entidad. Se hace SOLO en el spawn -donde el personaje es un freshie
-	// y no hay inventario que perder- y solo si el sexo pedido es distinto al que tiene.
-	// Devuelve el personaje nuevo, o null si no se pudo (en ese caso se sigue con el viejo).
-	// 'vestirVanilla' = false cuando despues se le va a aplicar el pack VIP (seria crear
-	// ropa para borrarla en el acto).
-	static PlayerBase CambiarSexo(PlayerBase viejo, vector pos, bool mujer, bool vestirVanilla)
+	static int GeneroDe(PlayerBase player)
 	{
-		if (!viejo || !viejo.GetIdentity())
-			return null;
-		string tipo = GetExorConfig().spawns.TipoAlAzar(mujer);
-		if (tipo == "")
-		{
-			Print(string.Format("%1 SPAWN: no hay tipos de personaje usables para el sexo pedido (spawns.json)", ExorStorageConstants.LOG));
-			return null;
-		}
-
-		PlayerIdentity id = viejo.GetIdentity();
-		string sid = id.GetPlainId();
-		// se lee ANTES de crear nada: es la pinta vanilla que el motor le habia dado
-		TStringArray ropaVieja = LeerRopa(viejo);
-		PlayerBase nuevo = PlayerBase.Cast(GetGame().CreatePlayer(id, tipo, pos, 0, "NONE"));
-		if (!nuevo)
-		{
-			Print(string.Format("%1 SPAWN: CreatePlayer fallo para '%2' (%3)", ExorStorageConstants.LOG, tipo, sid));
-			return null;
-		}
-
-		GetGame().SelectPlayer(id, nuevo);
-
-		// ROPA. Ojo: CreatePlayer devuelve el personaje DESNUDO. En vanilla al freshie lo
-		// viste el equipamiento que manda el cliente al CREAR el personaje, y eso ya se
-		// gasto en el cuerpo anterior; StartingEquipSetup solo mete venda/chemlight/fruta
-		// DENTRO de la ropa, no la crea (por eso se aparecia en bolas al cambiar de sexo).
-		// Se le re-crea la MISMA ropa que traia y despues el kit de la mision, asi queda
-		// igual que cualquier freshie: ropa + venda + chemlight + fruta.
-		if (vestirVanilla)
-		{
-			int puestas = VestirVanilla(nuevo, ropaVieja);
-			ExorMissionBridge.Freshie(nuevo);
-			Print(string.Format("%1 SPAWN: %2 vestido con %3 prenda(s)", ExorStorageConstants.LOG, sid, puestas));
-		}
-
-		// El personaje viejo quedo registrado en la mision y en los mods que llevan lista de
-		// jugadores (VPPAdminTools entre ellos). Se repite el mismo aviso que manda el
-		// respawn normal para que todos apunten al personaje NUEVO.
-		ExorMissionBridge.ReRegistrar(nuevo, id);
-
-		// El cuerpo viejo ya no lo maneja nadie -> se va. DIFERIDO 1s a proposito: borrarlo
-		// en el mismo frame del SelectPlayer le saca la entidad al cliente cuando todavia
-		// puede estar cambiando de personaje, y ahi es donde reaparece la pantalla
-		// "Has muerto". Un segundo alcanza para que el cliente ya este en el nuevo.
-		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(BorrarCuerpoViejo, 1000, false, viejo);
-
-		Print(string.Format("%1 SPAWN: %2 cambio de sexo -> %3", ExorStorageConstants.LOG, sid, tipo));
-		return nuevo;
-	}
-
-	// Lee los CLASSNAMES de la ropa que tiene puesta un personaje. Se leen y despues se
-	// RE-CREAN en el personaje nuevo, en vez de mover las prendas de un cuerpo al otro:
-	// las operaciones de inventario de DayZ son asincronas, asi que TakeEntityAsAttachment
-	// devolvia true pero el movimiento todavia no habia terminado cuando se borraba el
-	// cuerpo viejo -> las prendas se iban con el y se aparecia desnudo. Re-crear es
-	// sincronico y siempre queda vestido.
-	static TStringArray LeerRopa(PlayerBase player)
-	{
-		TStringArray tipos = new TStringArray;
-		if (!player || !player.GetInventory())
-			return tipos;
-		int ac = player.GetInventory().AttachmentCount();
-		int i;
-		for (i = 0; i < ac; i++)
-		{
-			EntityAI att = player.GetInventory().GetAttachmentFromIndex(i);
-			if (att && att.GetType() != "")
-				tipos.Insert(att.GetType());
-		}
-		return tipos;
-	}
-
-	// Viste al personaje nuevo con esos tipos. Si no quedo nada puesto, cae a la
-	// ropa_respaldo de spawns.json. Devuelve cuantas prendas quedaron puestas.
-	static int VestirVanilla(PlayerBase nuevo, TStringArray tipos)
-	{
-		if (!nuevo || !nuevo.GetInventory())
+		if (!player)
 			return 0;
-		int i;
-		if (tipos)
-		{
-			for (i = 0; i < tipos.Count(); i++)
-			{
-				if (tipos.Get(i) != "")
-					nuevo.GetInventory().CreateInInventory(tipos.Get(i));
-			}
-		}
-		if (nuevo.GetInventory().AttachmentCount() == 0)
-		{
-			TStringArray resp = GetExorConfig().spawns.ropa_respaldo;
-			if (resp)
-			{
-				for (i = 0; i < resp.Count(); i++)
-				{
-					if (resp.Get(i) != "")
-						nuevo.GetInventory().CreateInInventory(resp.Get(i));
-				}
-			}
-			Print(string.Format("%1 SPAWN: la ropa del cuerpo viejo no se pudo replicar -> ropa_respaldo", ExorStorageConstants.LOG));
-		}
-		return nuevo.GetInventory().AttachmentCount();
-	}
-
-	// Borra el cuerpo que quedo del cambio de sexo (diferido: ver CambiarSexo).
-	static void BorrarCuerpoViejo(PlayerBase viejo)
-	{
-		if (viejo)
-			GetGame().ObjectDelete(viejo);
+		return GeneroDeTipo(player.GetType());
 	}
 
 	// El jugador eligio (index >=0 = punto; -1 = base). 'equip' = pidio aparecer con el
 	// equipamiento VIP (el interruptor de la pantalla). 'genero' = 0 hombre / 1 mujer /
-	// -1 no tocar; solo se cambia si es distinto al que tiene.
+	// -1 no tocar; se GUARDA como preferencia y sale en la aparicion siguiente.
 	static void ApplyPick(PlayerBase player, int index, bool equip, int genero)
 	{
 		if (!GetGame().IsServer() || !player || !player.GetIdentity())
@@ -641,24 +505,18 @@ class ExorSpawn
 		if (pos == vector.Zero)
 			return;
 
-		// Hombre/mujer: si pidio el otro sexo, el personaje se REEMPLAZA por uno nuevo
-		// creado ya en 'pos' (por eso no hace falta el SetPosition en ese caso). Si algo
-		// falla, se sigue con el personaje que tenia: el spawn nunca se pierde.
-		bool cambio = false;
-		if (genero >= 0 && GetExorConfig().spawns.elegir_genero && genero != GeneroDe(player))
+		// Hombre/mujer: SOLO se guarda la preferencia. El personaje que ya existe NO se
+		// toca: reemplazarlo por uno del otro sexo (lo que se hacia antes) lo dejaba fuera
+		// del slot de persistencia del motor y el jugador perdia todo en el primer reinicio
+		// que lo agarraba conectado. El sexo elegido se aplica en la PROXIMA aparicion,
+		// cuando el motor crea el personaje. Ver ExorGeneroPref.
+		if (genero >= 0 && GetExorConfig().spawns.elegir_genero)
 		{
-			// si viene con pack VIP no se lo viste de vanilla: se lo pisaria enseguida
-			PlayerBase nuevo = CambiarSexo(player, pos, genero == 1, !(equip && pack));
-			if (nuevo)
-			{
-				player = nuevo;
-				cambio = true;
-			}
-			else
-				ExorAviso.Enviar(player, "No se pudo cambiar el personaje; apareciste con el que tenías.");
+			ExorGeneroPref.Guardar(sid, genero);
+			if (genero != GeneroDe(player))
+				ExorAviso.Enviar(player, "Vas a aparecer con el otro personaje desde tu próxima aparición.");
 		}
-		if (!cambio)
-			player.SetPosition(pos);
+		player.SetPosition(pos);
 
 		// Equipamiento VIP: recien ACA se gasta el uso (ya esta puesto en el mundo).
 		if (equip && pack)

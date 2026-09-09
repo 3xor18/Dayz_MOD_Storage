@@ -459,16 +459,17 @@ class ExorCfgSpawns
 	bool habilitado = true;
 	bool dar_cuchillo_al_spawnear = true;   // TEST: dar un cuchillo al personaje nuevo (suicidio facil al testear). Poner false en prod.
 	bool equipar_npc_test = false;          // TEST LOCAL: equipa los NPC dummy que spawnea VPP ("player") con ropa+mochila+armas, para probar la tumba. SIEMPRE false en prod (equiparia AI de otros mods).
-	// Elegir hombre/mujer en la pantalla de spawn. Es para TODOS, no solo VIP. Al elegir
-	// el punto, si el sexo pedido no es el que tiene, el server le crea el personaje del
-	// otro sexo ahi mismo (ver ExorSpawn.CambiarSexo). Las listas son los tipos de
-	// personaje que se sortean; se validan contra CfgVehicles antes de usarse.
+	// Elegir hombre/mujer en la pantalla de spawn. Es para TODOS, no solo VIP. Lo que se
+	// elige se GUARDA como preferencia del jugador y el personaje sale de ese sexo en la
+	// aparicion SIGUIENTE, porque al de ahora no se lo puede tocar sin romperle la
+	// persistencia (ver ExorGeneroPref). Las listas son los tipos de personaje que se
+	// sortean; se validan contra CfgVehicles antes de usarse.
 	bool elegir_genero = true;
 	ref TStringArray personajes_hombre;
 	ref TStringArray personajes_mujer;
-	// Solo se usa si al cambiar de sexo NO se pudo mudar la ropa del cuerpo viejo al
-	// nuevo (caso raro). Es para que nunca aparezca desnudo, no es el spawn normal:
-	// lo normal es que se lleve puesta la ropa vanilla que ya tenia.
+	// Ya no lo usa nadie: era el respaldo de cuando el mod re-vestia a mano al personaje
+	// que creaba para cambiar de sexo. Se deja el campo para no cambiarle la forma al
+	// spawns.json que ya esta en los servers.
 	ref TStringArray ropa_respaldo;
 	ref array<ref ExorSpawnPunto> puntos;
 

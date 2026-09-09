@@ -5,37 +5,11 @@
 //   detectadas en config (vanilla + mods), usando los defaults como relleno
 // - Arranca el manager (virtualizacion / auto-cierre / vehiculos)
 // ============================================================================
-// Implementacion real del puente de 4_World: aca si se ve MissionServer.
-class ExorMissionBridgeSrv extends ExorMissionBridge
-{
-	override void EquiparFreshie(PlayerBase player)
-	{
-		MissionServer ms = MissionServer.Cast(GetGame().GetMission());
-		if (ms && player)
-			ms.StartingEquipSetup(player, false);
-	}
-
-	// Mismo aviso que manda el respawn vanilla (MissionServer.OnClientRespawnEvent ->
-	// InvokeOnConnect): re-registra al jugador con su entidad NUEVA en la mision y en los
-	// mods que escuchan ahi. Es lo que devuelve el menu de VPPAdminTools tras el cambio
-	// de sexo; sin esto quedaban apuntando al personaje borrado y el menu salia vacio.
-	override void ReRegistrarJugador(PlayerBase player, PlayerIdentity identity)
-	{
-		MissionServer ms = MissionServer.Cast(GetGame().GetMission());
-		if (ms && player && identity)
-			ms.InvokeOnConnect(player, identity);
-	}
-}
-
 modded class MissionServer
 {
 	override void OnInit()
 	{
 		super.OnInit();
-
-		// puente para que ExorSpawn (4_World) pueda equipar como freshie al personaje
-		// que se crea al cambiar de sexo en la pantalla de spawn
-		ExorMissionBridge.s_Inst = new ExorMissionBridgeSrv();
 
 		// PRIMERO DE TODO: auto-reparacion de la persistencia. OnInit corre ANTES de que el
 		// CE restaure los dynamic_*.bin, asi que este es el unico momento en que se puede
@@ -263,6 +237,17 @@ modded class MissionServer
 		ExorAntiRaid.OnDisconnectInEnemyTerritory(player, identity);
 		ExorAntiRaid.OnCombatLogout(player, identity);
 		super.OnClientDisconnectedEvent(identity, player, logoutTime, authFailed);
+	}
+
+	// UNICO lugar donde se puede decidir el sexo del personaje sin romper la persistencia.
+	// El motor liga el slot de la base de datos a la entidad que sale de ACA (estado
+	// GetNewCharLoginState del login): un personaje creado despues, a mano, nunca entra en
+	// ese vinculo y se pierde entero en el primer reinicio con el jugador conectado. Por eso
+	// el hub de spawn ya no reemplaza la entidad: guarda la preferencia y se aplica aca, en
+	// la proxima aparicion. Ver ExorGeneroPref.
+	override PlayerBase CreateCharacter(PlayerIdentity identity, vector pos, ParamsReadContext ctx, string characterName)
+	{
+		return super.CreateCharacter(identity, pos, ctx, ExorGeneroPref.TipoParaLogin(identity, characterName));
 	}
 
 	// Personaje NUEVO (primer login O respawn por muerte): abrir la pantalla de

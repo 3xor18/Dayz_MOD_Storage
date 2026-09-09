@@ -103,10 +103,13 @@ class ExorSpawnMenu extends UIScriptedMenu
 			m_EquipRemaining = dto.equip_remaining;
 			m_EquipPack = dto.equip_pack;
 			m_GeneroShown = dto.genero_enabled;
-			// Arranca SIEMPRE en Hombre (pedido del admin). Ojo: como lo que se manda es lo
-			// que esta marcado, una jugadora que quiera seguir mujer tiene que tocar "Mujer"
-			// en cada respawn; si no toca nada, aparece hombre.
-			m_GeneroSel = 0;
+			// Arranca marcado en lo que el server dice que le corresponde: su preferencia
+			// guardada, o el personaje que tiene ahora si nunca eligio. Asi el que no toca
+			// nada no se cambia solo (antes arrancaba siempre en Hombre y una jugadora que
+			// no tocaba "Mujer" terminaba de hombre sin pedirlo).
+			m_GeneroSel = dto.genero_actual;
+			if (m_GeneroSel != 1)
+				m_GeneroSel = 0;
 		}
 
 		Relayout();
@@ -339,7 +342,9 @@ class ExorSpawnMenu extends UIScriptedMenu
 	}
 
 	// Hombre / mujer: el elegido va en verde, el otro gris. Se pinta siempre igual (no
-	// tiene cooldown ni condiciones): el cambio se aplica al elegir el punto de spawn.
+	// tiene cooldown ni condiciones). Lo que esta marcado se guarda como preferencia al
+	// elegir el punto, y el personaje sale de ese sexo en la aparicion SIGUIENTE: el que
+	// ya esta creado no se toca (reemplazarlo rompia la persistencia, ver ExorGeneroPref).
 	void RefreshGenero()
 	{
 		PintarGenero(m_BtnHombre, m_BgHombre, "Hombre", m_GeneroSel == 0);
