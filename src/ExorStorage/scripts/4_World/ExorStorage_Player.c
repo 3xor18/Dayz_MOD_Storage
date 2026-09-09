@@ -903,11 +903,11 @@ modded class PlayerBase
 	}
 
 	// index: >=0 punto de spawns.json, -1 = base. equip = pidio el equipamiento VIP
-	// (el interruptor de la pantalla de spawn). genero = 0 hombre / 1 mujer / -1 no tocar.
-	// El server re-valida los tres, no confia en el cliente.
-	void ExorReqSpawnPick(int index, bool equip, int genero)
+	// (el interruptor de la pantalla de spawn). El server re-valida los dos, no confia
+	// en el cliente.
+	void ExorReqSpawnPick(int index, bool equip)
 	{
-		RPCSingleParam(ExorRPC.SPAWN_PICK, new Param3<int, bool, int>(index, equip, genero), true, null);
+		RPCSingleParam(ExorRPC.SPAWN_PICK, new Param2<int, bool>(index, equip), true, null);
 	}
 
 	void ExorReqMarkerAdd(vector pos)
@@ -1109,9 +1109,9 @@ modded class PlayerBase
 			case ExorRPC.SPAWN_PICK:
 				if (GetGame().IsServer())
 				{
-					Param3<int, bool, int> sp = new Param3<int, bool, int>(0, false, -1);
+					Param2<int, bool> sp = new Param2<int, bool>(0, false);
 					if (ctx.Read(sp))
-						ExorSpawn.ApplyPick(this, sp.param1, sp.param2, sp.param3);
+						ExorSpawn.ApplyPick(this, sp.param1, sp.param2);
 				}
 				break;
 			case ExorRPC.MARKER_ADD:
@@ -1341,6 +1341,10 @@ modded class PlayerBase
 		if (js.ReadFromString(dto, full, err))
 		{
 			ExorSpawnClient.Set(dto);
+			// Sin 'abrir' esto es solo el refresco del cache (zonas + VIP) que necesita la
+			// pantalla de muerte. Abrir el hub aca seria abrirselo al jugador vivo.
+			if (!dto.abrir)
+				return;
 			m_ExorSpawnMenuTries = 0;	// llego lista nueva: se reinicia la espera del menu
 			Print("[3xorVO] cliente: SPAWN_OPEN recibido, abriendo menu");
 			GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(ExorOpenSpawnMenu, 800, false);
@@ -1352,6 +1356,10 @@ modded class PlayerBase
 
 	void ExorOpenSpawnMenu()
 	{
+		// Ya eligio zona en la pantalla de muerte -> no hay nada que preguntar de nuevo.
+		if (ExorSpawnPend.s_Enviado)
+			return;
+
 		// IDEMPOTENTE: el server reintenta el SPAWN_OPEN hasta que el jugador elige, asi que
 		// este handler puede correr varias veces. Si el menu YA esta abierto no hay que
 		// re-abrirlo (reabrirlo pisaria la seleccion que el jugador esta por confirmar);

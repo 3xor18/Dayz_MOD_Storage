@@ -11,8 +11,15 @@
 // ============================================================================
 class ExorSpawnMenu extends UIScriptedMenu
 {
-	// morado de "esto esta elegido" (lo comparten hombre/mujer y el interruptor VIP)
+	// morado de "esto esta elegido" (lo usa el interruptor VIP)
 	static const int MORADO = 0xFF5A4696;   // ARGB opaco = (90, 70, 150)
+
+	void OcultarSiExiste(string nombre)
+	{
+		Widget w = layoutRoot.FindAnyWidget(nombre);
+		if (w)
+			w.Show(false);
+	}
 
 	protected ref array<ButtonWidget> m_Buttons;
 	protected ButtonWidget m_BtnBase;
@@ -32,16 +39,10 @@ class ExorSpawnMenu extends UIScriptedMenu
 	protected string m_EquipPack;		// nombre del pack que le toca (vip.json)
 	protected bool m_EquipOn;			// arranca APAGADO: el VIP lo prende si quiere
 
-	protected ButtonWidget m_BtnHombre;	// hombre / mujer: es para TODOS, no solo VIP
-	protected ButtonWidget m_BtnMujer;
 	// Paneles de fondo de los botones CON ESTADO. SetColor sobre un ButtonWidget no pinta
 	// el estado normal: lo unico que se veia era el hover del motor, que se va al sacar el
 	// mouse. Un PanelWidget si respeta SetColor, asi que el "elegido" se pinta aca.
-	protected Widget m_BgHombre;
-	protected Widget m_BgMujer;
 	protected Widget m_BgEquip;
-	protected bool m_GeneroShown;
-	protected int m_GeneroSel;			// 0 = hombre, 1 = mujer (arranca en el que ya tiene)
 
 	override Widget Init()
 	{
@@ -59,11 +60,15 @@ class ExorSpawnMenu extends UIScriptedMenu
 		}
 		m_BtnBase = ButtonWidget.Cast(layoutRoot.FindAnyWidget("ExorSpawnBtnBase"));
 		m_BtnEquip = ButtonWidget.Cast(layoutRoot.FindAnyWidget("ExorSpawnBtnBaseEquip"));
-		m_BtnHombre = ButtonWidget.Cast(layoutRoot.FindAnyWidget("ExorSpawnBtnHombre"));
-		m_BtnMujer = ButtonWidget.Cast(layoutRoot.FindAnyWidget("ExorSpawnBtnMujer"));
-		m_BgHombre = layoutRoot.FindAnyWidget("ExorSpawnBgHombre");
-		m_BgMujer = layoutRoot.FindAnyWidget("ExorSpawnBgMujer");
 		m_BgEquip = layoutRoot.FindAnyWidget("ExorSpawnBgEquip");
+
+		// Hombre/mujer ya NO se elige aca: se elige en la pantalla de muerte, que es el
+		// unico momento en que la respuesta llega antes de que el motor cree el personaje
+		// (ver ExorJugadorSpawn). Los widgets siguen en el .layout, se apagan y listo.
+		OcultarSiExiste("ExorSpawnBtnHombre");
+		OcultarSiExiste("ExorSpawnBtnMujer");
+		OcultarSiExiste("ExorSpawnBgHombre");
+		OcultarSiExiste("ExorSpawnBgMujer");
 
 		m_Names = new TStringArray;
 		m_PointRemain = new array<float>;
@@ -76,8 +81,6 @@ class ExorSpawnMenu extends UIScriptedMenu
 		m_EquipRemaining = 0;
 		m_EquipPack = "";
 		m_EquipOn = false;
-		m_GeneroShown = false;
-		m_GeneroSel = 0;
 
 		ExorSpawnMenuDTO dto = ExorSpawnClient.s_DTO;
 		if (dto)
@@ -102,14 +105,6 @@ class ExorSpawnMenu extends UIScriptedMenu
 			m_EquipShown = dto.equip_enabled;
 			m_EquipRemaining = dto.equip_remaining;
 			m_EquipPack = dto.equip_pack;
-			m_GeneroShown = dto.genero_enabled;
-			// Arranca marcado en lo que el server dice que le corresponde: su preferencia
-			// guardada, o el personaje que tiene ahora si nunca eligio. Asi el que no toca
-			// nada no se cambia solo (antes arrancaba siempre en Hombre y una jugadora que
-			// no tocaba "Mujer" terminaba de hombre sin pedirlo).
-			m_GeneroSel = dto.genero_actual;
-			if (m_GeneroSel != 1)
-				m_GeneroSel = 0;
 		}
 
 		Relayout();
@@ -132,8 +127,6 @@ class ExorSpawnMenu extends UIScriptedMenu
 			return;
 
 		int filas = m_Count;
-		if (m_GeneroShown)
-			filas = filas + 1;	// hombre/mujer van en UNA fila (mitad y mitad)
 		if (m_BaseShown)
 			filas = filas + 1;
 		if (m_EquipShown)
@@ -184,31 +177,6 @@ class ExorSpawnMenu extends UIScriptedMenu
 				continue;
 			b.SetPos(0.05, y / panelH);
 			b.SetSize(0.9, hRel);
-			y = y + rowH + gap;
-		}
-		if (m_GeneroShown)
-		{
-			// el panel de fondo va EXACTAMENTE donde su boton (es lo que se ve pintado)
-			if (m_BtnHombre)
-			{
-				m_BtnHombre.SetPos(0.05, y / panelH);
-				m_BtnHombre.SetSize(0.44, hRel);
-			}
-			if (m_BgHombre)
-			{
-				m_BgHombre.SetPos(0.05, y / panelH);
-				m_BgHombre.SetSize(0.44, hRel);
-			}
-			if (m_BtnMujer)
-			{
-				m_BtnMujer.SetPos(0.51, y / panelH);
-				m_BtnMujer.SetSize(0.44, hRel);
-			}
-			if (m_BgMujer)
-			{
-				m_BgMujer.SetPos(0.51, y / panelH);
-				m_BgMujer.SetSize(0.44, hRel);
-			}
 			y = y + rowH + gap;
 		}
 		if (m_BaseShown && m_BtnBase)
@@ -338,48 +306,6 @@ class ExorSpawnMenu extends UIScriptedMenu
 			m_BgEquip.SetColor(MORADO);
 		}
 
-		RefreshGenero();
-	}
-
-	// Hombre / mujer: el elegido va en verde, el otro gris. Se pinta siempre igual (no
-	// tiene cooldown ni condiciones). Lo que esta marcado se guarda como preferencia al
-	// elegir el punto, y el personaje sale de ese sexo en la aparicion SIGUIENTE: el que
-	// ya esta creado no se toca (reemplazarlo rompia la persistencia, ver ExorGeneroPref).
-	void RefreshGenero()
-	{
-		PintarGenero(m_BtnHombre, m_BgHombre, "Hombre", m_GeneroSel == 0);
-		PintarGenero(m_BtnMujer, m_BgMujer, "Mujer", m_GeneroSel == 1);
-	}
-
-	// El elegido queda MORADO con letra clara (igual que el interruptor VIP prendido) y
-	// con una marca delante; el otro, gris con letra apagada. Se cambia el fondo Y la
-	// letra a proposito: si el estilo del boton no pinta el fondo, el texto igual delata
-	// cual esta elegido.
-	void PintarGenero(ButtonWidget b, Widget bg, string txt, bool elegido)
-	{
-		if (b)
-		{
-			b.Show(m_GeneroShown);
-			b.SetText(txt);
-			if (m_GeneroShown && elegido)
-				b.SetTextColor(ARGB(255, 245, 245, 245));
-			else
-				b.SetTextColor(ARGB(255, 130, 130, 140));
-		}
-		// el morado del elegido vive en el panel de atras (ver arriba: el boton no lo pinta)
-		if (bg)
-		{
-			bg.Show(m_GeneroShown && elegido);
-			bg.SetColor(MORADO);
-		}
-	}
-
-	// Sexo que se le manda al server con la eleccion (-1 = no tocar, feature apagada).
-	int GeneroPedido()
-	{
-		if (!m_GeneroShown)
-			return -1;
-		return m_GeneroSel;
 	}
 
 	// El interruptor se puede tocar si es VIP y le quedan usos (ya no depende de la base).
@@ -460,7 +386,7 @@ class ExorSpawnMenu extends UIScriptedMenu
 				if (!PointAvailable(i))
 					return true;	// en cooldown: ignora el click (no cierra)
 				// se manda el indice REAL de spawns.json, no la posicion en la lista
-				p.ExorReqSpawnPick(m_PointIdx.Get(i), EquipPedido(), GeneroPedido());
+				p.ExorReqSpawnPick(m_PointIdx.Get(i), EquipPedido());
 				Close();
 				return true;
 			}
@@ -469,7 +395,7 @@ class ExorSpawnMenu extends UIScriptedMenu
 		{
 			if (!BaseAvailable())
 				return true;	// base no disponible: ignora el click
-			p.ExorReqSpawnPick(-1, EquipPedido(), GeneroPedido());
+			p.ExorReqSpawnPick(-1, EquipPedido());
 			Close();
 			return true;
 		}
@@ -479,18 +405,6 @@ class ExorSpawnMenu extends UIScriptedMenu
 				return true;	// sin usos: ignora el click
 			m_EquipOn = !m_EquipOn;	// interruptor: NO cierra el menu, solo se pinta
 			Refresh();
-			return true;
-		}
-		if (w == m_BtnHombre || w == m_BtnMujer)
-		{
-			// Solo marca la eleccion: el personaje se cambia recien al elegir el punto.
-			if (!m_GeneroShown)
-				return true;
-			if (w == m_BtnHombre)
-				m_GeneroSel = 0;
-			else
-				m_GeneroSel = 1;
-			RefreshGenero();
 			return true;
 		}
 		return super.OnClick(w, x, y, button);

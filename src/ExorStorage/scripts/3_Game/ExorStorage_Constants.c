@@ -9,7 +9,7 @@ class ExorStorageConstants
 	// saber desde el RPT que PBO esta corriendo el server (el de version sola no alcanza:
 	// se desplego 2.9.1 con MOD_VERSION todavia en "2.8.0" y los logs pre/post deploy
 	// salieron identicos -> imposible confirmar si el deploy habia entrado).
-	static const string MOD_BUILD = "2026-09-09-v2192-genero-persistente";
+	static const string MOD_BUILD = "2026-09-09-v2192-pantalla-muerte-unica";
 	static const string LOG = "[3xorVO]";
 	// DEBUG temporal del ciclo de vida del barril (setear/levantar/abrir/cerrar/item
 	// in-out/virtualizar/restaurar/load/save/shutdown). Poner en false (o borrar las
@@ -62,10 +62,10 @@ class ExorStorageConstants
 	// Estado persistente de VIP (fecha de ingreso + usos de equipamiento por ciclo)
 	static const string VIP_STATE_FILE = "$profile:3xorVanillaOptimization\\vip_usos_consumidos.json";
 
-	// Sexo elegido en el hub de spawn, por steamid. Se aplica cuando el MOTOR crea el
-	// personaje (MissionServer.CreateCharacter), que es la unica forma de que persista.
-	// Ver ExorGeneroPref.
-	static const string GENERO_FILE = "$profile:3xorVanillaOptimization\\genero.json";
+	// Estado de spawn por jugador: sexo elegido en la pantalla de muerte + si ya jugo
+	// alguna vez aca (para no abrirle ninguna pantalla en su primer login). Las dos cosas
+	// se usan cuando el MOTOR crea el personaje. Ver ExorJugadorSpawn.
+	static const string JUGADORES_FILE = "$profile:3xorVanillaOptimization\\spawn_jugadores.json";
 
 	// Datos de virtualizacion (contenido de barriles)
 	static const string STORAGE_DIR = "$profile:3xorVanillaOptimization\\storage";

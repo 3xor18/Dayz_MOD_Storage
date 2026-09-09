@@ -28,9 +28,11 @@ class ExorSpawnMenuDTO
 	bool equip_enabled;           // mostrar el interruptor (es VIP + equip_habilitado + su pack viste algo)
 	int equip_remaining;          // usos de equipamiento que le quedan (se muestran en el boton)
 	string equip_pack;            // nombre del pack que le toca (para mostrarlo en el boton)
-	// Hombre/mujer: es para TODOS, no solo VIP (spawns.json -> elegir_genero).
-	bool genero_enabled;          // mostrar los dos botones
-	int genero_actual;            // 0 = hombre, 1 = mujer: el boton que sale ya marcado (la preferencia guardada, o el personaje que tiene si nunca eligio)
+	// true  = ademas de guardar los datos, ABRI el hub (es el envio de siempre, al aparecer)
+	// false = solo datos. El cliente los necesita ANTES de morir, porque la pantalla de
+	//         muerte arma su lista de zonas con este cache y estando muerto ya no se le
+	//         puede mandar nada. Se le manda al conectar y despues de cada aparicion.
+	bool abrir;
 	void ExorSpawnMenuDTO()
 	{
 		nombres = new TStringArray;
@@ -81,6 +83,26 @@ class ExorSpawn
 	}
 	static ref map<string, bool> s_NeedSelect;  // steamid -> debe mostrarse la pantalla de spawn
 
+	// steamid -> ya eligio zona en ESTA vida (la eligio en la pantalla de muerte y la mando
+	// apenas revivio). Sirve para no abrirle ademas el hub viejo. Se limpia al crearse un
+	// personaje nuevo.
+	static ref map<string, bool> s_YaEligio;
+
+	static void LimpiarEleccion(string sid)
+	{
+		if (!s_YaEligio)
+			s_YaEligio = new map<string, bool>;
+		s_YaEligio.Remove(sid);
+	}
+
+	static bool YaEligio(string sid)
+	{
+		if (!s_YaEligio)
+			return false;
+		bool v;
+		return s_YaEligio.Find(sid, v) && v;
+	}
+
 	static void Ensure()
 	{
 		if (!s_LastBaseMs)
@@ -129,6 +151,7 @@ class ExorSpawn
 	// Spawn en la base (mastil) si corresponde; zero si no.
 	static vector ChooseBase(string steamid, PlayerBase player)
 	{
+		Ensure();
 		ExorCfgPartyRespawnBase cfg = GetExorConfig().party.respawn_base;
 		if (!cfg.habilitado)
 			return vector.Zero;
@@ -172,6 +195,11 @@ class ExorSpawn
 	// Elige un punto de spawns.json que no este en cooldown (aleatorio).
 	static vector ChoosePoint(string steamid)
 	{
+		// Ensure() ANTES que nada: esto ahora tambien se llama desde CreateCharacter (primer
+		// login), que corre antes que cualquier otro camino, y ahi los mapas de cooldown
+		// todavia no existian -> "NULL pointer to instance" y el jugador se quedaba con el
+		// spawn vanilla.
+		Ensure();
 		ExorCfgSpawns spawns = GetExorConfig().spawns;
 		if (!spawns.habilitado || spawns.puntos.Count() == 0)
 			return vector.Zero;	// sin puntos: default vanilla
@@ -263,7 +291,14 @@ class ExorSpawn
 
 	// ------------------------- pantalla de seleccion (Fase F UI) -------------------------
 	// Manda al cliente la lista para abrir el menu de spawn.
-	static void SendOpen(PlayerBase player)
+	// Manda SOLO los datos (no abre nada). Es lo que llena el cache que despues usa la
+	// pantalla de muerte para ofrecer zonas y el interruptor VIP.
+	static void SendDatos(PlayerBase player)
+	{
+		SendOpen(player, false);
+	}
+
+	static void SendOpen(PlayerBase player, bool abrir = true)
 	{
 		if (!GetGame().IsServer() || !player || !player.GetIdentity())
 			return;
@@ -334,16 +369,7 @@ class ExorSpawn
 			dto.equip_pack = vipcfg.NombrePack(sidBase);
 		}
 
-		// Hombre/mujer (para todos). Se manda el boton que tiene que salir ya marcado: su
-		// preferencia guardada si tiene una, y si no el sexo del personaje que tiene AHORA.
-		// Importante que sea la PREFERENCIA y no el personaje actual: la eleccion se aplica
-		// recien en la proxima aparicion, asi que entre medio los dos no coinciden, y si se
-		// pintara el actual el jugador que no toca nada re-guardaria el viejo y se anularia
-		// solo el cambio que pidio.
-		dto.genero_enabled = spawns.elegir_genero;
-		dto.genero_actual = ExorGeneroPref.Leer(sidBase);
-		if (dto.genero_actual < 0)
-			dto.genero_actual = GeneroDe(player);
+		dto.abrir = abrir;
 
 		JsonSerializer js = new JsonSerializer();
 		string data;
@@ -422,9 +448,9 @@ class ExorSpawn
 	}
 
 	// El jugador eligio (index >=0 = punto; -1 = base). 'equip' = pidio aparecer con el
-	// equipamiento VIP (el interruptor de la pantalla). 'genero' = 0 hombre / 1 mujer /
-	// -1 no tocar; se GUARDA como preferencia y sale en la aparicion siguiente.
-	static void ApplyPick(PlayerBase player, int index, bool equip, int genero)
+	// equipamiento VIP (el interruptor de la pantalla). El sexo NO se elige aca: se elige
+	// en la pantalla de muerte, antes de que exista el personaje (ver ExorJugadorSpawn).
+	static void ApplyPick(PlayerBase player, int index, bool equip)
 	{
 		if (!GetGame().IsServer() || !player || !player.GetIdentity())
 			return;
@@ -505,18 +531,12 @@ class ExorSpawn
 		if (pos == vector.Zero)
 			return;
 
-		// Hombre/mujer: SOLO se guarda la preferencia. El personaje que ya existe NO se
-		// toca: reemplazarlo por uno del otro sexo (lo que se hacia antes) lo dejaba fuera
-		// del slot de persistencia del motor y el jugador perdia todo en el primer reinicio
-		// que lo agarraba conectado. El sexo elegido se aplica en la PROXIMA aparicion,
-		// cuando el motor crea el personaje. Ver ExorGeneroPref.
-		if (genero >= 0 && GetExorConfig().spawns.elegir_genero)
-		{
-			ExorGeneroPref.Guardar(sid, genero);
-			if (genero != GeneroDe(player))
-				ExorAviso.Enviar(player, "Vas a aparecer con el otro personaje desde tu próxima aparición.");
-		}
 		player.SetPosition(pos);
+
+		// Ya aparecio donde queria: no hace falta ofrecerle el hub de nuevo en esta vida.
+		if (!s_YaEligio)
+			s_YaEligio = new map<string, bool>;
+		s_YaEligio.Set(sid, true);
 
 		// Equipamiento VIP: recien ACA se gasta el uso (ya esta puesto en el mundo).
 		if (equip && pack)

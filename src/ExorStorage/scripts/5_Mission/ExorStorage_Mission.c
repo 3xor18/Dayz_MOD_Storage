@@ -109,6 +109,11 @@ modded class MissionServer
 	override void OnClientReadyEvent(PlayerIdentity identity, PlayerBase player)
 	{
 		super.OnClientReadyEvent(identity, player);
+		// Entro con un personaje que YA existia -> obviamente no es su primera vez aca.
+		// Marcarlo tambien desde este lado importa para los que ya jugaban antes de que
+		// existiera el archivo: si no, la primera vez que murieran contarian como nuevos.
+		if (identity)
+			ExorJugadorSpawn.MarcarVisto(identity.GetPlainId());
 		ExorAfterClientSpawned(player);
 	}
 
@@ -184,6 +189,11 @@ modded class MissionServer
 			// Se manda AHORA + REENVIADO a los 3s y 8s (igual que el roster): al conectar, el HUD
 			// del cliente puede no estar listo y el 1er envio se pierde -> la distancia VIP en las
 			// marcas dejaba de verse. Los reenvios diferidos aseguran que el flag llegue.
+			// Lista de zonas + estado VIP al CACHE del cliente (no abre nada). Sin esto, la
+			// pantalla de muerte no tiene que ofrecer: al morir ya no se le puede mandar.
+			ExorSpawn.SendDatos(player);
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorReenviarDatosSpawn, 8000, false, player);
+
 			bool isVip = GetExorConfig().vip.IsVip(identity.GetPlainId());
 			player.RPCSingleParam(ExorRPC.VIP_STATUS, new Param2<bool, bool>(isVip, GetExorConfig().vip.marcar_distancia_en_marcas), true, identity);
 			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorResendVip, 3000, false, player, isVip);
@@ -223,6 +233,14 @@ modded class MissionServer
 		}
 	}
 
+	// reenvio diferido de la lista de zonas (mismo motivo que el reenvio del flag VIP: al
+	// conectar el cliente puede no estar listo y el primer envio se pierde)
+	void ExorReenviarDatosSpawn(PlayerBase player)
+	{
+		if (player && player.GetIdentity())
+			ExorSpawn.SendDatos(player);
+	}
+
 	// reenvio diferido del flag VIP (ver arriba: cubre el timing del HUD del cliente al conectar)
 	void ExorResendVip(PlayerBase player, bool isVip)
 	{
@@ -239,33 +257,89 @@ modded class MissionServer
 		super.OnClientDisconnectedEvent(identity, player, logoutTime, authFailed);
 	}
 
-	// UNICO lugar donde se puede decidir el sexo del personaje sin romper la persistencia.
-	// El motor liga el slot de la base de datos a la entidad que sale de ACA (estado
-	// GetNewCharLoginState del login): un personaje creado despues, a mano, nunca entra en
-	// ese vinculo y se pierde entero en el primer reinicio con el jugador conectado. Por eso
-	// el hub de spawn ya no reemplaza la entidad: guarda la preferencia y se aplica aca, en
-	// la proxima aparicion. Ver ExorGeneroPref.
+	// UNICO lugar donde se puede decidir CON QUE SEXO y EN QUE PUNTO nace un personaje sin
+	// romper la persistencia. El motor liga el slot de la base de datos a la entidad que
+	// sale de ACA (estado GetNewCharLoginState del login): un personaje creado despues, a
+	// mano, nunca entra en ese vinculo y se pierde entero en el primer reinicio con el
+	// jugador conectado. Por eso el sexo se pregunta ANTES (pantalla de muerte) y se aplica
+	// aca. Ver ExorJugadorSpawn.
 	override PlayerBase CreateCharacter(PlayerIdentity identity, vector pos, ParamsReadContext ctx, string characterName)
 	{
-		return super.CreateCharacter(identity, pos, ctx, ExorGeneroPref.TipoParaLogin(identity, characterName));
+		vector donde = pos;
+		string tipo = characterName;
+		if (identity)
+		{
+			string sidCrea = identity.GetPlainId();
+			// PRIMER LOGIN de este steamid: no murio, no va a ver ninguna pantalla, asi que se
+			// lo deja NACER directamente en un punto de spawns.json. Nacer ahi es mejor que
+			// teletransportarlo despues: no hay parpadeo ni un instante tirado en la costa.
+			if (ExorJugadorSpawn.EsPrimerLogin(sidCrea))
+			{
+				vector punto = ExorSpawn.ChoosePoint(sidCrea);
+				if (punto != vector.Zero)
+					donde = punto;
+			}
+
+			// SEXO PEDIDO POR EL CLIENTE. super.OnClientNewEvent ya llamo a ProcessLoginData,
+			// asi que aca ya esta cargado el personaje que el cliente mando al reaparecer: eso
+			// es lo que toca la pantalla de muerte. Vanilla lo IGNORA cuando el server tiene
+			// disableRespawnDialog (fuerza personaje al azar), nosotros si lo miramos.
+			int pedido = -1;
+			string tipoCliente = "";
+			bool randomForzado = false;
+			MenuDefaultCharacterData mdc = GetGame().GetMenuDefaultCharacterData(false);
+			if (mdc)
+			{
+				tipoCliente = mdc.m_CharacterType;
+				randomForzado = mdc.m_ForceRandomCharacter;
+				if (tipoCliente != "")
+					pedido = ExorSpawn.GeneroDeTipo(tipoCliente);
+			}
+			// Queda logueado SIEMPRE: es la unica forma de distinguir "el jugador no eligio"
+			// de "eligio y no llego". Sin esto el diagnostico es adivinar.
+			Print(string.Format("%1 SPAWN: %2 login data -> tipo_cliente='%3' random=%4 | tipo_motor='%5'", ExorStorageConstants.LOG, sidCrea, tipoCliente, randomForzado, characterName));
+			tipo = ExorJugadorSpawn.TipoParaLogin(sidCrea, characterName, pedido);
+		}
+		return super.CreateCharacter(identity, donde, ctx, tipo);
 	}
 
 	// Personaje NUEVO (primer login O respawn por muerte): abrir la pantalla de
 	// seleccion de spawn unos segundos despues (cuando el cliente termino de cargar).
 	override PlayerBase OnClientNewEvent(PlayerIdentity identity, vector pos, ParamsReadContext ctx)
 	{
+		// SE LEE ANTES del super: adentro corre CreateCharacter, que consulta lo mismo, y
+		// la marca recien se pone al final. Asi las dos decisiones (donde nace y si se le
+		// abre la pantalla) ven exactamente el mismo valor.
+		string sidNuevo = "";
+		bool primeraVez = false;
+		if (identity)
+		{
+			sidNuevo = identity.GetPlainId();
+			primeraVez = ExorJugadorSpawn.EsPrimerLogin(sidNuevo);
+		}
+
 		PlayerBase player = super.OnClientNewEvent(identity, pos, ctx);
 		Print(string.Format("%1 OnClientNewEvent %2", ExorStorageConstants.LOG, identity.GetPlainId()));
 
-		// TEST: cuchillo al spawnear (suicidio/kills faciles al testear). Toggle en spawns.json.
+		// TEST: cuchillo al spawnear (suicidio/kills faciles al testear). Toggle en spawns.json,
+		// SOLO para el server local. Va primero A LA MANO: es para matarse rapido probando, y
+		// buscarlo en la ropa cada vez es perder tiempo.
 		if (player && GetExorConfig().spawns.dar_cuchillo_al_spawnear)
 		{
-			EntityAI cuchillo = player.GetInventory().CreateInInventory("CombatKnife");
+			EntityAI cuchillo = player.GetHumanInventory().CreateInHands("CombatKnife");
 			if (!cuchillo)
-				cuchillo = player.GetHumanInventory().CreateInHands("CombatKnife");
+				cuchillo = player.GetInventory().CreateInInventory("CombatKnife");
 		}
+		ExorSpawn.LimpiarEleccion(sidNuevo);	// vida nueva: vuelve a estar sin elegir
 		ExorCfgSpawns spawns = GetExorConfig().spawns;
-		if (player && spawns.habilitado && spawns.puntos.Count() > 0)
+		if (primeraVez)
+		{
+			// Recien llegado: ya nacio en un punto de spawns.json (ver CreateCharacter) y NO
+			// se le abre ninguna pantalla. Elegir donde aparecer es para el que muere.
+			ExorJugadorSpawn.MarcarVisto(sidNuevo);
+			Print(string.Format("%1 SPAWN: %2 entra por primera vez -> punto al azar, sin pantalla", ExorStorageConstants.LOG, sidNuevo));
+		}
+		else if (player && spawns.habilitado && spawns.puntos.Count() > 0)
 		{
 			Print(string.Format("%1 programando SPAWN_OPEN (5s) - puntos=%2", ExorStorageConstants.LOG, spawns.puntos.Count()));
 			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorDelayedSendOpen, 5000, false, player);
@@ -282,6 +356,11 @@ modded class MissionServer
 
 	void ExorDelayedSendOpen(PlayerBase player)
 	{
+		// Si eligio zona en la pantalla de muerte, ese pick ya llego (lo manda el cliente
+		// apenas revive) y no hay que abrirle el hub encima.
+		if (player && player.GetIdentity() && ExorSpawn.YaEligio(player.GetIdentity().GetPlainId()))
+			return;
+
 		// SendOpenTracked (no SendOpen): manda el menu Y reintenta si el jugador no elige,
 		// para que un cliente que todavia estaba cargando no se quede sin pantalla de spawn.
 		if (player)

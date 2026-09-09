@@ -1,0 +1,161 @@
+PanelWidgetClass ExorMuRoot
+{
+	visible 1
+	ignorepointer 1
+	position 0.32 0.05
+	size 0.36 0.40
+	color 0.06 0.07 0.12 0.94
+	style rover_sim_colorable
+	hexactpos 0
+	vexactpos 0
+	hexactsize 0
+	vexactsize 0
+	{
+		TextWidgetClass ExorMuTitulo
+		{
+			visible 1
+			ignorepointer 1
+			position 0.03 0.02
+			size 0.94 0.10
+			hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+			color 1 1 1 1
+			text "Elegi como y donde reaparecer"
+			font "gui/fonts/Metron-Bold58"
+			"text halign" center
+			"text valign" center
+			"exact text" 1
+			"exact text size" 24
+		}
+		TextWidgetClass ExorMuAyuda
+		{
+			visible 1
+			ignorepointer 1
+			position 0.03 0.90
+			size 0.94 0.08
+			hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+			color 0.6 0.6 0.66 1
+			text "Elegi y apreta REAPARECER"
+			font "gui/fonts/sdf_MetronLight36"
+			"text halign" center
+			"text valign" center
+			"exact text" 1
+			"exact text size" 16
+		}
+
+		PanelWidgetClass ExorMuBgH { visible 0 ignorepointer 1 position 0 0 size 0.1 0.1 color 0.35 0.27 0.59 1 style rover_sim_colorable hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0 }
+		PanelWidgetClass ExorMuBgM { visible 0 ignorepointer 1 position 0 0 size 0.1 0.1 color 0.35 0.27 0.59 1 style rover_sim_colorable hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0 }
+		ButtonWidgetClass ExorMuBtnH
+		{
+			visible 1 ignorepointer 0 position 0 0 size 0.1 0.1 color 0 0 0 0
+			hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+			{ TextWidgetClass ExorMuBtnHLabel { visible 1 ignorepointer 1 position 0 0 size 1 1 hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0 color 1 1 1 1 text "Hombre" font "gui/fonts/sdf_MetronLight36" "text halign" center "text valign" center "exact text" 1 "exact text size" 20 } }
+		}
+		ButtonWidgetClass ExorMuBtnM
+		{
+			visible 1 ignorepointer 0 position 0 0 size 0.1 0.1 color 0 0 0 0
+			hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+			{ TextWidgetClass ExorMuBtnMLabel { visible 1 ignorepointer 1 position 0 0 size 1 1 hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0 color 1 1 1 1 text "Mujer" font "gui/fonts/sdf_MetronLight36" "text halign" center "text valign" center "exact text" 1 "exact text size" 20 } }
+		}
+
+
+		PanelWidgetClass ExorMuBg0 { visible 0 ignorepointer 1 position 0 0 size 0.1 0.1 color 0.35 0.27 0.59 1 style rover_sim_colorable hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0 }
+		PanelWidgetClass ExorMuBg1 { visible 0 ignorepointer 1 position 0 0 size 0.1 0.1 color 0.35 0.27 0.59 1 style rover_sim_colorable hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0 }
+		PanelWidgetClass ExorMuBg2 { visible 0 ignorepointer 1 position 0 0 size 0.1 0.1 color 0.35 0.27 0.59 1 style rover_sim_colorable hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0 }
+		PanelWidgetClass ExorMuBg3 { visible 0 ignorepointer 1 position 0 0 size 0.1 0.1 color 0.35 0.27 0.59 1 style rover_sim_colorable hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0 }
+		PanelWidgetClass ExorMuBg4 { visible 0 ignorepointer 1 position 0 0 size 0.1 0.1 color 0.35 0.27 0.59 1 style rover_sim_colorable hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0 }
+		PanelWidgetClass ExorMuBg5 { visible 0 ignorepointer 1 position 0 0 size 0.1 0.1 color 0.35 0.27 0.59 1 style rover_sim_colorable hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0 }
+		PanelWidgetClass ExorMuBg6 { visible 0 ignorepointer 1 position 0 0 size 0.1 0.1 color 0.35 0.27 0.59 1 style rover_sim_colorable hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0 }
+		PanelWidgetClass ExorMuBg7 { visible 0 ignorepointer 1 position 0 0 size 0.1 0.1 color 0.35 0.27 0.59 1 style rover_sim_colorable hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0 }
+		PanelWidgetClass ExorMuBgVip { visible 0 ignorepointer 1 position 0 0 size 0.1 0.1 color 0.35 0.27 0.59 1 style rover_sim_colorable hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0 }
+		ButtonWidgetClass ExorMuBtn0
+		{
+			visible 0
+			ignorepointer 0
+			position 0 0
+			size 0.1 0.1
+			color 0 0 0 0
+			hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+			{ TextWidgetClass ExorMuBtn0Label { visible 1 ignorepointer 1 position 0 0 size 1 1 hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0 color 1 1 1 1 text "" font "gui/fonts/sdf_MetronLight36" "text halign" center "text valign" center "exact text" 1 "exact text size" 18 } }
+		}
+		ButtonWidgetClass ExorMuBtn1
+		{
+			visible 0
+			ignorepointer 0
+			position 0 0
+			size 0.1 0.1
+			color 0 0 0 0
+			hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+			{ TextWidgetClass ExorMuBtn1Label { visible 1 ignorepointer 1 position 0 0 size 1 1 hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0 color 1 1 1 1 text "" font "gui/fonts/sdf_MetronLight36" "text halign" center "text valign" center "exact text" 1 "exact text size" 18 } }
+		}
+		ButtonWidgetClass ExorMuBtn2
+		{
+			visible 0
+			ignorepointer 0
+			position 0 0
+			size 0.1 0.1
+			color 0 0 0 0
+			hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+			{ TextWidgetClass ExorMuBtn2Label { visible 1 ignorepointer 1 position 0 0 size 1 1 hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0 color 1 1 1 1 text "" font "gui/fonts/sdf_MetronLight36" "text halign" center "text valign" center "exact text" 1 "exact text size" 18 } }
+		}
+		ButtonWidgetClass ExorMuBtn3
+		{
+			visible 0
+			ignorepointer 0
+			position 0 0
+			size 0.1 0.1
+			color 0 0 0 0
+			hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+			{ TextWidgetClass ExorMuBtn3Label { visible 1 ignorepointer 1 position 0 0 size 1 1 hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0 color 1 1 1 1 text "" font "gui/fonts/sdf_MetronLight36" "text halign" center "text valign" center "exact text" 1 "exact text size" 18 } }
+		}
+		ButtonWidgetClass ExorMuBtn4
+		{
+			visible 0
+			ignorepointer 0
+			position 0 0
+			size 0.1 0.1
+			color 0 0 0 0
+			hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+			{ TextWidgetClass ExorMuBtn4Label { visible 1 ignorepointer 1 position 0 0 size 1 1 hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0 color 1 1 1 1 text "" font "gui/fonts/sdf_MetronLight36" "text halign" center "text valign" center "exact text" 1 "exact text size" 18 } }
+		}
+		ButtonWidgetClass ExorMuBtn5
+		{
+			visible 0
+			ignorepointer 0
+			position 0 0
+			size 0.1 0.1
+			color 0 0 0 0
+			hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+			{ TextWidgetClass ExorMuBtn5Label { visible 1 ignorepointer 1 position 0 0 size 1 1 hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0 color 1 1 1 1 text "" font "gui/fonts/sdf_MetronLight36" "text halign" center "text valign" center "exact text" 1 "exact text size" 18 } }
+		}
+		ButtonWidgetClass ExorMuBtn6
+		{
+			visible 0
+			ignorepointer 0
+			position 0 0
+			size 0.1 0.1
+			color 0 0 0 0
+			hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+			{ TextWidgetClass ExorMuBtn6Label { visible 1 ignorepointer 1 position 0 0 size 1 1 hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0 color 1 1 1 1 text "" font "gui/fonts/sdf_MetronLight36" "text halign" center "text valign" center "exact text" 1 "exact text size" 18 } }
+		}
+		ButtonWidgetClass ExorMuBtn7
+		{
+			visible 0
+			ignorepointer 0
+			position 0 0
+			size 0.1 0.1
+			color 0 0 0 0
+			hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+			{ TextWidgetClass ExorMuBtn7Label { visible 1 ignorepointer 1 position 0 0 size 1 1 hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0 color 1 1 1 1 text "" font "gui/fonts/sdf_MetronLight36" "text halign" center "text valign" center "exact text" 1 "exact text size" 18 } }
+		}
+		ButtonWidgetClass ExorMuBtnVip
+		{
+			visible 0
+			ignorepointer 0
+			position 0 0
+			size 0.1 0.1
+			color 0 0 0 0
+			hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0
+			{ TextWidgetClass ExorMuBtnVipLabel { visible 1 ignorepointer 1 position 0 0 size 1 1 hexactpos 0 vexactpos 0 hexactsize 0 vexactsize 0 color 1 1 1 1 text "" font "gui/fonts/sdf_MetronLight36" "text halign" center "text valign" center "exact text" 1 "exact text size" 18 } }
+		}
+	}
+}

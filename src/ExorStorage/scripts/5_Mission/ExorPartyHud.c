@@ -240,8 +240,25 @@ modded class MissionGameplay
 
 		// Teclas T/Y -> marcas del party (lectura cruda de tecla, sin tocar config)
 		ExorMarkerKeys();
+
+		// Zona + VIP elegidos en la pantalla de muerte: se mandan ACA porque estando muerto
+		// no hay canal (ver ExorSpawnPend). Apenas el personaje nuevo esta vivo, viaja.
+		ExorMandarSpawnPendiente();
 		// (el auto-run se maneja en PlayerBase.ModCommandHandlerBefore, no aca:
 		//  el override de movimiento necesita aplicarse en el tick del command handler)
+	}
+
+	// Manda al server lo que el jugador eligio en la pantalla de muerte (zona + VIP), una
+	// sola vez por vida. El sexo NO pasa por aca: ese viaja solo, en el login data.
+	void ExorMandarSpawnPendiente()
+	{
+		if (ExorSpawnPend.s_Enviado || ExorSpawnPend.s_Idx < 0)
+			return;
+		PlayerBase p = PlayerBase.Cast(GetGame().GetPlayer());
+		if (!p || !p.IsAlive())
+			return;
+		ExorSpawnPend.s_Enviado = true;
+		p.ExorReqSpawnPick(ExorSpawnPend.s_Idx, ExorSpawnPend.s_Equip);
 	}
 
 	// Detecta flanco de subida de T (poner marca) e Y (limpiar mis marcas).

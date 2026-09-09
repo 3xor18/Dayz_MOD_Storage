@@ -459,11 +459,11 @@ class ExorCfgSpawns
 	bool habilitado = true;
 	bool dar_cuchillo_al_spawnear = true;   // TEST: dar un cuchillo al personaje nuevo (suicidio facil al testear). Poner false en prod.
 	bool equipar_npc_test = false;          // TEST LOCAL: equipa los NPC dummy que spawnea VPP ("player") con ropa+mochila+armas, para probar la tumba. SIEMPRE false en prod (equiparia AI de otros mods).
-	// Elegir hombre/mujer en la pantalla de spawn. Es para TODOS, no solo VIP. Lo que se
-	// elige se GUARDA como preferencia del jugador y el personaje sale de ese sexo en la
-	// aparicion SIGUIENTE, porque al de ahora no se lo puede tocar sin romperle la
-	// persistencia (ver ExorGeneroPref). Las listas son los tipos de personaje que se
-	// sortean; se validan contra CfgVehicles antes de usarse.
+	// Elegir hombre/mujer. Es para TODOS, no solo VIP. La eleccion se hace en la PANTALLA
+	// DE MUERTE (no en el hub de spawn): ahi todavia no existe el personaje, asi que el
+	// motor lo crea ya del sexo pedido y persiste bien. Ver ExorJugadorSpawn. Las listas
+	// son los tipos de personaje que se sortean; se validan contra CfgVehicles antes de
+	// usarse.
 	bool elegir_genero = true;
 	ref TStringArray personajes_hombre;
 	ref TStringArray personajes_mujer;
@@ -1048,6 +1048,10 @@ class ExorClientCfgDTO
 	// (para saber si el player local es admin y ver los baules lockeados). Es liviano (1 bool + pocos ids).
 	bool carlock_activado;
 	ref TStringArray carlock_admins;
+	// elegir hombre/mujer: lo necesita el CLIENTE porque la pantalla de muerte decide sola
+	// si muestra los botones. Sin esto, apagar la feature en spawns.json no la sacaba de la
+	// pantalla del jugador (el cliente se quedaba con el default true).
+	bool elegir_genero;
 
 	void ExorClientCfgDTO()
 	{
@@ -2153,6 +2157,7 @@ class ExorConfig
 		d.permitir_construir_cerca = party.territorio.permitir_construir_cerca;
 		d.carlock_activado = carlock.activado != 0;
 		d.carlock_admins = carlock.admin_steamids;
+		d.elegir_genero = spawns.elegir_genero;
 		JsonSerializer js = new JsonSerializer();
 		string data;
 		js.WriteToString(d, false, data);
@@ -2189,6 +2194,7 @@ class ExorConfig
 			c.carlock.activado = 0;
 		if (d.carlock_admins)
 			c.carlock.admin_steamids = d.carlock_admins;
+		c.spawns.elegir_genero = d.elegir_genero;
 		// NOTA: el cache de admin del cliente (ExorCarAccessClient.RefreshAdmin) se refresca desde
 		// 4_World (ExorOnConfigSync), no aca: 3_Game no puede referenciar clases de 4_World.
 		c.m_Synced = true;
