@@ -114,6 +114,31 @@ modded class InGameMenu
 		return GetExorConfig().spawns.elegir_genero;
 	}
 
+	// Zona que queda marcada de entrada. Se elige la PRIMERA sin cooldown para que el que
+	// aprieta REAPARECER sin tocar nada igual caiga en una zona del server, en vez de donde
+	// lo tire el vanilla. Devuelve -1 si no hay ninguna usable.
+	int ExorMuPuntoPorDefecto()
+	{
+		ExorSpawnMenuDTO dto = ExorSpawnClient.s_DTO;
+		int puntos = ExorMuCantPuntos();
+		int i;
+		int primero = -1;
+		for (i = 0; i < puntos; i++)
+		{
+			int real = i;
+			if (dto.punto_idx && i < dto.punto_idx.Count())
+				real = dto.punto_idx.Get(i);
+			if (primero < 0)
+				primero = real;
+			int cd = 0;
+			if (dto.punto_cd_seg && i < dto.punto_cd_seg.Count())
+				cd = dto.punto_cd_seg.Get(i);
+			if (cd <= 0)
+				return real;
+		}
+		return primero;
+	}
+
 	bool ExorMuVipVisible()
 	{
 		ExorSpawnMenuDTO dto = ExorSpawnClient.s_DTO;
@@ -355,9 +380,13 @@ modded class InGameMenu
 
 		if (!m_ExorMuRoot)
 			return;
+		// MISMA condicion que usa vanilla para mostrar REAPARECER: "no hay personaje vivo".
+		// Pedir que el personaje EXISTA era el error: al morir, el mod convierte el cuerpo en
+		// tumba y la entidad desaparece del cliente, asi que a partir de la 2da muerte el
+		// panel se escondia justo cuando hacia falta.
 		Man player = GetGame().GetPlayer();
-		bool muerto = player && player.GetPlayerState() != EPlayerStates.ALIVE;
-		bool mostrar = muerto && GetGame().IsMultiplayer();
+		bool vivo = player && player.GetPlayerState() == EPlayerStates.ALIVE;
+		bool mostrar = !vivo && GetGame().IsMultiplayer();
 		m_ExorMuRoot.Show(mostrar);
 		if (!mostrar)
 		{
@@ -365,12 +394,15 @@ modded class InGameMenu
 			return;
 		}
 
-		// primer frame de ESTA muerte: se limpia lo elegido en la vida anterior
+
+		// El reset de la eleccion y la zona por defecto los hace ExorVigilarMuerte (corre
+		// siempre, aunque este menu nunca se haya abierto). Aca solo se arma el panel la
+		// primera vez que se muestra en esta muerte.
 		if (!m_ExorMuEstabaMuerto)
 		{
 			m_ExorMuEstabaMuerto = true;
-			ExorSpawnPend.Reset();
-			ExorGeneroClient.s_Sel = ExorGeneroDelCliente();
+			if (ExorGeneroClient.s_Sel < 0)
+				ExorGeneroClient.s_Sel = ExorGeneroDelCliente();
 			ExorMuRelayout();
 		}
 		ExorMuRefresh();

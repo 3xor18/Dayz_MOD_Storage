@@ -198,4 +198,35 @@ class ExorSpawnPend
 		s_Equip = false;
 		s_Enviado = false;
 	}
+
+	// Arranque de una muerte NUEVA: limpia lo de la vida anterior y deja marcada una zona
+	// por defecto, para que el que aprieta REAPARECER sin tocar nada igual caiga en una
+	// zona del server. Se elige la primera SIN cooldown; si todas estan en cooldown, la
+	// primera igual (el server la va a rechazar y avisar, pero no se pierde la eleccion).
+	static void NuevaMuerte()
+	{
+		Reset();
+		ExorSpawnMenuDTO dto = ExorSpawnClient.s_DTO;
+		if (!dto || !dto.nombres)
+			return;
+		int i;
+		int primero = -1;
+		for (i = 0; i < dto.nombres.Count(); i++)
+		{
+			int real = i;
+			if (dto.punto_idx && i < dto.punto_idx.Count())
+				real = dto.punto_idx.Get(i);
+			if (primero < 0)
+				primero = real;
+			int cd = 0;
+			if (dto.punto_cd_seg && i < dto.punto_cd_seg.Count())
+				cd = dto.punto_cd_seg.Get(i);
+			if (cd <= 0)
+			{
+				s_Idx = real;
+				return;
+			}
+		}
+		s_Idx = primero;
+	}
 }

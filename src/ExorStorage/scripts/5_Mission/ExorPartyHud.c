@@ -243,9 +243,30 @@ modded class MissionGameplay
 
 		// Zona + VIP elegidos en la pantalla de muerte: se mandan ACA porque estando muerto
 		// no hay canal (ver ExorSpawnPend). Apenas el personaje nuevo esta vivo, viaja.
+		ExorVigilarMuerte();
 		ExorMandarSpawnPendiente();
 		// (el auto-run se maneja en PlayerBase.ModCommandHandlerBefore, no aca:
 		//  el override de movimiento necesita aplicarse en el tick del command handler)
+	}
+
+	// Detecta el paso de VIVO a MUERTO y arranca una eleccion limpia (con zona por defecto).
+	// Va aca y NO en el menu de pausa: el UpdateGUI de ese menu solo corre mientras esta
+	// abierto, asi que si el jugador nunca lo abria estando vivo, la muerte siguiente
+	// arrastraba lo de la anterior y no se mandaba nada.
+	protected bool m_ExorVivoPrev = true;
+
+	void ExorVigilarMuerte()
+	{
+		// personaje nulo cuenta como MUERTO: al morir, el cuerpo se convierte en tumba y la
+		// entidad desaparece del cliente
+		PlayerBase p = PlayerBase.Cast(GetGame().GetPlayer());
+		bool vivo = p && p.IsAlive();
+		if (m_ExorVivoPrev && !vivo)
+		{
+			ExorSpawnPend.NuevaMuerte();
+			ExorGeneroClient.s_Sel = -1;	// el panel lo vuelve a leer del personaje elegido
+		}
+		m_ExorVivoPrev = vivo;
 	}
 
 	// Manda al server lo que el jugador eligio en la pantalla de muerte (zona + VIP), una
