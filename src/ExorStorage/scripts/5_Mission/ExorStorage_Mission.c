@@ -331,6 +331,12 @@ modded class MissionServer
 				cuchillo = player.GetInventory().CreateInInventory("CombatKnife");
 		}
 		ExorSpawn.LimpiarEleccion(sidNuevo);	// vida nueva: vuelve a estar sin elegir
+		// UNICO lugar que habilita el traslado por SPAWN_PICK. Este evento es el del personaje
+		// NUEVO (primer login o respawn por muerte); el que se reconecta con su personaje de
+		// siempre entra por OnClientReadyEvent y no pasa por aca, asi que un pick suelto ya no
+		// lo puede mover del lugar donde se habia desconectado (ver ExorSpawn.ApplyPick).
+		if (sidNuevo != "")
+			ExorSpawn.AbrirVentanaPick(sidNuevo);
 		ExorCfgSpawns spawns = GetExorConfig().spawns;
 		if (primeraVez)
 		{

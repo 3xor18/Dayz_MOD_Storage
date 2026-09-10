@@ -103,6 +103,40 @@ class ExorSpawn
 		return s_YaEligio.Find(sid, v) && v;
 	}
 
+	// ------------------------- ventana para aceptar el pick de spawn -------------------------
+	// steamid -> momento (ms del server) en que ese jugador estreno personaje. ApplyPick MUEVE
+	// al jugador, asi que solo se acepta dentro de esta ventana, o sea cuando de verdad acaba
+	// de nacer o de reaparecer tras morir. Sin esto, cualquier SPAWN_PICK que llegue movia a un
+	// jugador vivo: el que se reconectaba aparecia en el spawn con todas sus cosas (9-sep-2026),
+	// y un cliente modificado tenia un teletransporte gratis a cualquier punto.
+	// La ventana se abre SOLO en OnClientNewEvent (personaje nuevo = primer login o respawn por
+	// muerte). Reconectar con el personaje de siempre pasa por OnClientReadyEvent y no la abre.
+	static ref map<string, int> s_VentanaPickMs;
+	static const int PICK_VENTANA_MS = 300000;	// 5 min: el hub reintenta ~30s y el jugador puede tardar en elegir
+
+	static void AbrirVentanaPick(string sid)
+	{
+		if (!s_VentanaPickMs)
+			s_VentanaPickMs = new map<string, int>;
+		s_VentanaPickMs.Set(sid, GetGame().GetTime());
+	}
+
+	static void CerrarVentanaPick(string sid)
+	{
+		if (s_VentanaPickMs)
+			s_VentanaPickMs.Remove(sid);
+	}
+
+	static bool VentanaPickAbierta(string sid)
+	{
+		if (!s_VentanaPickMs)
+			return false;
+		int desde;
+		if (!s_VentanaPickMs.Find(sid, desde))
+			return false;
+		return GetGame().GetTime() - desde <= PICK_VENTANA_MS;
+	}
+
 	static void Ensure()
 	{
 		if (!s_LastBaseMs)
@@ -456,6 +490,15 @@ class ExorSpawn
 			return;
 		Ensure();
 		string sid = player.GetIdentity().GetPlainId();
+
+		// CANDADO: solo se mueve a alguien que acaba de estrenar personaje. Fuera de esa
+		// ventana el pick se descarta sin tocar la posicion (ver VentanaPickAbierta).
+		if (!VentanaPickAbierta(sid))
+		{
+			Print(string.Format("%1 SPAWN: se descarta el pick de %2 (indice=%3): no viene de un respawn", ExorStorageConstants.LOG, sid, index));
+			return;
+		}
+
 		// eligio -> cortar los reintentos del menu
 		if (s_OpenTries)
 			s_OpenTries.Remove(sid);
@@ -537,6 +580,9 @@ class ExorSpawn
 		if (!s_YaEligio)
 			s_YaEligio = new map<string, bool>;
 		s_YaEligio.Set(sid, true);
+		// Un solo traslado por vida: se cierra la ventana recien cuando el pick SALIO BIEN
+		// (los rechazos de arriba cortan antes, asi que el jugador puede reintentar).
+		CerrarVentanaPick(sid);
 
 		// Equipamiento VIP: recien ACA se gasta el uso (ya esta puesto en el mundo).
 		if (equip && pack)

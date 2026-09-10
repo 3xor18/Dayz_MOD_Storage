@@ -138,6 +138,11 @@ modded class MissionGameplay
 	{
 		super.OnMissionStart();
 		ExorTerritoryClient.ResetSesion();
+		// Misma razon: una eleccion de la pantalla de muerte que quedo sin mandar (el jugador
+		// cerro el juego en vez de apretar reaparecer) sobrevive en la estatica y se mandaria
+		// sola en la proxima sesion, moviendo a un jugador que nunca murio.
+		ExorSpawnPend.Reset();
+		ExorGeneroClient.s_Sel = -1;
 	}
 
 	override UIScriptedMenu CreateScriptedMenu(int id)
@@ -253,7 +258,16 @@ modded class MissionGameplay
 	// Va aca y NO en el menu de pausa: el UpdateGUI de ese menu solo corre mientras esta
 	// abierto, asi que si el jugador nunca lo abria estando vivo, la muerte siguiente
 	// arrastraba lo de la anterior y no se mandaba nada.
-	protected bool m_ExorVivoPrev = true;
+	// Arranca en FALSE A PROPOSITO. Al entrar a la mision el personaje local todavia no
+	// existe unos segundos, y "sin personaje" cuenta como muerto (ver abajo). Arrancando en
+	// true, esa nada inicial se leia como un flanco vivo->muerto: se marcaba una zona por
+	// defecto y, apenas el personaje aparecia, el cliente mandaba ese pick al server. El que
+	// solo se habia reconectado terminaba teletransportado al spawn con todas sus cosas
+	// (reportado el 9-sep-2026). En false, el flanco recien se arma despues de haberlo visto
+	// VIVO al menos una vez en la sesion, que es cuando una muerte puede ser real.
+	protected bool m_ExorVivoPrev = false;
+
+	protected bool m_ExorAvisoFlancoFalso;	// el aviso de abajo se escribe una sola vez por sesion
 
 	void ExorVigilarMuerte()
 	{
@@ -261,6 +275,16 @@ modded class MissionGameplay
 		// entidad desaparece del cliente
 		PlayerBase p = PlayerBase.Cast(GetGame().GetPlayer());
 		bool vivo = p && p.IsAlive();
+
+		// Rastro de diagnostico: deja escrito en el log del cliente el momento exacto en que
+		// el bug del relog se habria disparado (lista de zonas ya en mano y todavia sin
+		// personaje). Es la unica forma de confirmar desde afuera que el candado hizo falta.
+		if (!vivo && !m_ExorVivoPrev && !m_ExorAvisoFlancoFalso && ExorSpawnClient.s_DTO)
+		{
+			m_ExorAvisoFlancoFalso = true;
+			Print("[3xorVO] cliente: lista de zonas recibida sin personaje vivo -> flanco falso de muerte IGNORADO (candado del relog)");
+		}
+
 		if (m_ExorVivoPrev && !vivo)
 		{
 			ExorSpawnPend.NuevaMuerte();
