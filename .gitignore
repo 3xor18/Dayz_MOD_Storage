@@ -15,3 +15,6 @@ __pycache__/
 Thumbs.db
 desktop.ini
 127.0.0.1
+
+# Intermedios del retexturizado del cofre (salen del juego, no se redistribuyen)
+tools/paa_cofre_vanilla/

@@ -46,6 +46,13 @@ Mide geometría y resultados con los eventos del motor para dar **indicios** (NU
 - Zonas con **horario por día** donde se pueden abrir cofres. El player lleva una **caja cerrada** (item del mod, 3 colores) a la mesa del evento y la suelta: se coloca sola sobre la mesa y tras unos minutos se abre con un **loot aleatorio por color**.
 - Estructura del evento (mesa + drill + luz de roadflare), avisos killfeed y marca en el mapa. Gracia post-evento para no perder cajas.
 
+### Cofres de loot (camuflados, fijos en el mapa)
+- Cofres de suministros en coordenadas fijas para **enriquecer el loot de ciertas zonas**. Es el baúl marino vanilla retexturizado a camuflado.
+- **No se agarran ni se transportan**: se revientan a golpes de melee o a tiros (cuántos, configurable; cada herramienta puede costar distinto y se pueden mezclar balas con hachazos).
+- **El loot se crea recién al abrirlo**, no al spawnear: un cofre cerrado cuesta UNA entidad, así 30 cofres no son 400 items quietos ocupando red y persistencia.
+- Tablas de loot con nombre y % por item (+ attachments: cargador, mira, culata), y por cada posición se sortea qué tabla le toca.
+- Reaparece a los X minutos de que lo vacían, con % de que salga o no, distancia mínima a otro cofre y opción de **no sembrar durante el horario de raid**.
+
 ### Spawns
 - Pantalla de selección al morir / primer login, con puntos configurables + "Mi base".
 - **Hombre / Mujer** elegible en la misma pantalla (para todos): el personaje se reemplaza por uno del sexo elegido en el punto que elijas.
@@ -459,6 +466,42 @@ Por defecto solo evalúa a los SteamIDs de `watchlist` (`solo_watchlist=true`); 
 | `segundos_para_completar_koth` | `60` | int seg | Tiempo base para izar la bandera al 100%. |
 | `coordenadas[]` | `{0,0,0}` | [{x,y,z}] float | 1 o más ubicaciones; se elige una libre al azar cada ciclo. |
 | `item[]` | ejemplos | [{classname, prob}] | Recompensa: `classname` + `probabilidad_drop_en_porcentaje_maximo_100` (0–100). Repetir un classname = "1 seguro + 1 con suerte". |
+
+### `cofres_loot.json` — cofres de loot fijos
+*No-resave*: si el archivo existe se respeta exacto. Se crea con las **tablas de loot de ejemplo** y **sin posiciones** (hay que poner las coordenadas reales; sin posiciones el módulo no arranca).
+
+**Globales**
+| Parámetro | Default | Valores | Descripción |
+|---|---|---|---|
+| `enable` | `true` | bool | Master on/off del módulo. |
+| `minutos_re_spawn` | `60` | int min | Cuánto tarda una posición en volver a tener cofre después de que se vacía/vence. |
+| `no_spawnear_si_existe_otro_cofre_a_metros` | `5` | int m | No siembra si ya hay otro cofre del módulo a esa distancia. |
+| `no_spawnear_si_hay_jugador_a_metros` | `60` | int m (`0`=sin chequeo) | Que no aparezca delante de los ojos de nadie; reintenta en 1 min. |
+| `no_spawnear_cofres_en_horario_raid` | `true` | bool | Durante la ventana de `raid.json` no se siembran cofres nuevos (el que ya está sigue). |
+| `golpes_herramientas_para_aperturarlo` | `30` | int (`0`=el melee no abre) | Golpes de melee para reventarlo. |
+| `tiros_para_aperturarlo` | `20` | int (`0`=las balas no abren) | Balas para reventarlo. |
+| `golpes_por_herramienta[]` | pico/hacha/barreta/maza | [{classname, golpes}] | Excepción por herramienta. El contador es **fraccionario**: mezclar balas y golpes suma (10 tiros de 20 + 15 golpes de 30 = se abre). |
+| `minutos_para_borrar_cofre_abierto` | `30` | int min | Abierto y sin vaciar: se borra igual y la posición se re-arma. Vacío se borra al toque. |
+| `segundos_entre_chequeos` | `30` | int seg | Latido del módulo. Solo compara tiempos: subirlo no ahorra casi nada, bajarlo tampoco cuesta casi nada. |
+| `maximo_cofres_spawneados_por_chequeo` | `2` | int | Anti-pico: cuántos cofres se pueden crear en la misma ronda. |
+| `avisar_al_abrirse_en_el_chat` | `true` | bool | Mensaje al que lo abrió. |
+| `avisar_progreso_al_golpear` | `true` | bool | Le avisa "Cofre 25/50/75%" mientras lo revienta. |
+| `log_cada_impacto` | `0` | `0`/`1` | Debug: una línea por golpe/tiro en el RPT. |
+
+**Cada entrada de `tipos[]`** (una tabla de loot)
+| Parámetro | Valores | Descripción |
+|---|---|---|
+| `nombre` | string | Nombre con el que las posiciones la eligen. |
+| `items[]` | [{classname, probabilidad, cantidad, attachments}] | `probabilidad` 0–100 por item; `cantidad` = cuántas copias si sale; `attachments` = lo que se le engancha (cargador/mira/culata). Lo que no entre como attachment cae igual al cofre. |
+
+**Cada entrada de `posiciones[]`**
+| Parámetro | Valores | Descripción |
+|---|---|---|
+| `x` / `y` / `z` | float | Coordenada. `y = 0` lo apoya en el suelo; `y` distinto de 0 = altura exacta (pisos, techos, interiores). |
+| `probabilidad_spawn` | 0–100 | Chance de que el cofre aparezca en cada ronda. Si sale que no, espera `minutos_re_spawn`. |
+| `tipo[]` | [{nombre, probabilidad_que_sea_de_este_tipo}] | Sorteo ponderado entre tablas. **No hace falta que sumen 100**: 50/30/20 y 5/3/2 dan lo mismo. |
+
+Los classnames de todas las tablas se **verifican al arrancar**: si alguno no existe en el server (typo, o un mod que se sacó), queda escrito en el RPT (`grep "COFRE-LOOT: OJO"`) en vez de fallar en silencio el día que alguien abra el cofre.
 
 ### `cofre.json` — evento Cofre
 *No-resave*: si el archivo existe se respeta exacto y no se sobreescribe lo que edites. Se crea con **2 zonas de coordenadas de ejemplo** (de un mapa de test) — en tu server hay que **poner las coordenadas reales**.

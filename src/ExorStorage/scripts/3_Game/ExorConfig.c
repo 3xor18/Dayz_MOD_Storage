@@ -2097,6 +2097,294 @@ class ExorCfgRaid
 	}
 }
 
+// ============================================================================
+//  COFRES DE LOOT (cofres_loot.json)
+// ============================================================================
+// Cofres de loot fijos en el mapa para enriquecer ciertas zonas. Cada POSICION del
+// JSON tiene, como mucho, UN cofre vivo. El cofre no se puede agarrar ni mover: se
+// abre a los golpes (melee) o a los tiros, y RECIEN AHI se crea el loot adentro.
+//
+// POR QUE EL LOOT SE CREA AL ABRIR Y NO AL SPAWNEAR
+// Un cofre lleno son 10-15 entidades quietas en el mundo por cofre. Con 30 cofres
+// repartidos serian ~400 entidades de adorno que el server sincroniza, guarda y
+// limpia sin que nadie las mire. Creando el loot en el momento de la apertura, un
+// cofre cerrado cuesta UNA entidad, y el trabajo caro solo se paga cuando alguien
+// de verdad se gano el premio.
+// ----------------------------------------------------------------------------
+// UN item de una tabla de loot. attachments = lo que se le engancha al item
+// (cargador, mira, culata, guardamano); lo que no entre como attachment cae al
+// cargo del cofre para que igual se lo lleve.
+class ExorCfgCofreLootItem
+{
+	string classname = "";
+	int probabilidad = 100;	// 0-100: chance de que ESTE item salga en el cofre
+	int cantidad = 1;		// cuantas copias (si sale)
+	ref TStringArray attachments;
+
+	void ExorCfgCofreLootItem()
+	{
+		attachments = new TStringArray;
+	}
+}
+
+// UNA tabla de loot con nombre. Las posiciones la eligen por ese nombre.
+class ExorCfgCofreLootTipo
+{
+	string nombre = "";
+	ref array<ref ExorCfgCofreLootItem> items;
+
+	void ExorCfgCofreLootTipo()
+	{
+		items = new array<ref ExorCfgCofreLootItem>;
+	}
+}
+
+// PESO de un tipo dentro de una posicion. NO hace falta que sumen 100: se sortea
+// proporcional (50/30/20 y 5/3/2 dan lo mismo).
+class ExorCfgCofreLootPeso
+{
+	string nombre = "";
+	int probabilidad_que_sea_de_este_tipo = 100;
+}
+
+// UNA posicion del mapa donde puede haber un cofre.
+class ExorCfgCofreLootPos
+{
+	float x = 0;
+	float y = 0;	// 0 = lo apoya en el suelo (SurfaceY). Distinto de 0 = altura EXACTA (pisos, techos)
+	float z = 0;
+	int probabilidad_spawn = 100;	// 0-100: chance de que el cofre aparezca en cada ronda
+	ref array<ref ExorCfgCofreLootPeso> tipo;
+
+	void ExorCfgCofreLootPos()
+	{
+		tipo = new array<ref ExorCfgCofreLootPeso>;
+	}
+}
+
+// Herramienta que pega distinto: golpes = cuantos golpes de ESTA abren el cofre
+// (0 o ausente = usa golpes_herramientas_para_aperturarlo).
+class ExorCfgCofreLootHerramienta
+{
+	string classname = "";
+	int golpes = 0;
+}
+
+class ExorCfgCofreLoot
+{
+	int version = 1;
+	bool enable = true;
+	int minutos_re_spawn = 60;						// cuanto tarda una posicion en volver a tener cofre
+	int no_spawnear_si_existe_otro_cofre_a_metros = 5;
+	int no_spawnear_si_hay_jugador_a_metros = 60;	// que no aparezca delante de los ojos de nadie
+	bool no_spawnear_cofres_en_horario_raid = true;	// el horario sale de raid.json (fuente unica)
+	int golpes_herramientas_para_aperturarlo = 30;	// golpes de melee (hacha, pico, cuchillo, manos)
+	int tiros_para_aperturarlo = 20;				// balas
+	ref array<ref ExorCfgCofreLootHerramienta> golpes_por_herramienta;	// excepciones por clase
+	int minutos_para_borrar_cofre_abierto = 30;		// abierto y sin vaciar: se borra y la posicion se re-arma
+	int segundos_entre_chequeos = 30;				// latido del modulo (barato: solo compara tiempos)
+	int maximo_cofres_spawneados_por_chequeo = 2;	// anti-pico: no crear 30 cofres en el mismo frame
+	bool avisar_al_abrirse_en_el_chat = true;		// mensaje al que lo abrio
+	bool avisar_progreso_al_golpear = true;			// "Cofre 50%" mientras lo revientan
+	int log_cada_impacto = 0;						// debug: una linea por golpe/tiro en el RPT
+	ref array<ref ExorCfgCofreLootTipo> tipos;
+	ref array<ref ExorCfgCofreLootPos> posiciones;
+
+	void ExorCfgCofreLoot()
+	{
+		golpes_por_herramienta = new array<ref ExorCfgCofreLootHerramienta>;
+		tipos = new array<ref ExorCfgCofreLootTipo>;
+		posiciones = new array<ref ExorCfgCofreLootPos>;
+	}
+
+	void Validate()
+	{
+		if (minutos_re_spawn < 1)
+			minutos_re_spawn = 1;
+		if (segundos_entre_chequeos < 5)
+			segundos_entre_chequeos = 5;
+		if (maximo_cofres_spawneados_por_chequeo < 1)
+			maximo_cofres_spawneados_por_chequeo = 1;
+		if (golpes_herramientas_para_aperturarlo < 0)
+			golpes_herramientas_para_aperturarlo = 0;
+		if (tiros_para_aperturarlo < 0)
+			tiros_para_aperturarlo = 0;
+		// Los dos en 0 dejaria un cofre imposible de abrir: se cae al default de golpes.
+		if (golpes_herramientas_para_aperturarlo == 0 && tiros_para_aperturarlo == 0)
+			golpes_herramientas_para_aperturarlo = 30;
+		if (minutos_para_borrar_cofre_abierto < 1)
+			minutos_para_borrar_cofre_abierto = 1;
+	}
+
+	ExorCfgCofreLootTipo BuscarTipo(string nombre)
+	{
+		if (!tipos || nombre == "")
+			return null;
+		int i;
+		for (i = 0; i < tipos.Count(); i++)
+		{
+			ExorCfgCofreLootTipo t = tipos.Get(i);
+			if (t && t.nombre == nombre)
+				return t;
+		}
+		return null;
+	}
+
+	// golpes que necesita ESTA herramienta (vacio = manos / arma sin excepcion)
+	int GolpesDe(string clase)
+	{
+		if (golpes_por_herramienta && clase != "")
+		{
+			int i;
+			for (i = 0; i < golpes_por_herramienta.Count(); i++)
+			{
+				ExorCfgCofreLootHerramienta h = golpes_por_herramienta.Get(i);
+				if (h && h.classname == clase && h.golpes > 0)
+					return h.golpes;
+			}
+		}
+		return golpes_herramientas_para_aperturarlo;
+	}
+
+	void SetDefaults()
+	{
+		version = 1;
+		enable = true;
+		minutos_re_spawn = 60;
+		no_spawnear_si_existe_otro_cofre_a_metros = 5;
+		no_spawnear_si_hay_jugador_a_metros = 60;
+		no_spawnear_cofres_en_horario_raid = true;
+		golpes_herramientas_para_aperturarlo = 30;
+		tiros_para_aperturarlo = 20;
+		minutos_para_borrar_cofre_abierto = 30;
+		segundos_entre_chequeos = 30;
+		maximo_cofres_spawneados_por_chequeo = 2;
+		avisar_al_abrirse_en_el_chat = true;
+		avisar_progreso_al_golpear = true;
+		log_cada_impacto = 0;
+		golpes_por_herramienta = new array<ref ExorCfgCofreLootHerramienta>;
+		AddHerramienta("Pickaxe", 15);
+		AddHerramienta("FirefighterAxe", 15);
+		AddHerramienta("Crowbar", 20);
+		AddHerramienta("Sledgehammer", 12);
+
+		tipos = new array<ref ExorCfgCofreLootTipo>;
+		SetDefaultTipos();
+		posiciones = new array<ref ExorCfgCofreLootPos>;
+	}
+
+	protected void AddHerramienta(string cls, int golpes)
+	{
+		ExorCfgCofreLootHerramienta h = new ExorCfgCofreLootHerramienta;
+		h.classname = cls;
+		h.golpes = golpes;
+		golpes_por_herramienta.Insert(h);
+	}
+
+	// helper: agrega un item a una tabla y lo devuelve (para sumarle attachments)
+	protected ExorCfgCofreLootItem AddItem(ExorCfgCofreLootTipo t, string cls, int prob, int cant)
+	{
+		ExorCfgCofreLootItem it = new ExorCfgCofreLootItem;
+		it.classname = cls;
+		it.probabilidad = prob;
+		it.cantidad = cant;
+		t.items.Insert(it);
+		return it;
+	}
+
+	protected ExorCfgCofreLootTipo AddTipo(string nombre)
+	{
+		ExorCfgCofreLootTipo t = new ExorCfgCofreLootTipo;
+		t.nombre = nombre;
+		tipos.Insert(t);
+		return t;
+	}
+
+	// Las 5 tablas pedidas. Los classnames son REALES (vanilla + los del propio mod).
+	void SetDefaultTipos()
+	{
+		tipos = new array<ref ExorCfgCofreLootTipo>;
+
+		// --- SCAR-H vanilla con todos sus attachments ---
+		ExorCfgCofreLootTipo sc = AddTipo("scarh");
+		ExorCfgCofreLootItem i1 = AddItem(sc, "SCARH", 100, 1);
+		i1.attachments.Insert("Mag_SCARH_20Rnd");
+		i1.attachments.Insert("SCAR_PrecisionBttstck");
+		i1.attachments.Insert("MK4Optic_green");
+		ExorCfgCofreLootItem i2 = AddItem(sc, "SCARH_Black", 50, 1);
+		i2.attachments.Insert("Mag_SCARH_20Rnd_Black");
+		i2.attachments.Insert("SCAR_StockBttstck_Black");
+		i2.attachments.Insert("MK4Optic_black");
+		AddItem(sc, "Mag_SCARH_20Rnd", 100, 2);
+		AddItem(sc, "SCAR_StockBttstck", 70, 1);
+		AddItem(sc, "Ammo_308Win", 100, 2);
+		AddItem(sc, "ImprovisedSuppressor", 40, 1);
+
+		// --- M4 del mod, uno por color, con sus attachments del mismo color ---
+		ExorCfgCofreLootTipo m4 = AddTipo("m4-colores");
+		AddM4(m4, "Rosa", 100);
+		AddM4(m4, "Azul", 100);
+		AddM4(m4, "Dorado", 100);
+		AddM4(m4, "Camo", 100);
+		AddItem(m4, "Ammo_556x45", 100, 3);
+
+		// --- DMR (M14) del mod, uno por color ---
+		ExorCfgCofreLootTipo dmr = AddTipo("dmr-colores");
+		AddDmr(dmr, "Rosa", 100);
+		AddDmr(dmr, "Azul", 100);
+		AddDmr(dmr, "Dorado", 100);
+		AddDmr(dmr, "Camo", 100);
+		AddItem(dmr, "Ammo_308Win", 100, 3);
+
+		// --- Miras (todas las opticas del juego) + la de caza ---
+		ExorCfgCofreLootTipo mi = AddTipo("miras");
+		AddItem(mi, "HuntingOptic", 100, 1);	// la mira de caza
+		AddItem(mi, "MK4Optic_black", 70, 1);
+		AddItem(mi, "MK4Optic_green", 60, 1);
+		AddItem(mi, "MK4Optic_tan", 60, 1);
+		AddItem(mi, "ACOGOptic", 80, 1);
+		AddItem(mi, "ACOGOptic_6x", 50, 1);
+		AddItem(mi, "StarlightOptic", 40, 1);	// vision nocturna
+		AddItem(mi, "PSO1Optic", 70, 1);
+		AddItem(mi, "PSO11Optic", 50, 1);
+		AddItem(mi, "PUScopeOptic", 70, 1);		// montura + mira del Mosin
+		AddItem(mi, "KobraOptic", 80, 1);		// la del riel del AK
+		AddItem(mi, "M68Optic", 80, 1);
+		AddItem(mi, "M4_T3NRDSOptic", 80, 1);	// la de cerca del M4
+		AddItem(mi, "ReflexOptic", 70, 1);
+		AddItem(mi, "Battery9V", 100, 2);		// sin pila la Starlight no prende
+
+		// --- NBQ completo ---
+		ExorCfgCofreLootTipo nbq = AddTipo("nbq");
+		AddItem(nbq, "NBCJacketGray", 80, 1);
+		AddItem(nbq, "NBCPantsGray", 80, 1);
+		AddItem(nbq, "NBCHoodGray", 60, 1);
+		AddItem(nbq, "NBCGlovesGray", 60, 1);
+		AddItem(nbq, "NBCBootsGray", 60, 1);
+		AddItem(nbq, "GasMask", 100, 1);
+		AddItem(nbq, "GasMask_Filter", 100, 2);
+		AddItem(nbq, "CharcoalTablets", 100, 2);
+	}
+
+	// M4 de un color del mod con culata + guardamano + mira + cargador
+	protected void AddM4(ExorCfgCofreLootTipo t, string color, int prob)
+	{
+		ExorCfgCofreLootItem it = AddItem(t, "Exor_M4A1_" + color, prob, 1);
+		it.attachments.Insert("Mag_STANAG_30Rnd");
+		it.attachments.Insert("Exor_M4_CQBBttstck_" + color);
+		it.attachments.Insert("Exor_M4_RISHndgrd_" + color);
+		it.attachments.Insert("M4_T3NRDSOptic");
+	}
+
+	// DMR (M14) de un color del mod. El M14 vanilla solo acepta mira y cargador.
+	protected void AddDmr(ExorCfgCofreLootTipo t, string color, int prob)
+	{
+		ExorCfgCofreLootItem it = AddItem(t, "Exor_M14_" + color, prob, 1);
+		it.attachments.Insert("Mag_M14_20Rnd");
+		it.attachments.Insert("HuntingOptic");
+	}
+}
+
 class ExorConfig
 {
 	ref ExorCfgStorage storage;
@@ -2118,6 +2406,7 @@ class ExorConfig
 	ref ExorCfgCofre cofre;
 	ref ExorCfgCarLock carlock;	// candado de autos (codelock_autos.json)
 	ref ExorCfgRaid raid;	// CONFIG MAESTRA del horario de raid (raid.json)
+	ref ExorCfgCofreLoot cofres_loot;	// cofres de loot fijos en el mapa (cofres_loot.json)
 	bool m_Synced;	// cliente: true cuando ya recibio la config del server
 
 	void ExorConfig()
@@ -2141,6 +2430,7 @@ class ExorConfig
 		cofre = new ExorCfgCofre;
 		carlock = new ExorCfgCarLock;
 		raid = new ExorCfgRaid;
+		cofres_loot = new ExorCfgCofreLoot;
 	}
 
 	// SERVER: serializa la config relevante al cliente a JSON
@@ -2316,6 +2606,7 @@ class ExorConfig
 		c.LoadCofre();
 		c.LoadCarLock();
 		c.LoadRaid();
+		c.LoadCofresLoot();
 
 		return c;
 	}
@@ -2549,6 +2840,24 @@ class ExorConfig
 			cofre.Validate();
 			if (GuardarConfig(ExorStorageConstants.CFG_COFRE))
 				JsonFileLoader<ExorCfgCofre>.JsonSaveFile(ExorStorageConstants.CFG_COFRE, cofre);
+		}
+	}
+
+	// Cofres de loot fijos. Mismo criterio que KOTH/COFRE/RAID: si el archivo ya existe se
+	// carga EXACTO y no se re-guarda (no se reformatea lo que edito el admin). Solo se crea
+	// la 1ra vez, con las 5 tablas de loot sembradas y SIN posiciones (las pone el admin).
+	void LoadCofresLoot()
+	{
+		if (FileExist(ExorStorageConstants.CFG_COFRES_LOOT))
+		{
+			JsonFileLoader<ExorCfgCofreLoot>.JsonLoadFile(ExorStorageConstants.CFG_COFRES_LOOT, cofres_loot);
+			cofres_loot.Validate();
+		}
+		else
+		{
+			cofres_loot.SetDefaults();
+			cofres_loot.Validate();
+			JsonFileLoader<ExorCfgCofreLoot>.JsonSaveFile(ExorStorageConstants.CFG_COFRES_LOOT, cofres_loot);
 		}
 	}
 

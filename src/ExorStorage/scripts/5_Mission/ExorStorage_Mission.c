@@ -62,6 +62,7 @@ modded class MissionServer
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorGroupManager.Get().RestoreLostMastsTick, 30000, false);
 		ExorKoth.Start();	// KOTH: eventos de captura con recompensa (si koth.json activar=true)
 		ExorCofre.Start();	// COFRE: zonas de apertura de cofres por horario (si evento_apertura_cofre.json activado=true)
+		ExorCofreLoot.Start();	// COFRES DE LOOT: cofres camuflados fijos que se abren a golpes/tiros (cofres_loot.json)
 		ExorServerMsg.Start();	// mensajes automaticos del server al chat (mensajes.json: repetibles + agendados)
 		ExorTumbaForense.Limpiar();	// borra los JSON forenses de tumbas caducados (retencion en bodycadaver.json)
 		// Purga de JSON de bolsas sin dueño. Diferido 60s A PROPOSITO: necesita que la
