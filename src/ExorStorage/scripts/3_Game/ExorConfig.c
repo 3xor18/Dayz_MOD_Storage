@@ -2131,10 +2131,15 @@ class ExorCfgCofreLootItem
 class ExorCfgCofreLootTipo
 {
 	string nombre = "";
+	// Guardia de ESTE tipo de cofre. En 0 / vacio usa los de la raiz, asi que un cofre
+	// caro puede traer sus 5 infectados sin tocar el resto.
+	int cantidad_zombies = 0;
+	ref TStringArray clase_zombie;
 	ref array<ref ExorCfgCofreLootItem> items;
 
 	void ExorCfgCofreLootTipo()
 	{
+		clase_zombie = new TStringArray;
 		items = new array<ref ExorCfgCofreLootItem>;
 	}
 }
@@ -2180,7 +2185,19 @@ class ExorCfgCofreLoot
 	// siguiente puede caer en CUALQUIERA de las 3 (menos donde acaba de estar): los cofres
 	// rotan solos y nadie se para a esperar en un punto fijo. 0 = todas las posiciones.
 	int cantidad_cofres_a_spawnear = 0;
-	int no_spawnear_si_hay_jugador_a_metros = 60;	// que no aparezca delante de los ojos de nadie
+	// DISTANCIA DE SIEMBRA: el cofre (con su humo, su luz y sus infectados) aparece solo
+	// cuando hay un jugador a menos de estos metros, y sus infectados se retiran cuando no
+	// queda nadie cerca. Es lo que hace que 50 coordenadas repartidas por el mapa no cuesten
+	// nada mientras nadie las visita.
+	int metros_para_spawnear_cofre = 150;
+	// Marca del evento (para que se vea de lejos que ese cofre no es un baul cualquiera).
+	bool humo = true;
+	string color_humo = "blanco";	// blanco / amarillo / verde / morado / rojo / negro
+	bool luz = true;
+	string color_luz = "verde";		// verde / roja / azul / amarilla / blanca
+	// Guardia por DEFECTO de cualquier cofre (cada tabla de tipos[] puede pisarlo).
+	int cantidad_zombies = 0;
+	ref TStringArray clase_zombie;
 	bool no_spawnear_cofres_en_horario_raid = true;	// el horario sale de raid.json (fuente unica)
 	int golpes_herramientas_para_aperturarlo = 30;	// golpes de melee (hacha, pico, cuchillo, manos)
 	int tiros_para_aperturarlo = 20;				// balas
@@ -2196,6 +2213,7 @@ class ExorCfgCofreLoot
 
 	void ExorCfgCofreLoot()
 	{
+		clase_zombie = new TStringArray;
 		golpes_por_herramienta = new array<ref ExorCfgCofreLootHerramienta>;
 		tipos = new array<ref ExorCfgCofreLootTipo>;
 		posiciones = new array<ref ExorCfgCofreLootPos>;
@@ -2220,6 +2238,71 @@ class ExorCfgCofreLoot
 			minutos_para_borrar_cofre_abierto = 1;
 		if (cantidad_cofres_a_spawnear < 0)
 			cantidad_cofres_a_spawnear = 0;
+		if (metros_para_spawnear_cofre < 0)
+			metros_para_spawnear_cofre = 0;
+		if (cantidad_zombies < 0)
+			cantidad_zombies = 0;
+	}
+
+	// Cuantos infectados le tocan a un cofre de ESTA tabla (el de la tabla manda; 0 = el global).
+	int ZombiesDe(ExorCfgCofreLootTipo t)
+	{
+		if (t && t.cantidad_zombies > 0)
+			return t.cantidad_zombies;
+		return cantidad_zombies;
+	}
+
+	// Lista de clases de infectado para ESTA tabla (la de la tabla manda; vacia = la global).
+	TStringArray ClasesZombieDe(ExorCfgCofreLootTipo t)
+	{
+		if (t && t.clase_zombie && t.clase_zombie.Count() > 0)
+			return t.clase_zombie;
+		return clase_zombie;
+	}
+
+	// El humo y la luz viajan al cliente en UN entero sincronizado (humo*10 + luz), porque
+	// el cliente no tiene este JSON: la config vive solo en el server.
+	int CodigoFx()
+	{
+		int h = 0;
+		int l = 0;
+		if (humo)
+			h = IdxHumo(color_humo);
+		if (luz)
+			l = IdxLuz(color_luz);
+		return (h * 10) + l;
+	}
+
+	static int IdxHumo(string color)
+	{
+		string c = color;
+		c.ToLower();
+		if (c == "amarillo")
+			return 2;
+		if (c == "verde")
+			return 3;
+		if (c == "morado")
+			return 4;
+		if (c == "rojo")
+			return 5;
+		if (c == "negro")
+			return 6;
+		return 1;	// blanco
+	}
+
+	static int IdxLuz(string color)
+	{
+		string c = color;
+		c.ToLower();
+		if (c == "roja")
+			return 2;
+		if (c == "azul")
+			return 3;
+		if (c == "amarilla")
+			return 4;
+		if (c == "blanca")
+			return 5;
+		return 1;	// verde
 	}
 
 	// Cupo efectivo: 0 (o mas grande que el array) = una por cada posicion.
@@ -2269,7 +2352,13 @@ class ExorCfgCofreLoot
 		enable = true;
 		minutos_re_spawn = 60;
 		cantidad_cofres_a_spawnear = 0;
-		no_spawnear_si_hay_jugador_a_metros = 60;
+		metros_para_spawnear_cofre = 150;
+		humo = true;
+		color_humo = "blanco";
+		luz = true;
+		color_luz = "verde";
+		cantidad_zombies = 0;
+		clase_zombie = new TStringArray;
 		no_spawnear_cofres_en_horario_raid = true;
 		golpes_herramientas_para_aperturarlo = 30;
 		tiros_para_aperturarlo = 20;

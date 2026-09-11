@@ -41,12 +41,14 @@ class ExorCofreLootPunto
 	int m_Idx;					// indice en cofres_loot.posiciones
 	Exor_CofreLoot m_Cofre;		// cofre vivo en este punto (null = vacio)
 	int m_ProximoIntentoMs;		// uptime ms del proximo intento de spawn
+	ref array<Object> m_Zombies;	// la guardia de ESTE cofre (se va y vuelve con los jugadores)
 
 	void ExorCofreLootPunto(int idx)
 	{
 		m_Idx = idx;
 		m_Cofre = null;
 		m_ProximoIntentoMs = 0;
+		m_Zombies = new array<Object>;
 	}
 }
 
@@ -106,7 +108,7 @@ class ExorCofreLoot
 		// Diferido 20 s: la persistencia todavia esta cargando entidades en los primeros
 		// segundos y la limpieza tiene que ver el mundo ya armado para no dejar huerfanos.
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().LimpiarYArrancar, 20000, false);
-		Print(string.Format("%1 %2: %3 posiciones, %4 cofres a la vez, %5 tablas de loot, respawn %6 min", ExorStorageConstants.LOG, TAG, c.posiciones.Count(), c.Cupo(), c.tipos.Count(), c.minutos_re_spawn));
+		Print(string.Format("%1 %2: %3 posiciones, %4 cofres a la vez, %5 tablas de loot, respawn %6 min, siembra a %7 m", ExorStorageConstants.LOG, TAG, c.posiciones.Count(), c.Cupo(), c.tipos.Count(), c.minutos_re_spawn, c.metros_para_spawnear_cofre));
 	}
 
 	// Revisa UNA vez, al arrancar, que todos los classnames de las tablas existan de verdad
@@ -232,7 +234,12 @@ class ExorCofreLoot
 				continue;
 			RevisarCofreVivo(c, pt, now);
 			if (pt.m_Cofre)
+			{
 				vivos++;
+				// Una sola medicion de "hay alguien cerca" por cofre y por ronda, y con ella
+				// se decide todo lo de la guardia. Es la unica consulta de distancia del tick.
+				RevisarZombies(c, pt, HayJugadorCerca(pt.m_Cofre.GetPosition(), c.metros_para_spawnear_cofre));
+			}
 		}
 
 		// 2) sembrar hasta llenar el CUPO del array (no una por posicion)
@@ -310,12 +317,12 @@ class ExorCofreLoot
 
 		vector pos = PosDe(p);
 
-		// que no aparezca en la cara de nadie
-		if (c.no_spawnear_si_hay_jugador_a_metros > 0 && HayJugadorCerca(pos, c.no_spawnear_si_hay_jugador_a_metros))
-		{
-			pt.m_ProximoIntentoMs = now + 60000;
+		// NADIE CERCA = NO SE SIEMBRA. Es la regla que hace que tener 50 coordenadas por el
+		// mapa no cueste nada: el cofre, su humo, su luz y sus infectados existen solo
+		// mientras haya alguien a la distancia configurada. Se reintenta en la proxima ronda
+		// sin gastar el cooldown de respawn (todavia no paso nada).
+		if (c.metros_para_spawnear_cofre > 0 && !HayJugadorCerca(pos, c.metros_para_spawnear_cofre))
 			return false;
-		}
 
 		// el dado de la posicion: si sale que no, esta ronda queda vacia
 		pt.m_ProximoIntentoMs = now + (c.minutos_re_spawn * 60000);
@@ -335,7 +342,9 @@ class ExorCofreLoot
 
 		cofre.m_ExorPunto = pt.m_Idx;
 		cofre.m_ExorTipo = tipo;
+		cofre.ExorSetFx(c.CodigoFx());	// humo + luz, en un solo entero sincronizado
 		pt.m_Cofre = cofre;
+		RevisarZombies(c, pt, true);	// si llego aca es porque hay alguien cerca
 		Print(string.Format("%1 %2: cofre spawneado en %3 (posicion %4, tabla '%5')", ExorStorageConstants.LOG, TAG, pos, pt.m_Idx, tipo));
 		return true;
 	}
@@ -405,6 +414,93 @@ class ExorCofreLoot
 		return pos;
 	}
 
+	// ------------------------------------------------------------------------
+	//  GUARDIA DE INFECTADOS
+	// ------------------------------------------------------------------------
+	// Los infectados de un cofre existen SOLO mientras haya alguien cerca: si el jugador se
+	// va, se retiran, y si vuelve, vuelven. Un infectado quieto es de lo mas caro que hay
+	// (tiene IA, navmesh y sincronizacion), asi que dejarlos parados al lado de un cofre que
+	// nadie visita en horas seria pagar por nada.
+	void RevisarZombies(ExorCfgCofreLoot c, ExorCofreLootPunto pt, bool hayJugador)
+	{
+		if (!pt.m_Cofre)
+		{
+			BorrarZombies(pt);
+			return;
+		}
+		LimpiarMuertos(pt);
+		if (!hayJugador)
+		{
+			BorrarZombies(pt);
+			return;
+		}
+		ExorCfgCofreLootTipo tabla = c.BuscarTipo(pt.m_Cofre.m_ExorTipo);
+		int cuantos = c.ZombiesDe(tabla);
+		if (cuantos <= 0)
+			return;
+		TStringArray clases = c.ClasesZombieDe(tabla);
+		if (!clases || clases.Count() == 0)
+			return;
+		// Solo se repone lo que falta (los que mato el jugador NO se reponen mientras siga
+		// ahi: el cofre se defiende una vez, no es una fabrica infinita de infectados).
+		if (pt.m_Zombies.Count() >= cuantos)
+			return;
+		vector centro = pt.m_Cofre.GetPosition();
+		int faltan = cuantos - pt.m_Zombies.Count();
+		int i;
+		for (i = 0; i < faltan; i++)
+		{
+			string cls = clases.Get(Math.RandomInt(0, clases.Count()));
+			vector donde = PosAlrededor(centro, 3.0, 7.0);
+			Object z = GetGame().CreateObject(cls, donde, false, true, true);
+			if (z)
+				pt.m_Zombies.Insert(z);
+			else
+				Print(string.Format("%1 %2: no se pudo crear el infectado '%3' (classname invalido?)", ExorStorageConstants.LOG, TAG, cls));
+		}
+	}
+
+	// saca de la lista los que ya no estan (los mataron): asi el conteo no miente
+	void LimpiarMuertos(ExorCofreLootPunto pt)
+	{
+		int i;
+		for (i = pt.m_Zombies.Count() - 1; i >= 0; i--)
+		{
+			Object z = pt.m_Zombies.Get(i);
+			if (!z)
+			{
+				pt.m_Zombies.Remove(i);
+				continue;
+			}
+			DayZInfected inf = DayZInfected.Cast(z);
+			if (inf && !inf.IsAlive())
+				pt.m_Zombies.Remove(i);
+		}
+	}
+
+	void BorrarZombies(ExorCofreLootPunto pt)
+	{
+		int i;
+		for (i = 0; i < pt.m_Zombies.Count(); i++)
+		{
+			Object z = pt.m_Zombies.Get(i);
+			if (z)
+				GetGame().ObjectDelete(z);
+		}
+		pt.m_Zombies.Clear();
+	}
+
+	vector PosAlrededor(vector centro, float minM, float maxM)
+	{
+		float ang = Math.RandomFloat(0, Math.PI2);
+		float dist = Math.RandomFloat(minM, maxM);
+		vector p = centro;
+		p[0] = centro[0] + (Math.Cos(ang) * dist);
+		p[2] = centro[2] + (Math.Sin(ang) * dist);
+		p[1] = GetGame().SurfaceY(p[0], p[2]);
+		return p;
+	}
+
 	// Usa el cache de jugadores del latido de 1 Hz: no pide su propia lista.
 	bool HayJugadorCerca(vector pos, float metros)
 	{
@@ -437,6 +533,7 @@ class ExorCofreLoot
 			if (pt && pt.m_Cofre == cofre)
 			{
 				pt.m_Cofre = null;
+				BorrarZombies(pt);	// la guardia se va con su cofre
 				int ahora = GetGame().GetTime();
 				// El cofre consumido libera un lugar del CUPO, pero el lugar no se vuelve a
 				// llenar al instante: se esperan los minutos de respawn. Si no, lootear un
@@ -484,9 +581,27 @@ class ExorCofreLoot
 		{
 			// melee y explosiones: van por el contador de golpes, con la excepcion por
 			// herramienta si la clase esta listada en golpes_por_herramienta.
+			// De que herramienta es el golpe. Segun el caso, el motor manda como origen el
+			// item o al propio jugador, asi que si viene el jugador se mira que tiene en la
+			// mano; si no, no habria forma de aplicar golpes_por_herramienta.
 			string herramienta = "";
-			if (source && !source.IsInherited(PlayerBase))
-				herramienta = source.GetType();
+			if (source)
+			{
+				if (source.IsInherited(PlayerBase))
+				{
+					PlayerBase pe = PlayerBase.Cast(source);
+					if (pe && pe.GetHumanInventory())
+					{
+						EntityAI enMano = pe.GetHumanInventory().GetEntityInHands();
+						if (enMano)
+							herramienta = enMano.GetType();
+					}
+				}
+				else
+				{
+					herramienta = source.GetType();
+				}
+			}
 			int necesarios = c.GolpesDe(herramienta);
 			if (necesarios <= 0)
 				return;
