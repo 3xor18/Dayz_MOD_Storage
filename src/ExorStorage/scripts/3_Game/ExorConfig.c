@@ -2175,7 +2175,11 @@ class ExorCfgCofreLoot
 	int version = 1;
 	bool enable = true;
 	int minutos_re_spawn = 60;						// cuanto tarda una posicion en volver a tener cofre
-	int no_spawnear_si_existe_otro_cofre_a_metros = 5;
+	// CUPO del array: de todas las posiciones de abajo, cuantos cofres existen A LA VEZ.
+	// Con 3 posiciones y cupo 2 hay siempre 2 cofres, y cada vez que se consume uno el
+	// siguiente puede caer en CUALQUIERA de las 3 (menos donde acaba de estar): los cofres
+	// rotan solos y nadie se para a esperar en un punto fijo. 0 = todas las posiciones.
+	int cantidad_cofres_a_spawnear = 0;
 	int no_spawnear_si_hay_jugador_a_metros = 60;	// que no aparezca delante de los ojos de nadie
 	bool no_spawnear_cofres_en_horario_raid = true;	// el horario sale de raid.json (fuente unica)
 	int golpes_herramientas_para_aperturarlo = 30;	// golpes de melee (hacha, pico, cuchillo, manos)
@@ -2214,6 +2218,19 @@ class ExorCfgCofreLoot
 			golpes_herramientas_para_aperturarlo = 30;
 		if (minutos_para_borrar_cofre_abierto < 1)
 			minutos_para_borrar_cofre_abierto = 1;
+		if (cantidad_cofres_a_spawnear < 0)
+			cantidad_cofres_a_spawnear = 0;
+	}
+
+	// Cupo efectivo: 0 (o mas grande que el array) = una por cada posicion.
+	int Cupo()
+	{
+		int total = 0;
+		if (posiciones)
+			total = posiciones.Count();
+		if (cantidad_cofres_a_spawnear <= 0 || cantidad_cofres_a_spawnear > total)
+			return total;
+		return cantidad_cofres_a_spawnear;
 	}
 
 	ExorCfgCofreLootTipo BuscarTipo(string nombre)
@@ -2251,7 +2268,7 @@ class ExorCfgCofreLoot
 		version = 1;
 		enable = true;
 		minutos_re_spawn = 60;
-		no_spawnear_si_existe_otro_cofre_a_metros = 5;
+		cantidad_cofres_a_spawnear = 0;
 		no_spawnear_si_hay_jugador_a_metros = 60;
 		no_spawnear_cofres_en_horario_raid = true;
 		golpes_herramientas_para_aperturarlo = 30;

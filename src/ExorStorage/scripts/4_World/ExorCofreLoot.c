@@ -22,11 +22,15 @@
 //     no crea 40 entidades en el mismo frame: se reparten en varias rondas de 30 s.
 //     Mismo patron que el presupuesto por tick de los contenedores.
 //
-//  4) LAS CONSULTAS AL MUNDO SE EVITAN. La distancia "no spawnear si hay otro
-//     cofre cerca" se resuelve contra la lista en RAM de los cofres del modulo, y
-//     los jugadores salen del cache compartido del latido de 1 Hz. Lo unico que
-//     escanea el mundo de verdad es la limpieza de huerfanos, que corre UNA vez
-//     por arranque.
+//  4) LAS CONSULTAS AL MUNDO SE EVITAN. Lo unico que mira el mundo en el camino
+//     normal es "hay un jugador cerca", y sale del cache de jugadores compartido
+//     del latido de 1 Hz. El unico escaneo de verdad es la limpieza de huerfanos,
+//     que corre UNA vez por arranque.
+//
+//  EL CUPO: las posiciones son un ARRAY y 'cantidad_cofres_a_spawnear' dice cuantos
+//  cofres hay A LA VEZ entre todas. Con 3 posiciones y cupo 2 hay siempre 2 cofres,
+//  y cada vez que se consume uno el siguiente cae en otra de las posiciones: rotan
+//  solos y nadie se queda esperando parado en un punto fijo.
 //
 //  La entidad (Exor_CofreLoot) no tiene tick propio: solo reacciona a EEHitBy.
 // ============================================================================
@@ -57,6 +61,7 @@ class ExorCofreLoot
 
 	ref array<ref ExorCofreLootPunto> m_Puntos;
 	bool m_Arrancado;
+	int m_ProximoSpawnMs;	// cooldown GLOBAL: uptime ms hasta que se puede volver a sembrar
 
 	void ExorCofreLoot()
 	{
@@ -101,7 +106,7 @@ class ExorCofreLoot
 		// Diferido 20 s: la persistencia todavia esta cargando entidades en los primeros
 		// segundos y la limpieza tiene que ver el mundo ya armado para no dejar huerfanos.
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().LimpiarYArrancar, 20000, false);
-		Print(string.Format("%1 %2: %3 posiciones, %4 tablas de loot, respawn %5 min", ExorStorageConstants.LOG, TAG, c.posiciones.Count(), c.tipos.Count(), c.minutos_re_spawn));
+		Print(string.Format("%1 %2: %3 posiciones, %4 cofres a la vez, %5 tablas de loot, respawn %6 min", ExorStorageConstants.LOG, TAG, c.posiciones.Count(), c.Cupo(), c.tipos.Count(), c.minutos_re_spawn));
 	}
 
 	// Revisa UNA vez, al arrancar, que todos los classnames de las tablas existan de verdad
@@ -216,27 +221,60 @@ class ExorCofreLoot
 			return;
 
 		int now = GetGame().GetTime();
-		int creados = 0;
+
+		// 1) los que ya estan: ver si toca sacarlos, y de paso contar cuantos hay vivos
+		int vivos = 0;
 		int i;
 		for (i = 0; i < m_Puntos.Count(); i++)
 		{
 			ExorCofreLootPunto pt = m_Puntos.Get(i);
-			if (!pt)
+			if (!pt || !pt.m_Cofre)
 				continue;
-
+			RevisarCofreVivo(c, pt, now);
 			if (pt.m_Cofre)
-			{
-				RevisarCofreVivo(c, pt, now);
-				continue;
-			}
-
-			if (now < pt.m_ProximoIntentoMs)
-				continue;
-			if (creados >= c.maximo_cofres_spawneados_por_chequeo)
-				continue;	// el resto espera la proxima ronda (anti-pico)
-			if (Intentar(c, pt, now))
-				creados++;
+				vivos++;
 		}
+
+		// 2) sembrar hasta llenar el CUPO del array (no una por posicion)
+		int cupo = c.Cupo();
+		if (vivos >= cupo)
+			return;
+		if (now < m_ProximoSpawnMs)
+			return;	// cooldown global: tras consumirse un cofre se esperan los minutos de respawn
+
+		int creados = 0;
+		int faltan = cupo - vivos;
+		while (creados < faltan && creados < c.maximo_cofres_spawneados_por_chequeo)
+		{
+			ExorCofreLootPunto elegido = ElegirPuntoLibre(now);
+			if (!elegido)
+				break;	// no quedan posiciones disponibles en esta ronda
+			if (!Intentar(c, elegido, now))
+				break;	// no se pudo (raid, jugador cerca, dado, tabla mala): se reintenta despues
+			creados++;
+		}
+	}
+
+	// Una posicion libre AL AZAR entre las que estan disponibles. Al azar y no por orden:
+	// con cupo 2 sobre 3 posiciones, recorrer el array siempre de arriba a abajo dejaria a
+	// la ultima sin usarse casi nunca, y los cofres quedarian siempre en los mismos dos
+	// puntos, que es justo lo que el cupo viene a evitar.
+	ExorCofreLootPunto ElegirPuntoLibre(int now)
+	{
+		array<ExorCofreLootPunto> libres = new array<ExorCofreLootPunto>;
+		int i;
+		for (i = 0; i < m_Puntos.Count(); i++)
+		{
+			ExorCofreLootPunto pt = m_Puntos.Get(i);
+			if (!pt || pt.m_Cofre)
+				continue;
+			if (now < pt.m_ProximoIntentoMs)
+				continue;	// esta posicion todavia esta en cooldown (recien tuvo cofre)
+			libres.Insert(pt);
+		}
+		if (libres.Count() == 0)
+			return null;
+		return libres.Get(Math.RandomInt(0, libres.Count()));
 	}
 
 	// Un cofre ya abierto se va cuando lo vaciaron, o cuando se vencio su plazo. Los
@@ -276,13 +314,6 @@ class ExorCofreLoot
 		if (c.no_spawnear_si_hay_jugador_a_metros > 0 && HayJugadorCerca(pos, c.no_spawnear_si_hay_jugador_a_metros))
 		{
 			pt.m_ProximoIntentoMs = now + 60000;
-			return false;
-		}
-
-		// ni pegado a otro cofre del modulo (posiciones demasiado juntas en el JSON)
-		if (c.no_spawnear_si_existe_otro_cofre_a_metros > 0 && HayCofreCerca(pos, c.no_spawnear_si_existe_otro_cofre_a_metros, pt))
-		{
-			pt.m_ProximoIntentoMs = now + (c.minutos_re_spawn * 60000);
 			return false;
 		}
 
@@ -393,22 +424,6 @@ class ExorCofreLoot
 		return false;
 	}
 
-	// Contra la lista en RAM del modulo: cero consultas al mundo.
-	bool HayCofreCerca(vector pos, float metros, ExorCofreLootPunto excepto)
-	{
-		float r2 = metros * metros;
-		int i;
-		for (i = 0; i < m_Puntos.Count(); i++)
-		{
-			ExorCofreLootPunto pt = m_Puntos.Get(i);
-			if (!pt || pt == excepto || !pt.m_Cofre)
-				continue;
-			if (ExorMath.Dist2DSq(pos, pt.m_Cofre.GetPosition()) <= r2)
-				return true;
-		}
-		return false;
-	}
-
 	// El cofre se fue (lo borro el tick, un admin, o el apagado): liberar el punto y
 	// programar la proxima ronda.
 	void OnCofreBorrado(Exor_CofreLoot cofre)
@@ -422,7 +437,14 @@ class ExorCofreLoot
 			if (pt && pt.m_Cofre == cofre)
 			{
 				pt.m_Cofre = null;
-				pt.m_ProximoIntentoMs = GetGame().GetTime() + (Cfg().minutos_re_spawn * 60000);
+				int ahora = GetGame().GetTime();
+				// El cofre consumido libera un lugar del CUPO, pero el lugar no se vuelve a
+				// llenar al instante: se esperan los minutos de respawn. Si no, lootear un
+				// cofre haria aparecer otro en la posicion de al lado en el acto.
+				m_ProximoSpawnMs = ahora + (Cfg().minutos_re_spawn * 60000);
+				// Ademas la posicion que acaba de tener cofre queda en cooldown mas largo,
+				// para que el proximo caiga en otra de las del array y no siempre en la misma.
+				pt.m_ProximoIntentoMs = ahora + (Cfg().minutos_re_spawn * 60000 * 2);
 				return;
 			}
 		}

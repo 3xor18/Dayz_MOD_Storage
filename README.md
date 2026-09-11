@@ -51,7 +51,8 @@ Mide geometría y resultados con los eventos del motor para dar **indicios** (NU
 - **No se agarran ni se transportan**: se revientan a golpes de melee o a tiros (cuántos, configurable; cada herramienta puede costar distinto y se pueden mezclar balas con hachazos).
 - **El loot se crea recién al abrirlo**, no al spawnear: un cofre cerrado cuesta UNA entidad, así 30 cofres no son 400 items quietos ocupando red y persistencia.
 - Tablas de loot con nombre y % por item (+ attachments: cargador, mira, culata), y por cada posición se sortea qué tabla le toca.
-- Reaparece a los X minutos de que lo vacían, con % de que salga o no, distancia mínima a otro cofre y opción de **no sembrar durante el horario de raid**.
+- **Cupo sobre el array de posiciones**: se configura cuántos cofres hay a la vez, no uno por coordenada. Con 3 posiciones y cupo 2 siempre hay 2, y al consumirse uno el siguiente aparece en otra: nadie se queda esperando parado en un punto fijo.
+- Reaparece a los X minutos de que lo vacían, con % de que salga o no, y opción de **no sembrar durante el horario de raid**.
 
 ### Spawns
 - Pantalla de selección al morir / primer login, con puntos configurables + "Mi base".
@@ -474,8 +475,8 @@ Por defecto solo evalúa a los SteamIDs de `watchlist` (`solo_watchlist=true`); 
 | Parámetro | Default | Valores | Descripción |
 |---|---|---|---|
 | `enable` | `true` | bool | Master on/off del módulo. |
-| `minutos_re_spawn` | `60` | int min | Cuánto tarda una posición en volver a tener cofre después de que se vacía/vence. |
-| `no_spawnear_si_existe_otro_cofre_a_metros` | `5` | int m | No siembra si ya hay otro cofre del módulo a esa distancia. |
+| `minutos_re_spawn` | `60` | int min | Cuánto se espera, tras consumirse un cofre, para volver a sembrar. Es un cooldown global del cupo: lootear uno no hace aparecer otro al instante. |
+| `cantidad_cofres_a_spawnear` | `0` | int (`0`=todas) | **Cupo del array**: cuántos cofres hay A LA VEZ entre todas las posiciones. Con 3 posiciones y cupo 2 hay siempre 2 cofres, y al consumirse uno el siguiente cae en otra posición: rotan solos. |
 | `no_spawnear_si_hay_jugador_a_metros` | `60` | int m (`0`=sin chequeo) | Que no aparezca delante de los ojos de nadie; reintenta en 1 min. |
 | `no_spawnear_cofres_en_horario_raid` | `true` | bool | Durante la ventana de `raid.json` no se siembran cofres nuevos (el que ya está sigue). |
 | `golpes_herramientas_para_aperturarlo` | `30` | int (`0`=el melee no abre) | Golpes de melee para reventarlo. |
