@@ -604,7 +604,17 @@ class ExorCofreLoot
 			}
 			int necesarios = c.GolpesDe(herramienta);
 			if (necesarios <= 0)
+			{
+				// El melee no abre este cofre. Sin este aviso, pegarle y que no pase nada se
+				// lee como que el cofre esta roto: el jugador no tiene forma de saber que es
+				// a tiros. Se avisa como mucho una vez cada 3 s para no llenarle el chat.
+				if (quien && now - cofre.m_ExorUltimoAvisoMeleeMs > 3000)
+				{
+					cofre.m_ExorUltimoAvisoMeleeMs = now;
+					ExorAviso.Error(quien, "Este cofre solo se abre a tiros.");
+				}
 				return;
+			}
 			suma = 1.0 / necesarios;
 			comoTexto = herramienta;
 			if (comoTexto == "")

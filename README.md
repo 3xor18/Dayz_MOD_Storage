@@ -477,9 +477,12 @@ Por defecto solo evalúa a los SteamIDs de `watchlist` (`solo_watchlist=true`); 
 | `enable` | `true` | bool | Master on/off del módulo. |
 | `minutos_re_spawn` | `60` | int min | Cuánto se espera, tras consumirse un cofre, para volver a sembrar. Es un cooldown global del cupo: lootear uno no hace aparecer otro al instante. |
 | `cantidad_cofres_a_spawnear` | `0` | int (`0`=todas) | **Cupo del array**: cuántos cofres hay A LA VEZ entre todas las posiciones. Con 3 posiciones y cupo 2 hay siempre 2 cofres, y al consumirse uno el siguiente cae en otra posición: rotan solos. |
-| `no_spawnear_si_hay_jugador_a_metros` | `60` | int m (`0`=sin chequeo) | Que no aparezca delante de los ojos de nadie; reintenta en 1 min. |
+| `metros_para_spawnear_cofre` | `150` | int m (`0`=sin chequeo) | **El cofre, su luz y sus infectados existen solo mientras haya alguien a esta distancia.** Es lo que hace que 50 coordenadas por el mapa no cuesten nada mientras nadie las visita. |
+| `humo` / `color_humo` | `false` / `blanco` | bool / string | Humo del evento. Apagado por defecto: probado in-game no se llega a ver (el cofre es bajo y la particula queda pegada al piso). |
+| `luz` / `color_luz` | `true` / `verde` | bool / string | Luz de chemlight pegada al cofre. Como la chemlight vanilla, no se ve de dia. |
+| `cantidad_zombies` / `clase_zombie[]` | `0` / `[]` | int / [string] | Guardia por defecto de cada cofre. Cada tabla de `tipos[]` puede pisarla con la suya. Los infectados se retiran cuando no queda nadie cerca y vuelven cuando alguien aparece. |
 | `no_spawnear_cofres_en_horario_raid` | `true` | bool | Durante la ventana de `raid.json` no se siembran cofres nuevos (el que ya está sigue). |
-| `golpes_herramientas_para_aperturarlo` | `30` | int (`0`=el melee no abre) | Golpes de melee para reventarlo. |
+| `golpes_herramientas_para_aperturarlo` | `0` | int (`0`=el melee no abre) | Golpes de melee para reventarlo. En 0 (default) al que le pegue se le avisa que es a tiros: asi abrir un cofre cuesta municion y hace ruido. |
 | `tiros_para_aperturarlo` | `20` | int (`0`=las balas no abren) | Balas para reventarlo. |
 | `golpes_por_herramienta[]` | pico/hacha/barreta/maza | [{classname, golpes}] | Excepción por herramienta. El contador es **fraccionario**: mezclar balas y golpes suma (10 tiros de 20 + 15 golpes de 30 = se abre). |
 | `minutos_para_borrar_cofre_abierto` | `30` | int min | Abierto y sin vaciar: se borra igual y la posición se re-arma. Vacío se borra al toque. |
@@ -493,6 +496,7 @@ Por defecto solo evalúa a los SteamIDs de `watchlist` (`solo_watchlist=true`); 
 | Parámetro | Valores | Descripción |
 |---|---|---|
 | `nombre` | string | Nombre con el que las posiciones la eligen. |
+| `cantidad_zombies` / `clase_zombie[]` | int / [string] | Guardia propia de esta tabla. En 0 / vacío usa la de la raíz. |
 | `items[]` | [{classname, probabilidad, cantidad, attachments}] | `probabilidad` 0–100 por item; `cantidad` = cuántas copias si sale; `attachments` = lo que se le engancha (cargador/mira/culata). Lo que no entre como attachment cae igual al cofre. |
 
 **Cada entrada de `posiciones[]`**

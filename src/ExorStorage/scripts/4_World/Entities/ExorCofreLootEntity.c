@@ -39,6 +39,7 @@ class Exor_CofreLoot : Container_Base
 	float m_ExorProgreso;		// 0..1 ; a 1 se abre. Fraccionario: mezclar balas y golpes suma
 	int   m_ExorUltimoHitMs;	// dedup de impactos del MISMO disparo (perdigones de escopeta)
 	int   m_ExorUltimoAvisoPct;	// ultimo porcentaje avisado al que le pega (para no spamear)
+	int   m_ExorUltimoAvisoMeleeMs;	// ultimo "esto es a tiros" (idem: para no spamear)
 	int   m_ExorPunto;			// indice de la posicion de cofres_loot.json (-1 = suelto/admin)
 	int   m_ExorBorrarEnMs;		// uptime ms en que se borra si nadie lo vacio (0 = sin deadline)
 	string m_ExorTipo;			// nombre de la tabla de loot que le toco al spawnear

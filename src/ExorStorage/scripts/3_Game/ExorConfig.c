@@ -2191,7 +2191,9 @@ class ExorCfgCofreLoot
 	// nada mientras nadie las visita.
 	int metros_para_spawnear_cofre = 150;
 	// Marca del evento (para que se vea de lejos que ese cofre no es un baul cualquiera).
-	bool humo = true;
+	// HUMO: apagado por defecto. Se probo in-game y no se llega a ver -el cofre es bajo y la
+	// particula del M18 queda pegada al piso-, asi que el que marca el cofre es la luz.
+	bool humo = false;
 	string color_humo = "blanco";	// blanco / amarillo / verde / morado / rojo / negro
 	bool luz = true;
 	string color_luz = "verde";		// verde / roja / azul / amarilla / blanca
@@ -2199,7 +2201,10 @@ class ExorCfgCofreLoot
 	int cantidad_zombies = 0;
 	ref TStringArray clase_zombie;
 	bool no_spawnear_cofres_en_horario_raid = true;	// el horario sale de raid.json (fuente unica)
-	int golpes_herramientas_para_aperturarlo = 30;	// golpes de melee (hacha, pico, cuchillo, manos)
+	// Golpes de melee (hacha, pico, cuchillo, manos). En 0 el melee NO abre el cofre: al que
+	// le pegue se le avisa que es a tiros. Es el default a proposito, para que reventar un
+	// cofre cueste municion y haga ruido, y no se abra a cuchillazos en silencio.
+	int golpes_herramientas_para_aperturarlo = 0;
 	int tiros_para_aperturarlo = 20;				// balas
 	ref array<ref ExorCfgCofreLootHerramienta> golpes_por_herramienta;	// excepciones por clase
 	int minutos_para_borrar_cofre_abierto = 30;		// abierto y sin vaciar: se borra y la posicion se re-arma
@@ -2231,9 +2236,9 @@ class ExorCfgCofreLoot
 			golpes_herramientas_para_aperturarlo = 0;
 		if (tiros_para_aperturarlo < 0)
 			tiros_para_aperturarlo = 0;
-		// Los dos en 0 dejaria un cofre imposible de abrir: se cae al default de golpes.
+		// Los dos en 0 dejaria un cofre imposible de abrir: se cae al default de tiros.
 		if (golpes_herramientas_para_aperturarlo == 0 && tiros_para_aperturarlo == 0)
-			golpes_herramientas_para_aperturarlo = 30;
+			tiros_para_aperturarlo = 20;
 		if (minutos_para_borrar_cofre_abierto < 1)
 			minutos_para_borrar_cofre_abierto = 1;
 		if (cantidad_cofres_a_spawnear < 0)
@@ -2353,14 +2358,14 @@ class ExorCfgCofreLoot
 		minutos_re_spawn = 60;
 		cantidad_cofres_a_spawnear = 0;
 		metros_para_spawnear_cofre = 150;
-		humo = true;
+		humo = false;
 		color_humo = "blanco";
 		luz = true;
 		color_luz = "verde";
 		cantidad_zombies = 0;
 		clase_zombie = new TStringArray;
 		no_spawnear_cofres_en_horario_raid = true;
-		golpes_herramientas_para_aperturarlo = 30;
+		golpes_herramientas_para_aperturarlo = 0;
 		tiros_para_aperturarlo = 20;
 		minutos_para_borrar_cofre_abierto = 30;
 		segundos_entre_chequeos = 30;
