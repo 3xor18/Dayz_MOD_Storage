@@ -68,12 +68,11 @@ EXTRA = {
         'itemsCargoSize[] = {10, 12};',
         'attachments[] += {"Shoulder", "Melee"};',
     ],
-    # La chaqueta y el pantalon NBQ llevan 35 casillas (5x7) en vez de las 12 de vanilla.
-    # 5 de ancho y no 7: la grilla del inventario se dibuja a lo ancho, y mas de 6-7
-    # columnas empieza a irse de la pantalla en resoluciones chicas (mismo motivo por el
-    # que el cofre del KOTH es 10 de ancho y no 30).
-    "NBCJacket": ['itemsCargoSize[] = {5, 7};'],
-    "NBCPants":  ['itemsCargoSize[] = {5, 7};'],
+    # La chaqueta y el pantalon NBQ llevan 40 casillas (10 de ancho x 4 de alto) en vez de
+    # las 12 de vanilla. 10 es el ancho estandar del mod (el mismo de los barriles y del
+    # cofre del KOTH): entra en pantalla y no obliga a scrollear de costado.
+    "NBCJacket": ['itemsCargoSize[] = {10, 4};'],
+    "NBCPants":  ['itemsCargoSize[] = {10, 4};'],
 }
 
 CABECERA = '''\t// ==================================================================

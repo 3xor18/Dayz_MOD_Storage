@@ -301,7 +301,7 @@ class CfgVehicles
 			"ExorStorage\data\ropa\exor_rosa_nbc_jacket_worn_co.paa",
 			"ExorStorage\data\ropa\exor_rosa_nbc_jacket_worn_co.paa"
 		};
-		itemsCargoSize[] = {5, 7};
+		itemsCargoSize[] = {10, 4};
 	};
 
 	class Exor_NBCPants_Rosa: NBCPantsBase
@@ -314,7 +314,7 @@ class CfgVehicles
 			"ExorStorage\data\ropa\exor_rosa_nbc_pants_co.paa",
 			"ExorStorage\data\ropa\exor_rosa_nbc_pants_co.paa"
 		};
-		itemsCargoSize[] = {5, 7};
+		itemsCargoSize[] = {10, 4};
 	};
 
 	class Exor_NBCHood_Rosa: NBCHoodBase
@@ -527,7 +527,7 @@ class CfgVehicles
 			"ExorStorage\data\ropa\exor_arido_nbc_jacket_worn_co.paa",
 			"ExorStorage\data\ropa\exor_arido_nbc_jacket_worn_co.paa"
 		};
-		itemsCargoSize[] = {5, 7};
+		itemsCargoSize[] = {10, 4};
 	};
 
 	class Exor_NBCPants_Arido: NBCPantsBase
@@ -540,7 +540,7 @@ class CfgVehicles
 			"ExorStorage\data\ropa\exor_arido_nbc_pants_co.paa",
 			"ExorStorage\data\ropa\exor_arido_nbc_pants_co.paa"
 		};
-		itemsCargoSize[] = {5, 7};
+		itemsCargoSize[] = {10, 4};
 	};
 
 	class Exor_NBCHood_Arido: NBCHoodBase
@@ -753,7 +753,7 @@ class CfgVehicles
 			"ExorStorage\data\ropa\exor_urbano_nbc_jacket_worn_co.paa",
 			"ExorStorage\data\ropa\exor_urbano_nbc_jacket_worn_co.paa"
 		};
-		itemsCargoSize[] = {5, 7};
+		itemsCargoSize[] = {10, 4};
 	};
 
 	class Exor_NBCPants_Urbano: NBCPantsBase
@@ -766,7 +766,7 @@ class CfgVehicles
 			"ExorStorage\data\ropa\exor_urbano_nbc_pants_co.paa",
 			"ExorStorage\data\ropa\exor_urbano_nbc_pants_co.paa"
 		};
-		itemsCargoSize[] = {5, 7};
+		itemsCargoSize[] = {10, 4};
 	};
 
 	class Exor_NBCHood_Urbano: NBCHoodBase
@@ -979,7 +979,7 @@ class CfgVehicles
 			"ExorStorage\data\ropa\exor_nieve_nbc_jacket_worn_co.paa",
 			"ExorStorage\data\ropa\exor_nieve_nbc_jacket_worn_co.paa"
 		};
-		itemsCargoSize[] = {5, 7};
+		itemsCargoSize[] = {10, 4};
 	};
 
 	class Exor_NBCPants_Nieve: NBCPantsBase
@@ -992,7 +992,7 @@ class CfgVehicles
 			"ExorStorage\data\ropa\exor_nieve_nbc_pants_co.paa",
 			"ExorStorage\data\ropa\exor_nieve_nbc_pants_co.paa"
 		};
-		itemsCargoSize[] = {5, 7};
+		itemsCargoSize[] = {10, 4};
 	};
 
 	class Exor_NBCHood_Nieve: NBCHoodBase
@@ -1205,7 +1205,7 @@ class CfgVehicles
 			"ExorStorage\data\ropa\exor_negro_nbc_jacket_worn_co.paa",
 			"ExorStorage\data\ropa\exor_negro_nbc_jacket_worn_co.paa"
 		};
-		itemsCargoSize[] = {5, 7};
+		itemsCargoSize[] = {10, 4};
 	};
 
 	class Exor_NBCPants_Negro: NBCPantsBase
@@ -1218,7 +1218,7 @@ class CfgVehicles
 			"ExorStorage\data\ropa\exor_negro_nbc_pants_co.paa",
 			"ExorStorage\data\ropa\exor_negro_nbc_pants_co.paa"
 		};
-		itemsCargoSize[] = {5, 7};
+		itemsCargoSize[] = {10, 4};
 	};
 
 	class Exor_NBCHood_Negro: NBCHoodBase
