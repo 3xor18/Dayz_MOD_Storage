@@ -499,7 +499,7 @@ Por defecto solo evalúa a los SteamIDs de `watchlist` (`solo_watchlist=true`); 
 | `color_humo` | `"morado"` | string | Humo del maletín mientras está en el piso (se apaga solo cuando lo levantan) **y de la baliza del punto de entrega** (se borra cuando el maletín llega). |
 | `clase_cofre` | `Exor_KothCrate_1` | classname | El cofre del premio (el mismo supply crate del KOTH). |
 | `clase_fuegos_artificiales` | `FireworksLauncher` | classname | Fuegos al entregar. Vacío = sin fuegos. |
-| `minutos_despawn_cofre_premio` | `30` | int min | Cuánto queda el cofre del premio en el piso. |
+| `minutos_despawn_cofre_premio` | `10` | int min | Cuánto queda el cofre del premio en el piso desde que aparece. |
 | `cofres[]` | 2 ejemplos | lista | Cofres de premio posibles: `nombre`, `probabilidad_que_sea_este_cofre` (peso del sorteo, no hace falta que sumen 100) e `items[]` con `classname`, `probabilidad` 0-100, `cantidad` y `attachments`. |
 
 Los classnames del premio se **verifican al arrancar** (`grep "MALETIN: OJO"`).

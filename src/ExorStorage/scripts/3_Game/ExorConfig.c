@@ -2603,7 +2603,7 @@ class ExorCfgMaletin
 	string clase_cofre = "Exor_KothCrate_1";	// el mismo supply crate que usa el KOTH
 	string clase_fuegos_artificiales = "FireworksLauncher";
 	float metros_fuegos_lejos_del_cofre = 8;
-	int minutos_despawn_cofre_premio = 30;		// el cofre del premio no se queda para siempre
+	int minutos_despawn_cofre_premio = 10;		// el cofre del premio se va a los N minutos de aparecer
 
 	ref array<ref ExorCfgMaletinCofre> cofres;
 
@@ -2696,7 +2696,7 @@ class ExorCfgMaletin
 		clase_cofre = "Exor_KothCrate_1";
 		clase_fuegos_artificiales = "FireworksLauncher";
 		metros_fuegos_lejos_del_cofre = 8;
-		minutos_despawn_cofre_premio = 30;
+		minutos_despawn_cofre_premio = 10;
 		cofres = new array<ref ExorCfgMaletinCofre>;
 		SetDefaultCofres();
 	}
