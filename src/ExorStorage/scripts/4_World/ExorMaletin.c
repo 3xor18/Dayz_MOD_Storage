@@ -131,23 +131,36 @@ class ExorMaletin
 			Print(string.Format("%1 %2: %3 objetos de la sesion anterior borrados", ExorStorageConstants.LOG, TAG, borrados));
 	}
 
-	// borra maletines y balizas que quedaron alrededor de un punto configurado
+	// Borra lo que el evento haya dejado alrededor de un punto configurado: maletines,
+	// balizas y COFRES DE PREMIO.
+	//
+	// ⭐ El cofre del premio hace falta barrerlo aca porque su reloj de despawn vive en RAM:
+	// un reinicio en el medio de esos 10 minutos se lleva el estado del modulo y el cofre
+	// queda en el piso PARA SIEMPRE. Con varios reinicios seguidos -un dia de pruebas, o
+	// los reinicios normales del server- se apilan uno arriba del otro en el punto de
+	// entrega. Por eso el barrido del arranque tambien los incluye.
 	int BarrerPunto(ExorCfgMaletinCoord punto)
 	{
 		if (!punto)
 			return 0;
+		ExorCfgMaletin c = Cfg();
 		int borrados = 0;
 		int k;
 		vector pos = PosDe(punto);
 		array<Object> objs = new array<Object>;
 		array<CargoBase> cargos = new array<CargoBase>;
-		GetGame().GetObjectsAtPosition3D(pos, 15.0, objs, cargos);
+		GetGame().GetObjectsAtPosition3D(pos, 20.0, objs, cargos);
 		for (k = 0; k < objs.Count(); k++)
 		{
 			Object o = objs.Get(k);
 			if (!o)
 				continue;
-			if (Exor_MaletinEvento.Cast(o) || Exor_HumoEvento.Cast(o))
+			bool esDelEvento = Exor_MaletinEvento.Cast(o) || Exor_HumoEvento.Cast(o);
+			if (!esDelEvento && c.clase_cofre != "" && o.GetType() == c.clase_cofre)
+				esDelEvento = true;
+			if (!esDelEvento && c.clase_fuegos_artificiales != "" && o.GetType() == c.clase_fuegos_artificiales)
+				esDelEvento = true;
+			if (esDelEvento)
 			{
 				GetGame().ObjectDelete(o);
 				borrados++;
