@@ -63,6 +63,7 @@ modded class MissionServer
 		ExorKoth.Start();	// KOTH: eventos de captura con recompensa (si koth.json activar=true)
 		ExorCofre.Start();	// COFRE: zonas de apertura de cofres por horario (si evento_apertura_cofre.json activado=true)
 		ExorCofreLoot.Start();	// COFRES DE LOOT: cofres camuflados fijos que se abren a golpes/tiros (cofres_loot.json)
+		ExorMaletin.Start();	// EVENTO DEL MALETIN: llevarlo del punto de inicio al de entrega (evento_maletin.json)
 		ExorServerMsg.Start();	// mensajes automaticos del server al chat (mensajes.json: repetibles + agendados)
 		ExorTumbaForense.Limpiar();	// borra los JSON forenses de tumbas caducados (retencion en bodycadaver.json)
 		// Purga de JSON de bolsas sin dueño. Diferido 60s A PROPOSITO: necesita que la
@@ -153,6 +154,7 @@ modded class MissionServer
 			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorTerritoryManager.Get().HealGroupMast, 8000, false, exorHealG, player);
 		ExorKoth.Get().SyncMarkersToPlayer(player);	// que vea las marcas de los koth activos en su mapa
 		ExorCofre.Get().SyncMarkersToPlayer(player);	// marcas de las zonas de cofres abiertas
+		ExorMaletin.Get().SyncMarkersToPlayer(player);	// marcas del evento del maletin en curso
 
 		// BUGFIX (relog con lag): el roster (lista de miembros / menu P) se mandaba UNA
 		// sola vez aca. En un relog laggy ese envio fragmentado puede llegar antes de que

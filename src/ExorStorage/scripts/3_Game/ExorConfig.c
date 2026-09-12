@@ -2498,6 +2498,234 @@ class ExorCfgCofreLoot
 	}
 }
 
+// ============================================================================
+//  EVENTO DEL MALETIN (evento_maletin.json)
+// ============================================================================
+// Un maletin aparece en un punto de INICIO y hay que llevarlo hasta un punto de
+// FIN. El que lo carga no lo puede soltar, lo ve TODO el server en el mapa, y si
+// muere el maletin vuelve al inicio. Al entregarlo cae un cofre con premio.
+//
+// El costo del evento es fijo y minusculo: UN maletin, UNA marca de mapa que se
+// refresca cada N segundos, y el cofre del final. No hay nada por frame.
+// ----------------------------------------------------------------------------
+class ExorCfgMaletinCoord
+{
+	float x = 0;
+	float y = 0;	// 0 = lo apoya en el suelo (SurfaceY)
+	float z = 0;
+}
+
+// Ventana en la que el evento PUEDE arrancar (dia + rango horario).
+class ExorCfgMaletinHorario
+{
+	string dia = "todos";	// todos / lunes / martes / ... / domingo
+	string hora_inicio = "00:00";
+	string hora_fin = "23:59";
+	bool activado = true;
+}
+
+// Un item del cofre de premio, con su probabilidad y sus attachments.
+class ExorCfgMaletinItem
+{
+	string classname = "";
+	int probabilidad = 100;	// 0-100
+	int cantidad = 1;
+	ref TStringArray attachments;
+
+	void ExorCfgMaletinItem()
+	{
+		attachments = new TStringArray;
+	}
+}
+
+// Un COFRE de premio posible. Al entregar el maletin se sortea uno (ponderado) y
+// se tira su tabla de items.
+class ExorCfgMaletinCofre
+{
+	string nombre = "";
+	int probabilidad_que_sea_este_cofre = 100;	// peso del sorteo (no hace falta que sumen 100)
+	ref array<ref ExorCfgMaletinItem> items;
+
+	void ExorCfgMaletinCofre()
+	{
+		items = new array<ref ExorCfgMaletinItem>;
+	}
+}
+
+class ExorCfgMaletin
+{
+	int version = 1;
+	bool enable = true;
+	int offset_horas = 0;					// reloj del host vs la hora que se quiere usar
+	bool desactivar_en_horario_raid = true;	// en raid no arranca (el horario sale de raid.json)
+	int cantidad_minima_players_online = 1;	// menos que esto y el evento no arranca
+
+	// Puntos posibles. Se sortea UNO de cada array en cada evento, asi el recorrido
+	// cambia y nadie campea siempre el mismo lugar.
+	ref array<ref ExorCfgMaletinCoord> posicion_inicio;
+	ref array<ref ExorCfgMaletinCoord> posicion_fin;
+
+	ref array<ref ExorCfgMaletinHorario> horarios;	// cuando PUEDE arrancar
+
+	int minutos_duracion_evento = 60;				// el maletin espera esto en el inicio; si nadie lo agarra, se cancela
+	int minutos_para_ir_desde_inicio_al_final = 60;	// una vez agarrado, cuanto hay para entregarlo
+	int minutos_para_repetir_evento = 60;			// cuanto se espera para el proximo, al terminar (bien o mal)
+	int metros_para_entregar = 20;					// que tan cerca del punto final hay que llegar
+
+	// Anti-campeo: el que lleva el maletin no puede quedarse adentro de una base.
+	bool activar_muerte_por_permanecer_cerca_mastil_base = true;
+	int minutos_morir_por_cercania_mastil = 5;
+	int metros_para_morir_cercania_mastil = 50;
+
+	// Marcas de mapa
+	bool marcar_en_mapa_inicio_y_fin = true;
+	bool marcar_en_mapa_global_player_con_maletin = true;
+	int segundos_refrescar_marca_portador = 15;	// cada cuanto se re-manda la marca que se mueve
+
+	bool avisos_en_chat = true;					// avisos del evento a todo el server
+	string classname_maletin = "Exor_MaletinEvento";
+	string color_humo = "morado";				// humo del punto de inicio: morado/blanco/amarillo/verde/rojo/negro
+	string clase_cofre = "Exor_KothCrate_1";	// el mismo supply crate que usa el KOTH
+	string clase_fuegos_artificiales = "FireworksLauncher";
+	float metros_fuegos_lejos_del_cofre = 8;
+	int minutos_despawn_cofre_premio = 30;		// el cofre del premio no se queda para siempre
+
+	ref array<ref ExorCfgMaletinCofre> cofres;
+
+	void ExorCfgMaletin()
+	{
+		posicion_inicio = new array<ref ExorCfgMaletinCoord>;
+		posicion_fin = new array<ref ExorCfgMaletinCoord>;
+		horarios = new array<ref ExorCfgMaletinHorario>;
+		cofres = new array<ref ExorCfgMaletinCofre>;
+	}
+
+	void Validate()
+	{
+		if (minutos_duracion_evento < 1)
+			minutos_duracion_evento = 1;
+		if (minutos_para_ir_desde_inicio_al_final < 1)
+			minutos_para_ir_desde_inicio_al_final = 1;
+		if (minutos_para_repetir_evento < 1)
+			minutos_para_repetir_evento = 1;
+		if (metros_para_entregar < 2)
+			metros_para_entregar = 2;
+		if (segundos_refrescar_marca_portador < 5)
+			segundos_refrescar_marca_portador = 5;
+		if (minutos_morir_por_cercania_mastil < 1)
+			minutos_morir_por_cercania_mastil = 1;
+		if (metros_para_morir_cercania_mastil < 1)
+			metros_para_morir_cercania_mastil = 1;
+		if (cantidad_minima_players_online < 0)
+			cantidad_minima_players_online = 0;
+		if (classname_maletin == "")
+			classname_maletin = "Exor_MaletinEvento";
+	}
+
+	// Sorteo ponderado del cofre de premio.
+	ExorCfgMaletinCofre SortearCofre()
+	{
+		if (!cofres || cofres.Count() == 0)
+			return null;
+		int total = 0;
+		int i;
+		for (i = 0; i < cofres.Count(); i++)
+		{
+			ExorCfgMaletinCofre c = cofres.Get(i);
+			if (c && c.probabilidad_que_sea_este_cofre > 0)
+				total = total + c.probabilidad_que_sea_este_cofre;
+		}
+		if (total <= 0)
+			return cofres.Get(0);
+		int dado = Math.RandomInt(0, total);
+		int acum = 0;
+		for (i = 0; i < cofres.Count(); i++)
+		{
+			ExorCfgMaletinCofre c2 = cofres.Get(i);
+			if (!c2 || c2.probabilidad_que_sea_este_cofre <= 0)
+				continue;
+			acum = acum + c2.probabilidad_que_sea_este_cofre;
+			if (dado < acum)
+				return c2;
+		}
+		return cofres.Get(0);
+	}
+
+	void SetDefaults()
+	{
+		version = 1;
+		enable = false;	// arranca APAGADO: sin coordenadas reales no tiene sentido
+		offset_horas = 0;
+		desactivar_en_horario_raid = true;
+		cantidad_minima_players_online = 1;
+		posicion_inicio = new array<ref ExorCfgMaletinCoord>;
+		posicion_fin = new array<ref ExorCfgMaletinCoord>;
+		horarios = new array<ref ExorCfgMaletinHorario>;
+		ExorCfgMaletinHorario h = new ExorCfgMaletinHorario;
+		h.dia = "todos";
+		h.hora_inicio = "00:00";
+		h.hora_fin = "23:59";
+		h.activado = true;
+		horarios.Insert(h);
+		minutos_duracion_evento = 60;
+		minutos_para_ir_desde_inicio_al_final = 60;
+		minutos_para_repetir_evento = 60;
+		metros_para_entregar = 20;
+		activar_muerte_por_permanecer_cerca_mastil_base = true;
+		minutos_morir_por_cercania_mastil = 5;
+		metros_para_morir_cercania_mastil = 50;
+		marcar_en_mapa_inicio_y_fin = true;
+		marcar_en_mapa_global_player_con_maletin = true;
+		segundos_refrescar_marca_portador = 15;
+		avisos_en_chat = true;
+		classname_maletin = "Exor_MaletinEvento";
+		color_humo = "morado";
+		clase_cofre = "Exor_KothCrate_1";
+		clase_fuegos_artificiales = "FireworksLauncher";
+		metros_fuegos_lejos_del_cofre = 8;
+		minutos_despawn_cofre_premio = 30;
+		cofres = new array<ref ExorCfgMaletinCofre>;
+		SetDefaultCofres();
+	}
+
+	protected ExorCfgMaletinItem AddItem(ExorCfgMaletinCofre c, string cls, int prob, int cant)
+	{
+		ExorCfgMaletinItem it = new ExorCfgMaletinItem;
+		it.classname = cls;
+		it.probabilidad = prob;
+		it.cantidad = cant;
+		c.items.Insert(it);
+		return it;
+	}
+
+	// Dos cofres de ejemplo con classnames vanilla, para que el archivo sirva tal cual
+	// sale y el admin vea la forma.
+	void SetDefaultCofres()
+	{
+		cofres = new array<ref ExorCfgMaletinCofre>;
+
+		ExorCfgMaletinCofre a = new ExorCfgMaletinCofre;
+		a.nombre = "armas";
+		a.probabilidad_que_sea_este_cofre = 60;
+		ExorCfgMaletinItem m4 = AddItem(a, "M4A1", 100, 1);
+		m4.attachments.Insert("Mag_STANAG_30Rnd");
+		m4.attachments.Insert("M4_Suppressor");
+		AddItem(a, "Mag_STANAG_30Rnd", 100, 2);
+		AddItem(a, "Ammo_556x45", 100, 3);
+		AddItem(a, "SCARH", 40, 1);
+		cofres.Insert(a);
+
+		ExorCfgMaletinCofre b = new ExorCfgMaletinCofre;
+		b.nombre = "suministros";
+		b.probabilidad_que_sea_este_cofre = 40;
+		AddItem(b, "TacticalBaconCan", 100, 4);
+		AddItem(b, "BandageDressing", 100, 4);
+		AddItem(b, "TetracyclineAntibiotics", 80, 2);
+		AddItem(b, "BloodBagFull", 60, 1);
+		cofres.Insert(b);
+	}
+}
+
 class ExorConfig
 {
 	ref ExorCfgStorage storage;
@@ -2520,6 +2748,7 @@ class ExorConfig
 	ref ExorCfgCarLock carlock;	// candado de autos (codelock_autos.json)
 	ref ExorCfgRaid raid;	// CONFIG MAESTRA del horario de raid (raid.json)
 	ref ExorCfgCofreLoot cofres_loot;	// cofres de loot fijos en el mapa (cofres_loot.json)
+	ref ExorCfgMaletin maletin;	// evento del maletin (evento_maletin.json)
 	bool m_Synced;	// cliente: true cuando ya recibio la config del server
 
 	void ExorConfig()
@@ -2544,6 +2773,7 @@ class ExorConfig
 		carlock = new ExorCfgCarLock;
 		raid = new ExorCfgRaid;
 		cofres_loot = new ExorCfgCofreLoot;
+		maletin = new ExorCfgMaletin;
 	}
 
 	// SERVER: serializa la config relevante al cliente a JSON
@@ -2720,6 +2950,7 @@ class ExorConfig
 		c.LoadCarLock();
 		c.LoadRaid();
 		c.LoadCofresLoot();
+		c.LoadMaletin();
 
 		return c;
 	}
@@ -2971,6 +3202,23 @@ class ExorConfig
 			cofres_loot.SetDefaults();
 			cofres_loot.Validate();
 			JsonFileLoader<ExorCfgCofreLoot>.JsonSaveFile(ExorStorageConstants.CFG_COFRES_LOOT, cofres_loot);
+		}
+	}
+
+	// Evento del maletin. Mismo criterio no-resave que el resto de los eventos: si el
+	// archivo existe se carga EXACTO y no se reformatea lo que edito el admin.
+	void LoadMaletin()
+	{
+		if (FileExist(ExorStorageConstants.CFG_MALETIN))
+		{
+			JsonFileLoader<ExorCfgMaletin>.JsonLoadFile(ExorStorageConstants.CFG_MALETIN, maletin);
+			maletin.Validate();
+		}
+		else
+		{
+			maletin.SetDefaults();
+			maletin.Validate();
+			JsonFileLoader<ExorCfgMaletin>.JsonSaveFile(ExorStorageConstants.CFG_MALETIN, maletin);
 		}
 	}
 

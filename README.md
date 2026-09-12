@@ -54,6 +54,13 @@ Mide geometría y resultados con los eventos del motor para dar **indicios** (NU
 - **Cupo sobre el array de posiciones**: se configura cuántos cofres hay a la vez, no uno por coordenada. Con 3 posiciones y cupo 2 siempre hay 2, y al consumirse uno el siguiente aparece en otra: nadie se queda esperando parado en un punto fijo.
 - Reaparece a los X minutos de que lo vacían, con % de que salga o no, y opción de **no sembrar durante el horario de raid**.
 
+### Evento del maletín (escolta)
+- Aparece un **maletín** con humo en un punto de inicio (sorteado entre varios) y hay que llevarlo hasta un punto de entrega (también sorteado). Al entregarlo cae un **cofre con premio** y fuegos artificiales.
+- El que lo carga **no lo puede soltar** y sale marcado en el mapa de **todo el server**: es una liebre con premio encima.
+- Si el portador **muere**, el maletín vuelve al punto de inicio con su humo y el evento sigue: otro puede ir a buscarlo.
+- **Anti-campeo**: si el portador se queda cerca del mástil de una base los minutos configurados, se muere. Se puede desactivar.
+- Ventanas por día y hora, mínimo de jugadores online, tiempo máximo para entregarlo y pausa entre eventos, todo configurable.
+
 ### Spawns
 - Pantalla de selección al morir / primer login, con puntos configurables + "Mi base".
 - **Hombre / Mujer** elegible en la misma pantalla (para todos): el personaje se reemplaza por uno del sexo elegido en el punto que elijas.
@@ -467,6 +474,35 @@ Por defecto solo evalúa a los SteamIDs de `watchlist` (`solo_watchlist=true`); 
 | `segundos_para_completar_koth` | `60` | int seg | Tiempo base para izar la bandera al 100%. |
 | `coordenadas[]` | `{0,0,0}` | [{x,y,z}] float | 1 o más ubicaciones; se elige una libre al azar cada ciclo. |
 | `item[]` | ejemplos | [{classname, prob}] | Recompensa: `classname` + `probabilidad_drop_en_porcentaje_maximo_100` (0–100). Repetir un classname = "1 seguro + 1 con suerte". |
+
+### `evento_maletin.json` — evento del maletín
+*No-resave*: si el archivo existe se respeta exacto. Se crea **apagado** (`enable: false`) y **sin coordenadas**: hay que poner las reales y prenderlo.
+
+| Parámetro | Default | Valores | Descripción |
+|---|---|---|---|
+| `enable` | `false` | bool | Master on/off del evento. |
+| `offset_horas` | `0` | int horas | Ajuste del reloj del host vs la hora que se quiere usar. |
+| `desactivar_en_horario_raid` | `true` | bool | Durante la ventana de `raid.json` el evento no arranca. |
+| `cantidad_minima_players_online` | `1` | int | Con menos conectados que esto, no arranca. |
+| `posicion_inicio[]` / `posicion_fin[]` | `[]` | [{x,y,z}] | **Arrays**: en cada evento se sortea uno de cada uno, así el recorrido cambia. `y = 0` apoya en el suelo. |
+| `horarios[]` | todos 00:00-23:59 | [{dia, hora_inicio, hora_fin, activado}] | Cuándo PUEDE arrancar. |
+| `minutos_duracion_evento` | `60` | int min | Cuánto espera el maletín en el inicio. Si nadie lo agarra, se cancela. |
+| `minutos_para_ir_desde_inicio_al_final` | `60` | int min | Una vez agarrado, cuánto hay para entregarlo. |
+| `minutos_para_repetir_evento` | `60` | int min | Pausa hasta el próximo, al terminar (bien o mal). |
+| `metros_para_entregar` | `20` | int m | Qué tan cerca del punto final hay que llegar. |
+| `activar_muerte_por_permanecer_cerca_mastil_base` | `true` | bool | Anti-campeo: el portador no puede quedarse adentro de una base. |
+| `minutos_morir_por_cercania_mastil` | `5` | int min | Cuánto aguanta cerca de un mástil antes de morir (avisa a la mitad). |
+| `metros_para_morir_cercania_mastil` | `50` | int m | Qué tan cerca de un mástil cuenta como "adentro de una base". |
+| `marcar_en_mapa_inicio_y_fin` | `true` | bool | Marcas de inicio y entrega para todos. |
+| `marcar_en_mapa_global_player_con_maletin` | `true` | bool | La marca que se mueve con el portador. |
+| `segundos_refrescar_marca_portador` | `15` | int seg | Cada cuánto se re-manda esa marca. Bajarlo mucho es mandar RPCs a todo el server para mover un punto que casi no se movió. |
+| `color_humo` | `"morado"` | string | Humo del maletín mientras está en el piso. Se apaga solo cuando lo levantan. |
+| `clase_cofre` | `Exor_KothCrate_1` | classname | El cofre del premio (el mismo supply crate del KOTH). |
+| `clase_fuegos_artificiales` | `FireworksLauncher` | classname | Fuegos al entregar. Vacío = sin fuegos. |
+| `minutos_despawn_cofre_premio` | `30` | int min | Cuánto queda el cofre del premio en el piso. |
+| `cofres[]` | 2 ejemplos | lista | Cofres de premio posibles: `nombre`, `probabilidad_que_sea_este_cofre` (peso del sorteo, no hace falta que sumen 100) e `items[]` con `classname`, `probabilidad` 0-100, `cantidad` y `attachments`. |
+
+Los classnames del premio se **verifican al arrancar** (`grep "MALETIN: OJO"`).
 
 ### `cofres_loot.json` — cofres de loot fijos
 *No-resave*: si el archivo existe se respeta exacto. Se crea con las **tablas de loot de ejemplo** y **sin posiciones** (hay que poner las coordenadas reales; sin posiciones el módulo no arranca).
