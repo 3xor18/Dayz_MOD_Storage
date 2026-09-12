@@ -480,7 +480,7 @@ Por defecto solo evalúa a los SteamIDs de `watchlist` (`solo_watchlist=true`); 
 | `metros_para_spawnear_cofre` | `150` | int m (`0`=sin chequeo) | **El cofre, su luz y sus infectados existen solo mientras haya alguien a esta distancia.** Es lo que hace que 50 coordenadas por el mapa no cuesten nada mientras nadie las visita. |
 | `humo` / `color_humo` | `false` / `blanco` | bool / string | Humo del evento. Apagado por defecto: probado in-game no se llega a ver (el cofre es bajo y la particula queda pegada al piso). |
 | `luz` / `color_luz` | `true` / `verde` | bool / string | Luz de chemlight pegada al cofre. Como la chemlight vanilla, no se ve de dia. |
-| `cantidad_zombies` / `clase_zombie[]` | `0` / `[]` | int / [string] | Guardia por defecto de cada cofre. Cada tabla de `tipos[]` puede pisarla con la suya. Los infectados se retiran cuando no queda nadie cerca y vuelven cuando alguien aparece. |
+| `cantidad_zombies` / `clase_zombie[]` | `1` / `[ZmbM_Mummy]` | int / [string] | Guardia del cofre, **nace una sola vez junto con el cofre y no se repone**: el que la mata se ganó el cofre. Cada tabla de `tipos[]` puede pisarla con la suya. |
 | `no_spawnear_cofres_en_horario_raid` | `true` | bool | Durante la ventana de `raid.json` no se siembran cofres nuevos (el que ya está sigue). |
 | `golpes_herramientas_para_aperturarlo` | `0` | int (`0`=el melee no abre) | Golpes de melee para reventarlo. En 0 (default) al que le pegue se le avisa que es a tiros: asi abrir un cofre cuesta municion y hace ruido. |
 | `tiros_para_aperturarlo` | `20` | int (`0`=las balas no abren) | Balas para reventarlo. |

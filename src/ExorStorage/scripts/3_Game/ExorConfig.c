@@ -2197,8 +2197,9 @@ class ExorCfgCofreLoot
 	string color_humo = "blanco";	// blanco / amarillo / verde / morado / rojo / negro
 	bool luz = true;
 	string color_luz = "verde";		// verde / roja / azul / amarilla / blanca
-	// Guardia por DEFECTO de cualquier cofre (cada tabla de tipos[] puede pisarlo).
-	int cantidad_zombies = 0;
+	// Guardia por DEFECTO de cualquier cofre (cada tabla de tipos[] puede pisarla). Nace
+	// UNA sola vez, junto con el cofre, y no se repone: ver ExorCofreLoot.PonerGuardia.
+	int cantidad_zombies = 1;
 	ref TStringArray clase_zombie;
 	bool no_spawnear_cofres_en_horario_raid = true;	// el horario sale de raid.json (fuente unica)
 	// Golpes de melee (hacha, pico, cuchillo, manos). En 0 el melee NO abre el cofre: al que
@@ -2362,8 +2363,9 @@ class ExorCfgCofreLoot
 		color_humo = "blanco";
 		luz = true;
 		color_luz = "verde";
-		cantidad_zombies = 0;
+		cantidad_zombies = 1;
 		clase_zombie = new TStringArray;
+		clase_zombie.Insert("ZmbM_Mummy");	// la momia, la misma que usa el KOTH
 		no_spawnear_cofres_en_horario_raid = true;
 		golpes_herramientas_para_aperturarlo = 0;
 		tiros_para_aperturarlo = 20;

@@ -149,8 +149,32 @@ class ExorCofreLoot
 				}
 			}
 		}
+		malos = malos + ValidarZombies(c.clase_zombie, "la lista de la raiz");
+		for (i = 0; i < c.tipos.Count(); i++)
+		{
+			ExorCfgCofreLootTipo tz = c.tipos.Get(i);
+			if (tz)
+				malos = malos + ValidarZombies(tz.clase_zombie, "la tabla '" + tz.nombre + "'");
+		}
 		if (malos == 0)
 			Print(string.Format("%1 %2: classnames de las %3 tablas verificados, todos existen", ExorStorageConstants.LOG, TAG, c.tipos.Count()));
+	}
+
+	int ValidarZombies(TStringArray clases, string donde)
+	{
+		if (!clases)
+			return 0;
+		int malos = 0;
+		int i;
+		for (i = 0; i < clases.Count(); i++)
+		{
+			if (!ExisteClase(clases.Get(i)))
+			{
+				Print(string.Format("%1 %2: OJO, %3 pide el infectado '%4' y esa clase NO existe en este server", ExorStorageConstants.LOG, TAG, donde, clases.Get(i)));
+				malos++;
+			}
+		}
+		return malos;
 	}
 
 	static bool ExisteClase(string cls)
@@ -234,12 +258,7 @@ class ExorCofreLoot
 				continue;
 			RevisarCofreVivo(c, pt, now);
 			if (pt.m_Cofre)
-			{
 				vivos++;
-				// Una sola medicion de "hay alguien cerca" por cofre y por ronda, y con ella
-				// se decide todo lo de la guardia. Es la unica consulta de distancia del tick.
-				RevisarZombies(c, pt, HayJugadorCerca(pt.m_Cofre.GetPosition(), c.metros_para_spawnear_cofre));
-			}
 		}
 
 		// 2) sembrar hasta llenar el CUPO del array (no una por posicion)
@@ -344,7 +363,7 @@ class ExorCofreLoot
 		cofre.m_ExorTipo = tipo;
 		cofre.ExorSetFx(c.CodigoFx());	// humo + luz, en un solo entero sincronizado
 		pt.m_Cofre = cofre;
-		RevisarZombies(c, pt, true);	// si llego aca es porque hay alguien cerca
+		PonerGuardia(c, pt);	// la guardia nace con el cofre, y solo esta vez
 		Print(string.Format("%1 %2: cofre spawneado en %3 (posicion %4, tabla '%5')", ExorStorageConstants.LOG, TAG, pos, pt.m_Idx, tipo));
 		return true;
 	}
@@ -417,23 +436,20 @@ class ExorCofreLoot
 	// ------------------------------------------------------------------------
 	//  GUARDIA DE INFECTADOS
 	// ------------------------------------------------------------------------
-	// Los infectados de un cofre existen SOLO mientras haya alguien cerca: si el jugador se
-	// va, se retiran, y si vuelve, vuelven. Un infectado quieto es de lo mas caro que hay
-	// (tiene IA, navmesh y sincronizacion), asi que dejarlos parados al lado de un cofre que
-	// nadie visita en horas seria pagar por nada.
-	void RevisarZombies(ExorCfgCofreLoot c, ExorCofreLootPunto pt, bool hayJugador)
+	// Se pone UNA SOLA VEZ, en el mismo momento en que nace el cofre (o sea, cuando un
+	// jugador entro en el radio de siembra). Y no se repone nunca: el que los mata se gano
+	// el cofre, y el que vuelve al rato no se encuentra con la guardia otra vez.
+	//
+	// ⭐ POR QUE NO SE REPONEN NI SE RECICLAN
+	// Repoblarlos por tick -o sacarlos y devolverlos segun quien ande cerca- convertiria el
+	// cofre en una fabrica de infectados: cada ronda de 30 s crearia entidades con IA,
+	// navmesh y sincronizacion, que es lo mas caro que puede generar el mod. Naciendo con el
+	// cofre, la cuenta es exacta: por cada cofre que aparece se crean N infectados, ni uno
+	// mas, y se van todos juntos cuando el cofre se va.
+	void PonerGuardia(ExorCfgCofreLoot c, ExorCofreLootPunto pt)
 	{
 		if (!pt.m_Cofre)
-		{
-			BorrarZombies(pt);
 			return;
-		}
-		LimpiarMuertos(pt);
-		if (!hayJugador)
-		{
-			BorrarZombies(pt);
-			return;
-		}
 		ExorCfgCofreLootTipo tabla = c.BuscarTipo(pt.m_Cofre.m_ExorTipo);
 		int cuantos = c.ZombiesDe(tabla);
 		if (cuantos <= 0)
@@ -441,14 +457,9 @@ class ExorCofreLoot
 		TStringArray clases = c.ClasesZombieDe(tabla);
 		if (!clases || clases.Count() == 0)
 			return;
-		// Solo se repone lo que falta (los que mato el jugador NO se reponen mientras siga
-		// ahi: el cofre se defiende una vez, no es una fabrica infinita de infectados).
-		if (pt.m_Zombies.Count() >= cuantos)
-			return;
 		vector centro = pt.m_Cofre.GetPosition();
-		int faltan = cuantos - pt.m_Zombies.Count();
 		int i;
-		for (i = 0; i < faltan; i++)
+		for (i = 0; i < cuantos; i++)
 		{
 			string cls = clases.Get(Math.RandomInt(0, clases.Count()));
 			vector donde = PosAlrededor(centro, 3.0, 7.0);
@@ -458,24 +469,8 @@ class ExorCofreLoot
 			else
 				Print(string.Format("%1 %2: no se pudo crear el infectado '%3' (classname invalido?)", ExorStorageConstants.LOG, TAG, cls));
 		}
-	}
-
-	// saca de la lista los que ya no estan (los mataron): asi el conteo no miente
-	void LimpiarMuertos(ExorCofreLootPunto pt)
-	{
-		int i;
-		for (i = pt.m_Zombies.Count() - 1; i >= 0; i--)
-		{
-			Object z = pt.m_Zombies.Get(i);
-			if (!z)
-			{
-				pt.m_Zombies.Remove(i);
-				continue;
-			}
-			DayZInfected inf = DayZInfected.Cast(z);
-			if (inf && !inf.IsAlive())
-				pt.m_Zombies.Remove(i);
-		}
+		if (pt.m_Zombies.Count() > 0)
+			Print(string.Format("%1 %2: %3 infectados de guardia en la posicion %4", ExorStorageConstants.LOG, TAG, pt.m_Zombies.Count(), pt.m_Idx));
 	}
 
 	void BorrarZombies(ExorCofreLootPunto pt)
