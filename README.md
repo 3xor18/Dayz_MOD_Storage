@@ -484,7 +484,7 @@ Por defecto solo evalúa a los SteamIDs de `watchlist` (`solo_watchlist=true`); 
 | `offset_horas` | `0` | int horas | Ajuste del reloj del host vs la hora que se quiere usar. |
 | `desactivar_en_horario_raid` | `true` | bool | Durante la ventana de `raid.json` el evento no arranca. |
 | `cantidad_minima_players_online` | `1` | int | Con menos conectados que esto, no arranca. |
-| `posicion_inicio[]` / `posicion_fin[]` | `[]` | [{x,y,z}] | **Arrays**: en cada evento se sortea uno de cada uno, así el recorrido cambia. `y = 0` apoya en el suelo. |
+| `recorridos[]` | `[]` | [{inicio:{x,y,z}, fin:{x,y,z}}] | **Cada elemento es un recorrido entero** (de dónde sale y adónde va). En cada evento se sortea uno completo: sortear inicio y fin por separado puede dar un cruce absurdo. `y = 0` apoya en el suelo. |
 | `horarios[]` | todos 00:00-23:59 | [{dia, hora_inicio, hora_fin, activado}] | Cuándo PUEDE arrancar. |
 | `minutos_duracion_evento` | `60` | int min | Cuánto espera el maletín en el inicio. Si nadie lo agarra, se cancela. |
 | `minutos_para_ir_desde_inicio_al_final` | `60` | int min | Una vez agarrado, cuánto hay para entregarlo. |
@@ -496,7 +496,7 @@ Por defecto solo evalúa a los SteamIDs de `watchlist` (`solo_watchlist=true`); 
 | `marcar_en_mapa_inicio_y_fin` | `true` | bool | Marcas de inicio y entrega para todos. |
 | `marcar_en_mapa_global_player_con_maletin` | `true` | bool | La marca que se mueve con el portador. |
 | `segundos_refrescar_marca_portador` | `15` | int seg | Cada cuánto se re-manda esa marca. Bajarlo mucho es mandar RPCs a todo el server para mover un punto que casi no se movió. |
-| `color_humo` | `"morado"` | string | Humo del maletín mientras está en el piso. Se apaga solo cuando lo levantan. |
+| `color_humo` | `"morado"` | string | Humo del maletín mientras está en el piso (se apaga solo cuando lo levantan) **y de la baliza del punto de entrega** (se borra cuando el maletín llega). |
 | `clase_cofre` | `Exor_KothCrate_1` | classname | El cofre del premio (el mismo supply crate del KOTH). |
 | `clase_fuegos_artificiales` | `FireworksLauncher` | classname | Fuegos al entregar. Vacío = sin fuegos. |
 | `minutos_despawn_cofre_premio` | `30` | int min | Cuánto queda el cofre del premio en el piso. |

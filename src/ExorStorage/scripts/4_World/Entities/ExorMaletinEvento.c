@@ -98,6 +98,60 @@ class Exor_MaletinEvento : Container_Base
 	}
 }
 
+// ============================================================================
+//  BALIZA DEL PUNTO DE ENTREGA
+// ----------------------------------------------------------------------------
+//  Hereda de la luz del evento de cofres (bengala fija, no agarrable) y le suma
+//  el humo del mismo color que el del maletin, para que el punto de entrega se
+//  vea de lejos igual que el de inicio. La borra el manager cuando llega el
+//  maletin, asi que no hay que apagar nada a mano.
+// ============================================================================
+class Exor_HumoEvento : Exor_CofreLight
+{
+	int m_ExorHumo;		// sincronizado: 0 = sin humo, 1..6 = color
+
+	protected Particle m_ExorHumoFx;
+
+	void Exor_HumoEvento()
+	{
+		RegisterNetSyncVariableInt("m_ExorHumo", 0, 9);
+	}
+
+	void ExorSetHumo(int idx)
+	{
+		m_ExorHumo = idx;
+		SetSynchDirty();
+	}
+
+	override void OnVariablesSynchronized()
+	{
+		super.OnVariablesSynchronized();
+		if (!GetGame() || !GetGame().IsClient())
+			return;
+		if (m_ExorHumo > 0 && !m_ExorHumoFx)
+		{
+			vector p = GetPosition();
+			p[1] = p[1] + 0.3;
+			m_ExorHumoFx = Particle.PlayInWorld(ExorHumoFx.ParticulaDe(m_ExorHumo), p);
+		}
+		else if (m_ExorHumo == 0 && m_ExorHumoFx)
+		{
+			m_ExorHumoFx.Stop();
+			m_ExorHumoFx = null;
+		}
+	}
+
+	override void EEDelete(EntityAI parent)
+	{
+		if (m_ExorHumoFx)
+		{
+			m_ExorHumoFx.Stop();
+			m_ExorHumoFx = null;
+		}
+		super.EEDelete(parent);
+	}
+}
+
 // ----------------------------------------------------------------------------
 //  Traduccion color -> particula de humo, compartida por el cofre y el maletin.
 // ----------------------------------------------------------------------------

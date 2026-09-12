@@ -2515,6 +2515,22 @@ class ExorCfgMaletinCoord
 	float z = 0;
 }
 
+// UN recorrido: de donde sale el maletin y adonde hay que llevarlo. Van EN PAREJA a
+// proposito: sortear el inicio y el fin por separado puede dar un cruce absurdo (dos
+// puntos pegados, o uno que cruza el mapa entero). Asi cada recorrido se diseña entero
+// y el sorteo elige cual se juega.
+class ExorCfgMaletinRecorrido
+{
+	ref ExorCfgMaletinCoord inicio;
+	ref ExorCfgMaletinCoord fin;
+
+	void ExorCfgMaletinRecorrido()
+	{
+		inicio = new ExorCfgMaletinCoord;
+		fin = new ExorCfgMaletinCoord;
+	}
+}
+
 // Ventana en la que el evento PUEDE arrancar (dia + rango horario).
 class ExorCfgMaletinHorario
 {
@@ -2560,10 +2576,9 @@ class ExorCfgMaletin
 	bool desactivar_en_horario_raid = true;	// en raid no arranca (el horario sale de raid.json)
 	int cantidad_minima_players_online = 1;	// menos que esto y el evento no arranca
 
-	// Puntos posibles. Se sortea UNO de cada array en cada evento, asi el recorrido
-	// cambia y nadie campea siempre el mismo lugar.
-	ref array<ref ExorCfgMaletinCoord> posicion_inicio;
-	ref array<ref ExorCfgMaletinCoord> posicion_fin;
+	// Recorridos posibles (inicio + fin). En cada evento se sortea UNO entero, asi el
+	// camino cambia y nadie campea siempre el mismo lugar.
+	ref array<ref ExorCfgMaletinRecorrido> recorridos;
 
 	ref array<ref ExorCfgMaletinHorario> horarios;	// cuando PUEDE arrancar
 
@@ -2594,8 +2609,7 @@ class ExorCfgMaletin
 
 	void ExorCfgMaletin()
 	{
-		posicion_inicio = new array<ref ExorCfgMaletinCoord>;
-		posicion_fin = new array<ref ExorCfgMaletinCoord>;
+		recorridos = new array<ref ExorCfgMaletinRecorrido>;
 		horarios = new array<ref ExorCfgMaletinHorario>;
 		cofres = new array<ref ExorCfgMaletinCofre>;
 	}
@@ -2658,8 +2672,7 @@ class ExorCfgMaletin
 		offset_horas = 0;
 		desactivar_en_horario_raid = true;
 		cantidad_minima_players_online = 1;
-		posicion_inicio = new array<ref ExorCfgMaletinCoord>;
-		posicion_fin = new array<ref ExorCfgMaletinCoord>;
+		recorridos = new array<ref ExorCfgMaletinRecorrido>;
 		horarios = new array<ref ExorCfgMaletinHorario>;
 		ExorCfgMaletinHorario h = new ExorCfgMaletinHorario;
 		h.dia = "todos";

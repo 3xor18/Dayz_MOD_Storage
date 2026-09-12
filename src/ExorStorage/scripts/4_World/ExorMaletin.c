@@ -48,6 +48,7 @@ class ExorMaletin
 	vector m_Inicio;
 	vector m_Fin;
 	Exor_MaletinEvento m_Maletin;
+	Exor_HumoEvento m_HumoFin;	// baliza con humo en el punto de entrega
 	PlayerBase m_Portador;
 	Object m_Cofre;
 	Object m_Fuegos;
@@ -87,16 +88,16 @@ class ExorMaletin
 			Print(string.Format("%1 %2: desactivado (evento_maletin.json enable=false)", ExorStorageConstants.LOG, TAG));
 			return;
 		}
-		if (!c.posicion_inicio || c.posicion_inicio.Count() == 0 || !c.posicion_fin || c.posicion_fin.Count() == 0)
+		if (!c.recorridos || c.recorridos.Count() == 0)
 		{
-			Print(string.Format("%1 %2: faltan posiciones de inicio o de fin, no arranca", ExorStorageConstants.LOG, TAG));
+			Print(string.Format("%1 %2: sin recorridos configurados, no arranca", ExorStorageConstants.LOG, TAG));
 			return;
 		}
 		Get().ValidarClassnames();
 		// Diferido 25 s: que la persistencia termine de cargar antes de barrer maletines
 		// viejos, si no se borrarian los que el motor todavia no cargo.
 		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(Get().LimpiarYArrancar, 25000, false);
-		Print(string.Format("%1 %2: %3 puntos de inicio, %4 de fin, %5 cofres de premio", ExorStorageConstants.LOG, TAG, c.posicion_inicio.Count(), c.posicion_fin.Count(), c.cofres.Count()));
+		Print(string.Format("%1 %2: %3 recorridos, %4 cofres de premio", ExorStorageConstants.LOG, TAG, c.recorridos.Count(), c.cofres.Count()));
 	}
 
 	void LimpiarYArrancar()
@@ -113,25 +114,42 @@ class ExorMaletin
 	{
 		ExorCfgMaletin c = Cfg();
 		int borrados = 0;
-		int i, k;
-		for (i = 0; i < c.posicion_inicio.Count(); i++)
+		int j;
+		for (j = 0; j < c.recorridos.Count(); j++)
 		{
-			vector pos = PosDe(c.posicion_inicio.Get(i));
-			array<Object> objs = new array<Object>;
-			array<CargoBase> cargos = new array<CargoBase>;
-			GetGame().GetObjectsAtPosition3D(pos, 15.0, objs, cargos);
-			for (k = 0; k < objs.Count(); k++)
-			{
-				Exor_MaletinEvento viejo = Exor_MaletinEvento.Cast(objs.Get(k));
-				if (viejo)
-				{
-					GetGame().ObjectDelete(viejo);
-					borrados++;
-				}
-			}
+			ExorCfgMaletinRecorrido r = c.recorridos.Get(j);
+			if (!r)
+				continue;
+			borrados = borrados + BarrerPunto(r.inicio);
+			borrados = borrados + BarrerPunto(r.fin);
 		}
 		if (borrados > 0)
-			Print(string.Format("%1 %2: %3 maletines de la sesion anterior borrados", ExorStorageConstants.LOG, TAG, borrados));
+			Print(string.Format("%1 %2: %3 objetos de la sesion anterior borrados", ExorStorageConstants.LOG, TAG, borrados));
+	}
+
+	// borra maletines y balizas que quedaron alrededor de un punto configurado
+	int BarrerPunto(ExorCfgMaletinCoord punto)
+	{
+		if (!punto)
+			return 0;
+		int borrados = 0;
+		int k;
+		vector pos = PosDe(punto);
+		array<Object> objs = new array<Object>;
+		array<CargoBase> cargos = new array<CargoBase>;
+		GetGame().GetObjectsAtPosition3D(pos, 15.0, objs, cargos);
+		for (k = 0; k < objs.Count(); k++)
+		{
+			Object o = objs.Get(k);
+			if (!o)
+				continue;
+			if (Exor_MaletinEvento.Cast(o) || Exor_HumoEvento.Cast(o))
+			{
+				GetGame().ObjectDelete(o);
+				borrados++;
+			}
+		}
+		return borrados;
 	}
 
 	// Mismo criterio que el modulo de cofres: los classnames del premio se revisan UNA vez
@@ -244,8 +262,12 @@ class ExorMaletin
 		if (!EnHorario(c))
 			return;
 
-		m_Inicio = PosDe(c.posicion_inicio.Get(Math.RandomInt(0, c.posicion_inicio.Count())));
-		m_Fin = PosDe(c.posicion_fin.Get(Math.RandomInt(0, c.posicion_fin.Count())));
+		// se sortea el recorrido ENTERO, no cada punto por su lado
+		ExorCfgMaletinRecorrido r = c.recorridos.Get(Math.RandomInt(0, c.recorridos.Count()));
+		if (!r || !r.inicio || !r.fin)
+			return;
+		m_Inicio = PosDe(r.inicio);
+		m_Fin = PosDe(r.fin);
 
 		if (!CrearMaletin(c))
 		{
@@ -258,6 +280,7 @@ class ExorMaletin
 		m_Portador = null;
 		m_CampeandoMs = 0;
 
+		CrearHumoFin(c);
 		if (c.marcar_en_mapa_inicio_y_fin)
 		{
 			Marca(MARCA_INICIO, true, m_Inicio, "Maletin");
@@ -280,6 +303,33 @@ class ExorMaletin
 		}
 		m_Maletin.ExorSetHumo(ExorHumoFx.IdxDe(c.color_humo));
 		return true;
+	}
+
+	// Baliza del punto de entrega: el mismo humo que el del maletin, para que los dos
+	// extremos del recorrido se vean igual de lejos. Vive todo el evento -tambien cuando el
+	// maletin vuelve al inicio- y se borra cuando el maletin llega o el evento se cancela.
+	void CrearHumoFin(ExorCfgMaletin c)
+	{
+		BorrarHumoFin();
+		Object o = GetGame().CreateObjectEx("Exor_HumoEvento", m_Fin, ECE_PLACE_ON_SURFACE);
+		m_HumoFin = Exor_HumoEvento.Cast(o);
+		if (!m_HumoFin)
+		{
+			if (o)
+				GetGame().ObjectDelete(o);
+			Print(string.Format("%1 %2: no se pudo crear la baliza del punto de entrega", ExorStorageConstants.LOG, TAG));
+			return;
+		}
+		m_HumoFin.ExorSetHumo(ExorHumoFx.IdxDe(c.color_humo));
+	}
+
+	void BorrarHumoFin()
+	{
+		if (m_HumoFin)
+		{
+			GetGame().ObjectDelete(m_HumoFin);
+			m_HumoFin = null;
+		}
 	}
 
 	// ------------------------------------------------------------------------
@@ -407,6 +457,7 @@ class ExorMaletin
 	{
 		string quien = NombreDe(m_Portador);
 		BorrarMaletin();
+		BorrarHumoFin();	// llego el maletin: la baliza del punto de entrega ya no hace falta
 		Marca(MARCA_PORTADOR, false, m_Fin, "");
 		Marca(MARCA_FIN, false, m_Fin, "");
 
@@ -529,6 +580,7 @@ class ExorMaletin
 	void Cancelar(ExorCfgMaletin c, int now, string aviso)
 	{
 		BorrarMaletin();
+		BorrarHumoFin();
 		Marca(MARCA_INICIO, false, m_Inicio, "");
 		Marca(MARCA_FIN, false, m_Fin, "");
 		Marca(MARCA_PORTADOR, false, m_Inicio, "");
