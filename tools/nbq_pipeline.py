@@ -21,6 +21,7 @@ import sys
 
 from PIL import Image
 
+from recolor_armas import camuflaje
 from recolor_ropa import SETS, recolor
 
 BASE = os.path.dirname(os.path.abspath(__file__))
@@ -72,6 +73,19 @@ def extraer():
             print("vanilla", corto, Image.open(dst).size)
 
 
+# ⭐ EL ARIDO VA CON PATRON, NO CON REMAPEO DE TONO.
+# El resto de la ropa del mod parte de prendas que YA tienen camuflaje pintado (la gorka),
+# asi que alcanza con remapear el tono: las manchas ya estaban. El traje NBC vanilla es
+# LISO, de un solo color, asi que remapearle el tono devuelve un mameluco arena plano: se
+# ve como un traje de pintor, no como ropa militar. Para el arido se genera un patron
+# woodland propio y se multiplica por la luminancia del vanilla -el mismo metodo que las
+# armas camo del mod-, que conserva pliegues, costuras y sombras y solo cambia el color.
+# Los otros cuatro colores SI van lisos a proposito: nieve, negro y urbano son colores
+# planos por definicion, y el rosa es un color, no un camuflaje.
+CAMO = ["arido"]
+CAMO_SEED = 20260912
+
+
 def recolorear():
     total = 0
     os.makedirs(DEST, exist_ok=True)
@@ -79,7 +93,10 @@ def recolorear():
         for corto in FUENTES:
             im = Image.open(os.path.join(PNG, corto + ".png"))
             tmp_png = os.path.join(PNG, "%s_%s.png" % (color, corto))
-            recolor(im, paleta).save(tmp_png)
+            if color in CAMO:
+                camuflaje(im, seed=CAMO_SEED).save(tmp_png)
+            else:
+                recolor(im, paleta).save(tmp_png)
             dst = os.path.join(DEST, "exor_%s_%s_co.paa" % (color, corto))
             img2paa(tmp_png, dst)
             total += os.path.getsize(dst)
