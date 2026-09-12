@@ -2207,7 +2207,6 @@ class ExorCfgCofreLoot
 	// cofre cueste municion y haga ruido, y no se abra a cuchillazos en silencio.
 	int golpes_herramientas_para_aperturarlo = 0;
 	int tiros_para_aperturarlo = 20;				// balas
-	ref array<ref ExorCfgCofreLootHerramienta> golpes_por_herramienta;	// excepciones por clase
 	int minutos_para_borrar_cofre_abierto = 30;		// abierto y sin vaciar: se borra y la posicion se re-arma
 	int segundos_entre_chequeos = 30;				// latido del modulo (barato: solo compara tiempos)
 	int maximo_cofres_spawneados_por_chequeo = 2;	// anti-pico: no crear 30 cofres en el mismo frame
@@ -2220,7 +2219,6 @@ class ExorCfgCofreLoot
 	void ExorCfgCofreLoot()
 	{
 		clase_zombie = new TStringArray;
-		golpes_por_herramienta = new array<ref ExorCfgCofreLootHerramienta>;
 		tipos = new array<ref ExorCfgCofreLootTipo>;
 		posiciones = new array<ref ExorCfgCofreLootPos>;
 	}
@@ -2336,19 +2334,10 @@ class ExorCfgCofreLoot
 		return null;
 	}
 
-	// golpes que necesita ESTA herramienta (vacio = manos / arma sin excepcion)
+	// golpes de melee que necesita ESTA herramienta. Con golpes_herramientas_para_aperturarlo
+	// en 0 (default) el melee NO abre el cofre: solo se abre a tiros.
 	int GolpesDe(string clase)
 	{
-		if (golpes_por_herramienta && clase != "")
-		{
-			int i;
-			for (i = 0; i < golpes_por_herramienta.Count(); i++)
-			{
-				ExorCfgCofreLootHerramienta h = golpes_por_herramienta.Get(i);
-				if (h && h.classname == clase && h.golpes > 0)
-					return h.golpes;
-			}
-		}
 		return golpes_herramientas_para_aperturarlo;
 	}
 
@@ -2375,24 +2364,12 @@ class ExorCfgCofreLoot
 		avisar_al_abrirse_en_el_chat = true;
 		avisar_progreso_al_golpear = true;
 		log_cada_impacto = 0;
-		golpes_por_herramienta = new array<ref ExorCfgCofreLootHerramienta>;
-		AddHerramienta("Pickaxe", 15);
-		AddHerramienta("FirefighterAxe", 15);
-		AddHerramienta("Crowbar", 20);
-		AddHerramienta("Sledgehammer", 12);
 
 		tipos = new array<ref ExorCfgCofreLootTipo>;
 		SetDefaultTipos();
 		posiciones = new array<ref ExorCfgCofreLootPos>;
 	}
 
-	protected void AddHerramienta(string cls, int golpes)
-	{
-		ExorCfgCofreLootHerramienta h = new ExorCfgCofreLootHerramienta;
-		h.classname = cls;
-		h.golpes = golpes;
-		golpes_por_herramienta.Insert(h);
-	}
 
 	// helper: agrega un item a una tabla y lo devuelve (para sumarle attachments)
 	protected ExorCfgCofreLootItem AddItem(ExorCfgCofreLootTipo t, string cls, int prob, int cant)

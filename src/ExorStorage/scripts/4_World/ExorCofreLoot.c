@@ -574,11 +574,10 @@ class ExorCofreLoot
 		}
 		else
 		{
-			// melee y explosiones: van por el contador de golpes, con la excepcion por
-			// herramienta si la clase esta listada en golpes_por_herramienta.
+			// melee y explosiones: van por el contador de golpes (golpes_herramientas_para_aperturarlo,
+			// 0 por defecto = el melee NO abre, solo tiros).
 			// De que herramienta es el golpe. Segun el caso, el motor manda como origen el
-			// item o al propio jugador, asi que si viene el jugador se mira que tiene en la
-			// mano; si no, no habria forma de aplicar golpes_por_herramienta.
+			// item o al propio jugador, asi que si viene el jugador se mira que tiene en la mano.
 			string herramienta = "";
 			if (source)
 			{
