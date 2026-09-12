@@ -38,6 +38,14 @@ PIEZAS = [
     ("PlateCarrierHolster", "PlateCarrierHolster",      "DZ_Characters_Vests",    "Pistolera de chaleco","plate",         "plate"),
     ("PlateCarrierPouches", "PlateCarrierPouches",      "DZ_Gear_Containers",     "Bolsillos de chaleco","plate",         "plate"),
     ("TortillaBag",         "TortillaBag",              "DZ_Characters_Backpacks","Mochila tactica",     "tortilla",      "tortilla"),
+    # --- set NBQ (trajes NBC). Heredan de las bases NBC, asi que se REPARAN igual que los
+    # vanilla: repairableWithKits/repairCosts ya vienen en la base y no hay que copiarlos.
+    # Sus texturas salen de tools/nbq_pipeline.py (parten del NBC amarillo, no del gris).
+    ("NBCJacket",           "NBCJacketBase",            "DZ_Characters_Tops",     "Chaqueta NBQ",        "nbc_jacket_ground", "nbc_jacket_worn"),
+    ("NBCPants",            "NBCPantsBase",             "DZ_Characters_Pants",    "Pantalon NBQ",        "nbc_pants",     "nbc_pants"),
+    ("NBCHood",             "NBCHoodBase",              "DZ_Characters_Headgear", "Capucha NBQ",         "nbc_hood",      "nbc_hood"),
+    ("NBCGloves",           "NBCGloves_ColorBase",      "DZ_Characters_Gloves",   "Guantes NBQ",         "nbc_gloves",    "nbc_gloves"),
+    ("NBCBoots",            "NBCBootsBase",             "DZ_Characters_Shoes",    "Botas NBQ",           "nbc_boots",     "nbc_boots"),
 ]
 
 # Piezas cuyo PADRE no declara hiddenSelections (las declara cada variante vanilla): hay que
@@ -60,12 +68,18 @@ EXTRA = {
         'itemsCargoSize[] = {10, 12};',
         'attachments[] += {"Shoulder", "Melee"};',
     ],
+    # La chaqueta y el pantalon NBQ llevan 35 casillas (5x7) en vez de las 12 de vanilla.
+    # 5 de ancho y no 7: la grilla del inventario se dibuja a lo ancho, y mas de 6-7
+    # columnas empieza a irse de la pantalla en resoluciones chicas (mismo motivo por el
+    # que el cofre del KOTH es 10 de ancho y no 30).
+    "NBCJacket": ['itemsCargoSize[] = {5, 7};'],
+    "NBCPants":  ['itemsCargoSize[] = {5, 7};'],
 }
 
 CABECERA = '''\t// ==================================================================
 \t//  SETS DE ROPA 3xor (retexturizados)
 \t// ------------------------------------------------------------------
-\t//  Cinco colores x trece piezas. Son ITEMS NUEVOS: cada clase HEREDA de la base vanilla
+\t//  Cinco colores x dieciocho piezas (incluido el set NBQ). Son ITEMS NUEVOS: cada clase HEREDA de la base vanilla
 \t//  y solo cambia 'hiddenSelectionsTextures'. Las bases se declaran sin cuerpo (forward
 \t//  declaration), que NO modifica la clase vanilla: los items originales del juego quedan
 \t//  intactos, igual que los modelos, que se reusan tal cual. No hay ni un 'modded class'.

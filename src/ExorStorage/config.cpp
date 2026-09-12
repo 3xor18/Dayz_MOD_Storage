@@ -9,7 +9,7 @@ class CfgPatches
 {
 	class ExorStorage
 	{
-		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_OpenableStorage", "Exor_Fridge", "Exor_Refrigerador_Packed", "Exor_Refrigerador_Ghost", "Exor_Locker", "Exor_Locker_Packed", "Exor_Locker_Ghost", "Exor_LockerRojo", "Exor_LockerRojo_Packed", "Exor_LockerRojo_Ghost", "Exor_MuebleArmas", "Exor_MuebleArmas_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_CofreLoot", "Exor_MaletinEvento", "Exor_HumoEvento", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight", "Exor_Parking", "Exor_Parking_Packed", "Exor_Parking_Ghost", "Exor_GorkaJacket_Rosa", "Exor_GorkaPants_Rosa", "Exor_BallisticHelmet_Rosa", "Exor_Mich2001Helmet_Rosa", "Exor_GorkaHelmet_Rosa", "Exor_BalaclavaMask_Rosa", "Exor_CombatBoots_Rosa", "Exor_TacticalGloves_Rosa", "Exor_PressVest_Rosa", "Exor_PlateCarrierVest_Rosa", "Exor_PlateCarrierHolster_Rosa", "Exor_PlateCarrierPouches_Rosa", "Exor_TortillaBag_Rosa", "Exor_GorkaJacket_Arido", "Exor_GorkaPants_Arido", "Exor_BallisticHelmet_Arido", "Exor_Mich2001Helmet_Arido", "Exor_GorkaHelmet_Arido", "Exor_BalaclavaMask_Arido", "Exor_CombatBoots_Arido", "Exor_TacticalGloves_Arido", "Exor_PressVest_Arido", "Exor_PlateCarrierVest_Arido", "Exor_PlateCarrierHolster_Arido", "Exor_PlateCarrierPouches_Arido", "Exor_TortillaBag_Arido", "Exor_GorkaJacket_Urbano", "Exor_GorkaPants_Urbano", "Exor_BallisticHelmet_Urbano", "Exor_Mich2001Helmet_Urbano", "Exor_GorkaHelmet_Urbano", "Exor_BalaclavaMask_Urbano", "Exor_CombatBoots_Urbano", "Exor_TacticalGloves_Urbano", "Exor_PressVest_Urbano", "Exor_PlateCarrierVest_Urbano", "Exor_PlateCarrierHolster_Urbano", "Exor_PlateCarrierPouches_Urbano", "Exor_TortillaBag_Urbano", "Exor_GorkaJacket_Nieve", "Exor_GorkaPants_Nieve", "Exor_BallisticHelmet_Nieve", "Exor_Mich2001Helmet_Nieve", "Exor_GorkaHelmet_Nieve", "Exor_BalaclavaMask_Nieve", "Exor_CombatBoots_Nieve", "Exor_TacticalGloves_Nieve", "Exor_PressVest_Nieve", "Exor_PlateCarrierVest_Nieve", "Exor_PlateCarrierHolster_Nieve", "Exor_PlateCarrierPouches_Nieve", "Exor_TortillaBag_Nieve", "Exor_GorkaJacket_Negro", "Exor_GorkaPants_Negro", "Exor_BallisticHelmet_Negro", "Exor_Mich2001Helmet_Negro", "Exor_GorkaHelmet_Negro", "Exor_BalaclavaMask_Negro", "Exor_CombatBoots_Negro", "Exor_TacticalGloves_Negro", "Exor_PressVest_Negro", "Exor_PlateCarrierVest_Negro", "Exor_PlateCarrierHolster_Negro", "Exor_PlateCarrierPouches_Negro", "Exor_TortillaBag_Negro", "Exor_M4_OEBttstck_Rosa", "Exor_M4_MPBttstck_Rosa", "Exor_M4_CQBBttstck_Rosa", "Exor_M4_RISHndgrd_Rosa", "Exor_M4_MPHndgrd_Rosa", "Exor_M4_PlasticHndgrd_Rosa", "Exor_AK_WoodBttstck_Rosa", "Exor_AK_WoodHndgrd_Rosa", "Exor_AK_FoldingBttstck_Rosa", "Exor_AK_RailHndgrd_Rosa", "Exor_AK_PlasticBttstck_Rosa", "Exor_AK_PlasticHndgrd_Rosa", "Exor_M4_OEBttstck_Azul", "Exor_M4_MPBttstck_Azul", "Exor_M4_CQBBttstck_Azul", "Exor_M4_RISHndgrd_Azul", "Exor_M4_MPHndgrd_Azul", "Exor_M4_PlasticHndgrd_Azul", "Exor_AK_WoodBttstck_Azul", "Exor_AK_WoodHndgrd_Azul", "Exor_AK_FoldingBttstck_Azul", "Exor_AK_RailHndgrd_Azul", "Exor_AK_PlasticBttstck_Azul", "Exor_AK_PlasticHndgrd_Azul", "Exor_M4_OEBttstck_Dorado", "Exor_M4_MPBttstck_Dorado", "Exor_M4_CQBBttstck_Dorado", "Exor_M4_RISHndgrd_Dorado", "Exor_M4_MPHndgrd_Dorado", "Exor_M4_PlasticHndgrd_Dorado", "Exor_AK_WoodBttstck_Dorado", "Exor_AK_WoodHndgrd_Dorado", "Exor_AK_FoldingBttstck_Dorado", "Exor_AK_RailHndgrd_Dorado", "Exor_AK_PlasticBttstck_Dorado", "Exor_AK_PlasticHndgrd_Dorado", "Exor_M4_OEBttstck_Camo", "Exor_M4_MPBttstck_Camo", "Exor_M4_CQBBttstck_Camo", "Exor_M4_RISHndgrd_Camo", "Exor_M4_MPHndgrd_Camo", "Exor_M4_PlasticHndgrd_Camo", "Exor_AK_WoodBttstck_Camo", "Exor_AK_WoodHndgrd_Camo", "Exor_AK_FoldingBttstck_Camo", "Exor_AK_RailHndgrd_Camo", "Exor_AK_PlasticBttstck_Camo", "Exor_AK_PlasticHndgrd_Camo"};
+		units[] = {"Exor_Barrel_500", "Exor_Barrel_500_Packed", "Exor_OpenableStorage", "Exor_Fridge", "Exor_Refrigerador_Packed", "Exor_Refrigerador_Ghost", "Exor_Locker", "Exor_Locker_Packed", "Exor_Locker_Ghost", "Exor_LockerRojo", "Exor_LockerRojo_Packed", "Exor_LockerRojo_Ghost", "Exor_MuebleArmas", "Exor_MuebleArmas_Packed", "Exor_BodyBag", "Exor_KothCrate_1", "Exor_KothCrate_2", "Exor_KothCrate_3", "Exor_CofreLoot", "Exor_MaletinEvento", "Exor_HumoEvento", "Exor_Cofre_Azul_Packed", "Exor_Cofre_Verde_Packed", "Exor_Cofre_Rojo_Packed", "Exor_Cofre_Azul", "Exor_Cofre_Verde", "Exor_Cofre_Rojo", "Exor_CofreLight", "Exor_Parking", "Exor_Parking_Packed", "Exor_Parking_Ghost", "Exor_NBCJacket_Rosa", "Exor_NBCPants_Rosa", "Exor_NBCHood_Rosa", "Exor_NBCGloves_Rosa", "Exor_NBCBoots_Rosa", "Exor_NBCJacket_Arido", "Exor_NBCPants_Arido", "Exor_NBCHood_Arido", "Exor_NBCGloves_Arido", "Exor_NBCBoots_Arido", "Exor_NBCJacket_Urbano", "Exor_NBCPants_Urbano", "Exor_NBCHood_Urbano", "Exor_NBCGloves_Urbano", "Exor_NBCBoots_Urbano", "Exor_NBCJacket_Nieve", "Exor_NBCPants_Nieve", "Exor_NBCHood_Nieve", "Exor_NBCGloves_Nieve", "Exor_NBCBoots_Nieve", "Exor_NBCJacket_Negro", "Exor_NBCPants_Negro", "Exor_NBCHood_Negro", "Exor_NBCGloves_Negro", "Exor_NBCBoots_Negro", "Exor_GorkaJacket_Rosa", "Exor_GorkaPants_Rosa", "Exor_BallisticHelmet_Rosa", "Exor_Mich2001Helmet_Rosa", "Exor_GorkaHelmet_Rosa", "Exor_BalaclavaMask_Rosa", "Exor_CombatBoots_Rosa", "Exor_TacticalGloves_Rosa", "Exor_PressVest_Rosa", "Exor_PlateCarrierVest_Rosa", "Exor_PlateCarrierHolster_Rosa", "Exor_PlateCarrierPouches_Rosa", "Exor_TortillaBag_Rosa", "Exor_GorkaJacket_Arido", "Exor_GorkaPants_Arido", "Exor_BallisticHelmet_Arido", "Exor_Mich2001Helmet_Arido", "Exor_GorkaHelmet_Arido", "Exor_BalaclavaMask_Arido", "Exor_CombatBoots_Arido", "Exor_TacticalGloves_Arido", "Exor_PressVest_Arido", "Exor_PlateCarrierVest_Arido", "Exor_PlateCarrierHolster_Arido", "Exor_PlateCarrierPouches_Arido", "Exor_TortillaBag_Arido", "Exor_GorkaJacket_Urbano", "Exor_GorkaPants_Urbano", "Exor_BallisticHelmet_Urbano", "Exor_Mich2001Helmet_Urbano", "Exor_GorkaHelmet_Urbano", "Exor_BalaclavaMask_Urbano", "Exor_CombatBoots_Urbano", "Exor_TacticalGloves_Urbano", "Exor_PressVest_Urbano", "Exor_PlateCarrierVest_Urbano", "Exor_PlateCarrierHolster_Urbano", "Exor_PlateCarrierPouches_Urbano", "Exor_TortillaBag_Urbano", "Exor_GorkaJacket_Nieve", "Exor_GorkaPants_Nieve", "Exor_BallisticHelmet_Nieve", "Exor_Mich2001Helmet_Nieve", "Exor_GorkaHelmet_Nieve", "Exor_BalaclavaMask_Nieve", "Exor_CombatBoots_Nieve", "Exor_TacticalGloves_Nieve", "Exor_PressVest_Nieve", "Exor_PlateCarrierVest_Nieve", "Exor_PlateCarrierHolster_Nieve", "Exor_PlateCarrierPouches_Nieve", "Exor_TortillaBag_Nieve", "Exor_GorkaJacket_Negro", "Exor_GorkaPants_Negro", "Exor_BallisticHelmet_Negro", "Exor_Mich2001Helmet_Negro", "Exor_GorkaHelmet_Negro", "Exor_BalaclavaMask_Negro", "Exor_CombatBoots_Negro", "Exor_TacticalGloves_Negro", "Exor_PressVest_Negro", "Exor_PlateCarrierVest_Negro", "Exor_PlateCarrierHolster_Negro", "Exor_PlateCarrierPouches_Negro", "Exor_TortillaBag_Negro", "Exor_M4_OEBttstck_Rosa", "Exor_M4_MPBttstck_Rosa", "Exor_M4_CQBBttstck_Rosa", "Exor_M4_RISHndgrd_Rosa", "Exor_M4_MPHndgrd_Rosa", "Exor_M4_PlasticHndgrd_Rosa", "Exor_AK_WoodBttstck_Rosa", "Exor_AK_WoodHndgrd_Rosa", "Exor_AK_FoldingBttstck_Rosa", "Exor_AK_RailHndgrd_Rosa", "Exor_AK_PlasticBttstck_Rosa", "Exor_AK_PlasticHndgrd_Rosa", "Exor_M4_OEBttstck_Azul", "Exor_M4_MPBttstck_Azul", "Exor_M4_CQBBttstck_Azul", "Exor_M4_RISHndgrd_Azul", "Exor_M4_MPHndgrd_Azul", "Exor_M4_PlasticHndgrd_Azul", "Exor_AK_WoodBttstck_Azul", "Exor_AK_WoodHndgrd_Azul", "Exor_AK_FoldingBttstck_Azul", "Exor_AK_RailHndgrd_Azul", "Exor_AK_PlasticBttstck_Azul", "Exor_AK_PlasticHndgrd_Azul", "Exor_M4_OEBttstck_Dorado", "Exor_M4_MPBttstck_Dorado", "Exor_M4_CQBBttstck_Dorado", "Exor_M4_RISHndgrd_Dorado", "Exor_M4_MPHndgrd_Dorado", "Exor_M4_PlasticHndgrd_Dorado", "Exor_AK_WoodBttstck_Dorado", "Exor_AK_WoodHndgrd_Dorado", "Exor_AK_FoldingBttstck_Dorado", "Exor_AK_RailHndgrd_Dorado", "Exor_AK_PlasticBttstck_Dorado", "Exor_AK_PlasticHndgrd_Dorado", "Exor_M4_OEBttstck_Camo", "Exor_M4_MPBttstck_Camo", "Exor_M4_CQBBttstck_Camo", "Exor_M4_RISHndgrd_Camo", "Exor_M4_MPHndgrd_Camo", "Exor_M4_PlasticHndgrd_Camo", "Exor_AK_WoodBttstck_Camo", "Exor_AK_WoodHndgrd_Camo", "Exor_AK_FoldingBttstck_Camo", "Exor_AK_RailHndgrd_Camo", "Exor_AK_PlasticBttstck_Camo", "Exor_AK_PlasticHndgrd_Camo"};
 		weapons[] = {"Exor_M4A1_Rosa", "Exor_AKM_Rosa", "Exor_Aug_Rosa", "Exor_M14_Rosa", "Exor_SV98_Rosa", "Exor_M4A1_Azul", "Exor_AKM_Azul", "Exor_Aug_Azul", "Exor_M14_Azul", "Exor_SV98_Azul", "Exor_M4A1_Dorado", "Exor_AKM_Dorado", "Exor_Aug_Dorado", "Exor_M14_Dorado", "Exor_SV98_Dorado", "Exor_M4A1_Camo", "Exor_AKM_Camo", "Exor_Aug_Camo", "Exor_M14_Camo", "Exor_SV98_Camo"};
 		requiredVersion = 0.1;
 		// DZ_Gear_Camping = TerritoryFlag/Kit + SeaChest. DZ_Characters_Backpacks =
@@ -91,7 +91,7 @@ class CfgVehicles
 	// ==================================================================
 	//  SETS DE ROPA 3xor (retexturizados)
 	// ------------------------------------------------------------------
-	//  Cinco colores x trece piezas. Son ITEMS NUEVOS: cada clase HEREDA de la base vanilla
+	//  Cinco colores x dieciocho piezas (incluido el set NBQ). Son ITEMS NUEVOS: cada clase HEREDA de la base vanilla
 	//  y solo cambia 'hiddenSelectionsTextures'. Las bases se declaran sin cuerpo (forward
 	//  declaration), que NO modifica la clase vanilla: los items originales del juego quedan
 	//  intactos, igual que los modelos, que se reusan tal cual. No hay ni un 'modded class'.
@@ -121,6 +121,11 @@ class CfgVehicles
 	class PlateCarrierHolster;	// externa (DZ_Characters_Vests)
 	class PlateCarrierPouches;	// externa (DZ_Gear_Containers)
 	class TortillaBag;	// externa (DZ_Characters_Backpacks)
+	class NBCJacketBase;	// externa (DZ_Characters_Tops)
+	class NBCPantsBase;	// externa (DZ_Characters_Pants)
+	class NBCHoodBase;	// externa (DZ_Characters_Headgear)
+	class NBCGloves_ColorBase;	// externa (DZ_Characters_Gloves)
+	class NBCBootsBase;	// externa (DZ_Characters_Shoes)
 
 	// ---------------- SET ROSA ----------------
 
@@ -284,6 +289,68 @@ class CfgVehicles
 		};
 		itemsCargoSize[] = {10, 12};
 		attachments[] += {"Shoulder", "Melee"};
+	};
+
+	class Exor_NBCJacket_Rosa: NBCJacketBase
+	{
+		scope = 2;
+		displayName = "Chaqueta NBQ Rosa";
+		descriptionShort = "Chaqueta NBQ del set Rosa de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_rosa_nbc_jacket_ground_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_nbc_jacket_worn_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_nbc_jacket_worn_co.paa"
+		};
+		itemsCargoSize[] = {5, 7};
+	};
+
+	class Exor_NBCPants_Rosa: NBCPantsBase
+	{
+		scope = 2;
+		displayName = "Pantalon NBQ Rosa";
+		descriptionShort = "Pantalon NBQ del set Rosa de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_rosa_nbc_pants_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_nbc_pants_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_nbc_pants_co.paa"
+		};
+		itemsCargoSize[] = {5, 7};
+	};
+
+	class Exor_NBCHood_Rosa: NBCHoodBase
+	{
+		scope = 2;
+		displayName = "Capucha NBQ Rosa";
+		descriptionShort = "Capucha NBQ del set Rosa de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_rosa_nbc_hood_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_nbc_hood_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_nbc_hood_co.paa"
+		};
+	};
+
+	class Exor_NBCGloves_Rosa: NBCGloves_ColorBase
+	{
+		scope = 2;
+		displayName = "Guantes NBQ Rosa";
+		descriptionShort = "Guantes NBQ del set Rosa de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_rosa_nbc_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_nbc_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_nbc_gloves_co.paa"
+		};
+	};
+
+	class Exor_NBCBoots_Rosa: NBCBootsBase
+	{
+		scope = 2;
+		displayName = "Botas NBQ Rosa";
+		descriptionShort = "Botas NBQ del set Rosa de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_rosa_nbc_boots_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_nbc_boots_co.paa",
+			"ExorStorage\data\ropa\exor_rosa_nbc_boots_co.paa"
+		};
 	};
 
 	// ---------------- SET ARIDO ----------------
@@ -450,6 +517,68 @@ class CfgVehicles
 		attachments[] += {"Shoulder", "Melee"};
 	};
 
+	class Exor_NBCJacket_Arido: NBCJacketBase
+	{
+		scope = 2;
+		displayName = "Chaqueta NBQ Arido";
+		descriptionShort = "Chaqueta NBQ del set Arido de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_arido_nbc_jacket_ground_co.paa",
+			"ExorStorage\data\ropa\exor_arido_nbc_jacket_worn_co.paa",
+			"ExorStorage\data\ropa\exor_arido_nbc_jacket_worn_co.paa"
+		};
+		itemsCargoSize[] = {5, 7};
+	};
+
+	class Exor_NBCPants_Arido: NBCPantsBase
+	{
+		scope = 2;
+		displayName = "Pantalon NBQ Arido";
+		descriptionShort = "Pantalon NBQ del set Arido de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_arido_nbc_pants_co.paa",
+			"ExorStorage\data\ropa\exor_arido_nbc_pants_co.paa",
+			"ExorStorage\data\ropa\exor_arido_nbc_pants_co.paa"
+		};
+		itemsCargoSize[] = {5, 7};
+	};
+
+	class Exor_NBCHood_Arido: NBCHoodBase
+	{
+		scope = 2;
+		displayName = "Capucha NBQ Arido";
+		descriptionShort = "Capucha NBQ del set Arido de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_arido_nbc_hood_co.paa",
+			"ExorStorage\data\ropa\exor_arido_nbc_hood_co.paa",
+			"ExorStorage\data\ropa\exor_arido_nbc_hood_co.paa"
+		};
+	};
+
+	class Exor_NBCGloves_Arido: NBCGloves_ColorBase
+	{
+		scope = 2;
+		displayName = "Guantes NBQ Arido";
+		descriptionShort = "Guantes NBQ del set Arido de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_arido_nbc_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_arido_nbc_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_arido_nbc_gloves_co.paa"
+		};
+	};
+
+	class Exor_NBCBoots_Arido: NBCBootsBase
+	{
+		scope = 2;
+		displayName = "Botas NBQ Arido";
+		descriptionShort = "Botas NBQ del set Arido de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_arido_nbc_boots_co.paa",
+			"ExorStorage\data\ropa\exor_arido_nbc_boots_co.paa",
+			"ExorStorage\data\ropa\exor_arido_nbc_boots_co.paa"
+		};
+	};
+
 	// ---------------- SET URBANO ----------------
 
 	class Exor_GorkaJacket_Urbano: GorkaEJacket_ColorBase
@@ -612,6 +741,68 @@ class CfgVehicles
 		};
 		itemsCargoSize[] = {10, 12};
 		attachments[] += {"Shoulder", "Melee"};
+	};
+
+	class Exor_NBCJacket_Urbano: NBCJacketBase
+	{
+		scope = 2;
+		displayName = "Chaqueta NBQ Urbano";
+		descriptionShort = "Chaqueta NBQ del set Urbano de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_urbano_nbc_jacket_ground_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_nbc_jacket_worn_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_nbc_jacket_worn_co.paa"
+		};
+		itemsCargoSize[] = {5, 7};
+	};
+
+	class Exor_NBCPants_Urbano: NBCPantsBase
+	{
+		scope = 2;
+		displayName = "Pantalon NBQ Urbano";
+		descriptionShort = "Pantalon NBQ del set Urbano de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_urbano_nbc_pants_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_nbc_pants_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_nbc_pants_co.paa"
+		};
+		itemsCargoSize[] = {5, 7};
+	};
+
+	class Exor_NBCHood_Urbano: NBCHoodBase
+	{
+		scope = 2;
+		displayName = "Capucha NBQ Urbano";
+		descriptionShort = "Capucha NBQ del set Urbano de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_urbano_nbc_hood_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_nbc_hood_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_nbc_hood_co.paa"
+		};
+	};
+
+	class Exor_NBCGloves_Urbano: NBCGloves_ColorBase
+	{
+		scope = 2;
+		displayName = "Guantes NBQ Urbano";
+		descriptionShort = "Guantes NBQ del set Urbano de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_urbano_nbc_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_nbc_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_nbc_gloves_co.paa"
+		};
+	};
+
+	class Exor_NBCBoots_Urbano: NBCBootsBase
+	{
+		scope = 2;
+		displayName = "Botas NBQ Urbano";
+		descriptionShort = "Botas NBQ del set Urbano de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_urbano_nbc_boots_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_nbc_boots_co.paa",
+			"ExorStorage\data\ropa\exor_urbano_nbc_boots_co.paa"
+		};
 	};
 
 	// ---------------- SET NIEVE ----------------
@@ -778,6 +969,68 @@ class CfgVehicles
 		attachments[] += {"Shoulder", "Melee"};
 	};
 
+	class Exor_NBCJacket_Nieve: NBCJacketBase
+	{
+		scope = 2;
+		displayName = "Chaqueta NBQ Nieve";
+		descriptionShort = "Chaqueta NBQ del set Nieve de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_nieve_nbc_jacket_ground_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_nbc_jacket_worn_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_nbc_jacket_worn_co.paa"
+		};
+		itemsCargoSize[] = {5, 7};
+	};
+
+	class Exor_NBCPants_Nieve: NBCPantsBase
+	{
+		scope = 2;
+		displayName = "Pantalon NBQ Nieve";
+		descriptionShort = "Pantalon NBQ del set Nieve de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_nieve_nbc_pants_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_nbc_pants_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_nbc_pants_co.paa"
+		};
+		itemsCargoSize[] = {5, 7};
+	};
+
+	class Exor_NBCHood_Nieve: NBCHoodBase
+	{
+		scope = 2;
+		displayName = "Capucha NBQ Nieve";
+		descriptionShort = "Capucha NBQ del set Nieve de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_nieve_nbc_hood_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_nbc_hood_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_nbc_hood_co.paa"
+		};
+	};
+
+	class Exor_NBCGloves_Nieve: NBCGloves_ColorBase
+	{
+		scope = 2;
+		displayName = "Guantes NBQ Nieve";
+		descriptionShort = "Guantes NBQ del set Nieve de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_nieve_nbc_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_nbc_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_nbc_gloves_co.paa"
+		};
+	};
+
+	class Exor_NBCBoots_Nieve: NBCBootsBase
+	{
+		scope = 2;
+		displayName = "Botas NBQ Nieve";
+		descriptionShort = "Botas NBQ del set Nieve de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_nieve_nbc_boots_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_nbc_boots_co.paa",
+			"ExorStorage\data\ropa\exor_nieve_nbc_boots_co.paa"
+		};
+	};
+
 	// ---------------- SET NEGRO ----------------
 
 	class Exor_GorkaJacket_Negro: GorkaEJacket_ColorBase
@@ -940,6 +1193,68 @@ class CfgVehicles
 		};
 		itemsCargoSize[] = {10, 12};
 		attachments[] += {"Shoulder", "Melee"};
+	};
+
+	class Exor_NBCJacket_Negro: NBCJacketBase
+	{
+		scope = 2;
+		displayName = "Chaqueta NBQ Negro";
+		descriptionShort = "Chaqueta NBQ del set Negro de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_negro_nbc_jacket_ground_co.paa",
+			"ExorStorage\data\ropa\exor_negro_nbc_jacket_worn_co.paa",
+			"ExorStorage\data\ropa\exor_negro_nbc_jacket_worn_co.paa"
+		};
+		itemsCargoSize[] = {5, 7};
+	};
+
+	class Exor_NBCPants_Negro: NBCPantsBase
+	{
+		scope = 2;
+		displayName = "Pantalon NBQ Negro";
+		descriptionShort = "Pantalon NBQ del set Negro de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_negro_nbc_pants_co.paa",
+			"ExorStorage\data\ropa\exor_negro_nbc_pants_co.paa",
+			"ExorStorage\data\ropa\exor_negro_nbc_pants_co.paa"
+		};
+		itemsCargoSize[] = {5, 7};
+	};
+
+	class Exor_NBCHood_Negro: NBCHoodBase
+	{
+		scope = 2;
+		displayName = "Capucha NBQ Negro";
+		descriptionShort = "Capucha NBQ del set Negro de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_negro_nbc_hood_co.paa",
+			"ExorStorage\data\ropa\exor_negro_nbc_hood_co.paa",
+			"ExorStorage\data\ropa\exor_negro_nbc_hood_co.paa"
+		};
+	};
+
+	class Exor_NBCGloves_Negro: NBCGloves_ColorBase
+	{
+		scope = 2;
+		displayName = "Guantes NBQ Negro";
+		descriptionShort = "Guantes NBQ del set Negro de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_negro_nbc_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_negro_nbc_gloves_co.paa",
+			"ExorStorage\data\ropa\exor_negro_nbc_gloves_co.paa"
+		};
+	};
+
+	class Exor_NBCBoots_Negro: NBCBootsBase
+	{
+		scope = 2;
+		displayName = "Botas NBQ Negro";
+		descriptionShort = "Botas NBQ del set Negro de 3xor.";
+		hiddenSelectionsTextures[] = {
+			"ExorStorage\data\ropa\exor_negro_nbc_boots_co.paa",
+			"ExorStorage\data\ropa\exor_negro_nbc_boots_co.paa",
+			"ExorStorage\data\ropa\exor_negro_nbc_boots_co.paa"
+		};
 	};
 
 	// <<< SETS DE ROPA 3xor <<<

@@ -63,6 +63,7 @@ class ExorGodPack
 		if (cmd == "/nieve")      { SetRopa(p, "Nieve");  return true; }
 		if (cmd == "/negro")      { SetRopa(p, "Negro");  return true; }
 		if (cmd == "/test_ropa")  { TestRopa(p);          return true; }
+		if (cmd == "/test_nbq")   { TestNbq(p);           return true; }
 		if (cmd == "/arma_color")
 		{
 			// sin argumento = los CUATRO sets; con argumento = solo ese color
@@ -423,6 +424,66 @@ class ExorGodPack
 			GetGame().CreateObjectEx("Exor_PressVest_" + variante, pie + lado * 0.7, ECE_PLACE_ON_SURFACE);
 		}
 		Print(string.Format("%1 GODPACK /test_ropa: %2/%3 maniquies vestidos", ExorStorageConstants.LOG, ok, n));
+	}
+
+	// Maniqui vestido con el traje NBQ completo de un color.
+	static bool ManiquiNbq(string cuerpo, vector pos, float yaw, string variante)
+	{
+		PlayerBase d = PlayerBase.Cast(GetGame().CreateObject(cuerpo, pos, false, false, true));
+		if (!d)
+			return false;
+		d.SetPosition(pos);
+		d.SetOrientation(Vector(yaw, 0, 0));
+		d.SetAllowDamage(false);	// que no se caiga ni se muera mientras se le saca la foto
+
+		d.GetInventory().CreateAttachment("Exor_NBCJacket_" + variante);
+		d.GetInventory().CreateAttachment("Exor_NBCPants_" + variante);
+		d.GetInventory().CreateAttachment("Exor_NBCBoots_" + variante);
+		d.GetInventory().CreateAttachment("Exor_NBCGloves_" + variante);
+		d.GetInventory().CreateAttachment("Exor_NBCHood_" + variante);
+		// la mascara es vanilla: el set NBQ del mod no la retexturiza (no tiene color propio
+		// en vanilla, es la misma para todas las variantes)
+		EntityAI mask = d.GetInventory().CreateAttachment("GasMask");
+		if (mask)
+			mask.GetInventory().CreateAttachment("GasMask_Filter");
+		return true;
+	}
+
+	// /test_nbq: un maniqui por color con el traje NBQ puesto, en fila y mirando al
+	// jugador. Misma puesta en escena que /test_ropa, para comparar los dos sets al lado.
+	static void TestNbq(PlayerBase p)
+	{
+		TStringArray cuerpos = {"SurvivorM_Mirek", "SurvivorM_Boris", "SurvivorM_Cyril",
+								"SurvivorM_Denis", "SurvivorM_Elias"};
+		vector orig = p.GetPosition();
+		vector fwd = p.GetDirection();
+		fwd[1] = 0;
+		fwd.Normalize();
+		vector lado = Vector(-fwd[2], 0, fwd[0]);
+		float yaw = fwd.VectorToAngles()[0] + 180.0;
+		int n = SETS_ROPA.Count();
+		int i;
+		int ok = 0;
+		for (i = 0; i < n; i++)
+		{
+			string variante = SETS_ROPA.Get(i);
+			float off = (i - (n - 1) * 0.5) * 1.6;
+			vector pos = orig + fwd * 6.0 + lado * off;
+			pos[1] = GetGame().SurfaceY(pos[0], pos[2]);
+			if (!ManiquiNbq(cuerpos.Get(i), pos, yaw, variante))
+			{
+				Print(string.Format("%1 GODPACK /test_nbq: no se pudo crear el maniqui %2", ExorStorageConstants.LOG, variante));
+				continue;
+			}
+			ok++;
+			// una chaqueta y un pantalon sueltos a los pies: sirven para abrirlos y ver que
+			// de verdad tienen las 35 casillas, que puesto no se ve.
+			vector pie = pos + fwd * -0.9;
+			pie[1] = GetGame().SurfaceY(pie[0], pie[2]);
+			GetGame().CreateObjectEx("Exor_NBCJacket_" + variante, pie, ECE_PLACE_ON_SURFACE);
+			GetGame().CreateObjectEx("Exor_NBCPants_" + variante, pie + lado * 0.4, ECE_PLACE_ON_SURFACE);
+		}
+		Print(string.Format("%1 GODPACK /test_nbq: %2/%3 maniquies vestidos", ExorStorageConstants.LOG, ok, n));
 	}
 
 	static void Explosivos(PlayerBase p)
