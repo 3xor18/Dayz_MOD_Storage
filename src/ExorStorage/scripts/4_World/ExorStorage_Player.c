@@ -448,6 +448,12 @@ modded class PlayerBase
 		if (GetGame().IsServer() && !m_ExorDeathDone)
 		{
 			m_ExorDeathDone = true;
+			// ANTES que nada: si este muerto llevaba el maletin del evento, el maletin se
+			// borra YA. Tiene que ser aca y no en el latido del modulo: dos segundos mas
+			// tarde el cuerpo ya se convirtio en tumba y el maletin quedo adentro (y peor,
+			// virtualizado a JSON), asi que borrar la entidad despues no alcanza -el
+			// restore lo vuelve a crear al abrir la tumba-.
+			ExorMaletin.Get().OnPortadorMuerto(this);
 			ExorBuildKillfeed(killer);
 			ExorScheduleBodyBag();
 		}

@@ -15,6 +15,9 @@
 class Exor_MaletinEvento : Container_Base
 {
 	int m_ExorHumo;		// sincronizado: 0 = sin humo, 1..6 = color (ver ExorHumoFx)
+	// server: el maletin esta esperando en el punto de inicio. Es el UNICO lugar donde
+	// puede estar sin dueño; en cualquier otro lado sin un jugador vivo encima, sobra.
+	bool m_ExorEnInicio;
 
 	protected Particle m_ExorHumoFx;	// cliente (Particle es Object: lo gestiona el motor, sin ref)
 
@@ -26,8 +29,41 @@ class Exor_MaletinEvento : Container_Base
 	override void EEInit()
 	{
 		super.EEInit();
-		if (GetGame().IsServer())
-			SetAllowDamage(false);	// el objetivo del evento no se rompe a balazos
+		if (!GetGame().IsServer())
+			return;
+		SetAllowDamage(false);	// el objetivo del evento no se rompe a balazos
+
+		// ⭐ Un maletin que NO acaba de crear el modulo es basura de otra vida: lo mas
+		// comun es la copia que revive el restore al abrir una tumba donde quedo uno.
+		// Hay UN maletin en el mundo y es el del evento en curso; cualquier otro se borra
+		// solo. Diferido para no borrarse en medio de la creacion del motor.
+		if (!ExorMaletin.s_Creando)
+		{
+			Print(string.Format("%1 MALETIN: se borra un maletin que no es del evento en curso", ExorStorageConstants.LOG));
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(ExorAutoBorrar, 100, false);
+		}
+	}
+
+	void ExorAutoBorrar()
+	{
+		GetGame().ObjectDelete(this);
+	}
+
+	// ⭐ NO SE GUARDA EN NINGUN LADO QUE NO SEA UN JUGADOR VIVO.
+	// Un barril, un locker, una nevera, el baul de un auto, una carpa: nada de eso puede
+	// recibirlo. Lo unico que lo acepta es el inventario de un jugador vivo -su ropa y su
+	// mochila cuentan, porque la raiz de la jerarquia sigue siendo el jugador-. Asi el
+	// maletin no se puede esconder: o lo llevas encima, o lo perdes.
+	// Va como bloqueo de la accion y no solo como red de seguridad para que el jugador vea
+	// que NO se puede, en vez de ver como el maletin se le escapa de vuelta al inventario.
+	override bool CanPutInCargo(EntityAI parent)
+	{
+		if (!super.CanPutInCargo(parent))
+			return false;
+		if (!parent)
+			return false;
+		PlayerBase p = PlayerBase.Cast(parent.GetHierarchyRootPlayer());
+		return p && p.IsAlive();
 	}
 
 	// El maletin NO guarda cosas: es un objetivo, no una mochila. Sin esto se podria
@@ -51,6 +87,19 @@ class Exor_MaletinEvento : Container_Base
 		if (!GetGame() || !GetGame().IsServer())
 			return;
 		ExorMaletin.Get().OnMaletinMovido(this);
+	}
+
+	// El maletin solo puede estar en dos lados: esperando en el punto de inicio, o encima
+	// de un jugador VIVO. Todo lo demas -una tumba, una mochila tirada, el baul de un auto,
+	// el inventario de un muerto- es un lugar del que hay que sacarlo.
+	bool ExorEnLugarValido()
+	{
+		PlayerBase p = PlayerBase.Cast(GetHierarchyRootPlayer());
+		if (p && p.IsAlive())
+			return true;
+		if (m_ExorEnInicio && !GetHierarchyParent())
+			return true;
+		return false;
 	}
 
 	override void EEDelete(EntityAI parent)

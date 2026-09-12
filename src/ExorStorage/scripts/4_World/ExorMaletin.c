@@ -30,6 +30,10 @@ class ExorMaletinEstado
 class ExorMaletin
 {
 	static ref ExorMaletin s_Instance;
+	// true SOLO mientras el modulo esta creando el maletin del evento. Lo lee el EEInit de
+	// la entidad para distinguir "este es el del evento" de "este es una copia que revivio
+	// de una tumba" (misma idea que el guard del mastil del KOTH).
+	static bool s_Creando;
 	static const string TAG = "MALETIN";
 	static const int TICK_MS = 2000;
 	// ids de las marcas del mapa (el KOTH usa 0..n y el cofre 5000+)
@@ -293,7 +297,9 @@ class ExorMaletin
 
 	bool CrearMaletin(ExorCfgMaletin c)
 	{
+		s_Creando = true;
 		Object o = GetGame().CreateObjectEx(c.classname_maletin, m_Inicio, ECE_PLACE_ON_SURFACE);
+		s_Creando = false;
 		m_Maletin = Exor_MaletinEvento.Cast(o);
 		if (!m_Maletin)
 		{
@@ -302,6 +308,7 @@ class ExorMaletin
 			return false;
 		}
 		m_Maletin.ExorSetHumo(ExorHumoFx.IdxDe(c.color_humo));
+		m_Maletin.m_ExorEnInicio = true;	// unico lugar donde puede estar sin dueño
 		return true;
 	}
 
@@ -356,6 +363,7 @@ class ExorMaletin
 		m_UltimaMarcaMs = 0;
 		m_UltimoCampeoMs = now;
 		m_Maletin.ExorSetHumo(0);
+		m_Maletin.m_ExorEnInicio = false;	// de aca en mas solo vale estar encima de su dueño
 		Marca(MARCA_INICIO, false, m_Inicio, "");
 		if (c.avisos_en_chat)
 			ExorKoth.Alert(string.Format("%1 agarro el maletin. Va marcado en el mapa: %2 minutos para entregarlo.", NombreDe(quien), c.minutos_para_ir_desde_inicio_al_final), 15, Argb());
@@ -367,10 +375,17 @@ class ExorMaletin
 	// ------------------------------------------------------------------------
 	void TickEnTransito(ExorCfgMaletin c, int now)
 	{
-		// se murio, se desconecto, o el maletin ya no lo tiene el
-		if (!m_Maletin || !m_Portador || !m_Portador.IsAlive() || PortadorReal() != m_Portador)
+		// murio o se desconecto -> el maletin vuelve al inicio
+		if (!m_Maletin || !m_Portador || !m_Portador.IsAlive())
 		{
 			VolverAlInicio(c, now, "El que llevaba el maletin cayo. El maletin volvio al punto de inicio.");
+			return;
+		}
+		// sigue vivo pero el maletin no lo tiene el: lo solto, lo metio en un auto, o solto
+		// la mochila donde lo llevaba. Se le devuelve: del maletin no se puede zafar.
+		if (PortadorReal() != m_Portador)
+		{
+			DevolverAlPortador();
 			return;
 		}
 
@@ -458,8 +473,7 @@ class ExorMaletin
 		string quien = NombreDe(m_Portador);
 		BorrarMaletin();
 		BorrarHumoFin();	// llego el maletin: la baliza del punto de entrega ya no hace falta
-		Marca(MARCA_PORTADOR, false, m_Fin, "");
-		Marca(MARCA_FIN, false, m_Fin, "");
+		OcultarMarcas();
 
 		int puestos = CrearPremio(c);
 		m_Estado = ExorMaletinEstado.PREMIO;
@@ -581,9 +595,7 @@ class ExorMaletin
 	{
 		BorrarMaletin();
 		BorrarHumoFin();
-		Marca(MARCA_INICIO, false, m_Inicio, "");
-		Marca(MARCA_FIN, false, m_Fin, "");
-		Marca(MARCA_PORTADOR, false, m_Inicio, "");
+		OcultarMarcas();
 		m_Portador = null;
 		m_Estado = ExorMaletinEstado.IDLE;
 		m_ProximoIntentoMs = now + (c.minutos_para_repetir_evento * 60000);
@@ -599,6 +611,23 @@ class ExorMaletin
 			GetGame().ObjectDelete(m_Maletin);
 			m_Maletin = null;
 		}
+	}
+
+	// ⭐ Lo llama EEKilled del jugador, no el latido. Si esto se dejara para el tick, dos
+	// segundos despues el cuerpo ya es una tumba con el maletin adentro, y como el contenido
+	// de la tumba se virtualiza a JSON, borrar la entidad ya no alcanza: al abrir la tumba
+	// el restore lo vuelve a crear. Por eso el maletin se borra en el mismo instante de la
+	// muerte, antes de que el cuerpo se convierta en nada.
+	void OnPortadorMuerto(PlayerBase p)
+	{
+		if (m_Estado != ExorMaletinEstado.EN_TRANSITO)
+			return;
+		if (!p || p != m_Portador)
+			return;
+		ExorCfgMaletin c = Cfg();
+		if (!c || !c.enable)
+			return;
+		VolverAlInicio(c, GetGame().GetTime(), "El que llevaba el maletin cayo. El maletin volvio al punto de inicio.");
 	}
 
 	// ------------------------------------------------------------------------
@@ -629,16 +658,26 @@ class ExorMaletin
 		if (quien == m_Portador)
 			return;	// lo movio dentro de su propio inventario: todo bien
 
-		// Lo soltó, se lo sacaron, o cayó a la bolsa del cadaver. Si el que lo llevaba
-		// sigue vivo se lo devolvemos (el maletin no se suelta); si no, vuelve al inicio.
+		// Lo solto, se lo sacaron, o cayo a la bolsa del cadaver: una sola resolucion.
+		OnMaletinSinDuenio(maletin);
+	}
+
+	// Lo llama la entidad cuando quedo en un lugar donde NO puede estar (una tumba, un
+	// contenedor en el piso, el inventario de un muerto). Es la red de seguridad del hook
+	// de muerte: cubre lo que ese hook no ve, como una desconexion.
+	void OnMaletinSinDuenio(Exor_MaletinEvento maletin)
+	{
+		if (maletin != m_Maletin || m_Estado != ExorMaletinEstado.EN_TRANSITO)
+			return;
+		ExorCfgMaletin c = Cfg();
+		if (!c || !c.enable)
+			return;
 		if (m_Portador && m_Portador.IsAlive())
 		{
-			// diferido un frame: mover inventario DENTRO del propio hook de movimiento es
-			// la forma segura de terminar con el item en un estado raro.
 			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(DevolverAlPortador, 1, false);
 			return;
 		}
-		VolverAlInicio(c, now, "El que llevaba el maletin cayo. El maletin volvio al punto de inicio.");
+		VolverAlInicio(c, GetGame().GetTime(), "El que llevaba el maletin cayo. El maletin volvio al punto de inicio.");
 	}
 
 	void DevolverAlPortador()
@@ -698,6 +737,17 @@ class ExorMaletin
 			}
 		}
 		return false;
+	}
+
+	// Apaga las TRES marcas del evento de una. Se llama en los tres finales -entregado,
+	// cancelado, y el portador que cae- para que nadie quede marcado en el mapa de los
+	// demas cuando el evento ya no existe. Ir apagandolas de a una por cada final es
+	// justamente como se olvida una.
+	void OcultarMarcas()
+	{
+		Marca(MARCA_PORTADOR, false, m_Fin, "");
+		Marca(MARCA_INICIO, false, m_Inicio, "");
+		Marca(MARCA_FIN, false, m_Fin, "");
 	}
 
 	void Marca(int id, bool mostrar, vector pos, string label)
